@@ -140,10 +140,10 @@ export default function App() {
 
   if (!isFirebaseConfigured || error || (!user && !loading)) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6 text-stone-900Selection:bg-emerald-100">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6 text-stone-900 selection:bg-emerald-100">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.9, rotate: 0 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
           className="max-w-md w-full bg-white p-8 rounded-[3rem] shadow-2xl border border-stone-200 text-center space-y-8"
         >
           <div className={cn(
