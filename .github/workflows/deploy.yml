@@ -18,6 +18,13 @@ jobs:
 
       - name: Build project
         run: npm run build
+        env:
+          VITE_FIREBASE_API_KEY: "AIzaSyB7JmfGxu1P8tU-jp0PSM3AH7XXHjoydGQ"
+          VITE_FIREBASE_AUTH_DOMAIN: "shopping-list-app-1718.firebaseapp.com"
+          VITE_FIREBASE_PROJECT_ID: "shopping-list-app-1718"
+          VITE_FIREBASE_STORAGE_BUCKET: "shopping-list-app-1718.firebasestorage.app"
+          VITE_FIREBASE_MESSAGING_SENDER_ID: "969953753780"
+          VITE_FIREBASE_APP_ID: "1:969953753780:web:05e04cf409b3a323d775e1"
 
       - name: Deploy to Project A folder
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
