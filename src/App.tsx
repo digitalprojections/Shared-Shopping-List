@@ -14,12 +14,14 @@ import {
   ShoppingBag
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { auth, isFirebaseConfigured } from './lib/firebase';
+import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
 import { 
   signInAnonymously, 
   onAuthStateChanged, 
   User,
-  signOut
+  signOut,
+  signInWithPopup,
+  linkWithPopup
 } from 'firebase/auth';
 import { shoppingService } from './services/shoppingService';
 import { ShoppingList, ListItem, ShareLink, Permission } from './types';
@@ -70,16 +72,6 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
-      if (!u && !shareId) {
-        signInAnonymously(auth).catch(err => {
-          console.error("Auth error:", err);
-          if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-            setError("Firebase Auth is not enabled. Please enable 'Anonymous' sign-in in your Firebase Console.");
-          } else {
-            setError(err.message);
-          }
-        });
-      }
     }, (err) => {
       console.error("Auth state change error:", err);
       setError("Firebase connection failed. Check your API keys.");
@@ -88,6 +80,40 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  const handleAnonymously = () => {
+    setLoading(true);
+    signInAnonymously(auth).catch(err => {
+      console.error("Auth error:", err);
+      if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+        setError("Firebase Auth is not enabled. Please enable 'Anonymous' sign-in in your Firebase Console.");
+      } else {
+        setError(err.message);
+      }
+      setLoading(false);
+    });
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      if (user && user.isAnonymous) {
+        // Link anonymous account to Google
+        await linkWithPopup(user, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
+    } catch (err: any) {
+      console.error("Google login error:", err);
+      if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+        setError("Google Search is not enabled. Please enable 'Google' provider in your Firebase Console.");
+      } else {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -112,61 +138,69 @@ export default function App() {
     );
   }
 
-  if (!isFirebaseConfigured || error) {
+  if (!isFirebaseConfigured || error || (!user && !loading)) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6 text-stone-900Selection:bg-emerald-100">
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="max-w-md w-full bg-white p-8 rounded-3xl shadow-xl border border-stone-200 text-center space-y-6"
+          className="max-w-md w-full bg-white p-8 rounded-[3rem] shadow-2xl border border-stone-200 text-center space-y-8"
         >
           <div className={cn(
-            "w-16 h-16 rounded-2xl flex items-center justify-center mx-auto",
-            error ? "bg-rose-100" : "bg-amber-100"
+            "w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner",
+            error ? "bg-rose-50" : "bg-emerald-50"
           )}>
-            {error ? <X className="w-8 h-8 text-rose-600" /> : <LinkIcon className="w-8 h-8 text-amber-600" />}
+            {error ? <X className="w-10 h-10 text-rose-500" /> : <ShoppingBag className="w-10 h-10 text-emerald-600" />}
           </div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-stone-900">
-              {error ? "Configuration Error" : "Setup Required"}
+          
+          <div className="space-y-3">
+            <h2 className="text-3xl font-black tracking-tight text-stone-900">
+              {error ? "Configuration" : "Welcome to ShopShare"}
             </h2>
-            <p className="text-stone-500">
-              {error || "Please configure your Firebase environment variables to start using ShopShare."}
+            <p className="text-stone-500 font-medium">
+              {error || "Collaborative shopping made beautiful. Sign in to start your lists."}
             </p>
           </div>
           
+          <div className="space-y-4 pt-4">
+            <motion.button 
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleGoogleLogin}
+              className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-stone-100 rounded-2xl font-bold text-stone-700 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"/>
+              </svg>
+              Sign in with Google
+            </motion.button>
+
+            <button 
+              onClick={handleAnonymously}
+              className="w-full py-4 text-stone-400 font-bold hover:text-stone-600 transition-colors text-sm"
+            >
+              Continue as Guest
+            </button>
+          </div>
+          
           {error && (
-            <div className="text-left space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-widest text-stone-400">Checklist:</h4>
-              <ul className="text-sm text-stone-600 space-y-2">
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                  <span>Go to <b>Authentication</b> tab in Firebase Console</span>
+            <div className="text-left space-y-3 pt-6 border-t border-stone-100">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400">Fixing the error:</h4>
+              <ul className="text-xs text-stone-500 space-y-2 font-medium">
+                <li className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                  <span>Enable <b>Google</b> & <b>Anonymous</b> in Firebase Auth Console</span>
                 </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                  <span>Enable <b>Anonymous</b> sign-in provider</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 shrink-0" />
-                  <span>Ensure <b>Firestore</b> is created in Test Mode</span>
+                <li className="flex items-start gap-3">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                  <span>Ensure <b>Firestore</b> rules allow access</span>
                 </li>
               </ul>
             </div>
           )}
-
-          {!error && (
-            <div className="bg-stone-50 p-4 rounded-xl text-left text-xs font-mono text-stone-600 overflow-x-auto">
-              VITE_FIREBASE_API_KEY<br/>
-              VITE_FIREBASE_AUTH_DOMAIN<br/>
-              VITE_FIREBASE_PROJECT_ID<br/>
-              ...
-            </div>
-          )}
-          
-          <p className="text-xs text-stone-400">
-            {error ? "After fixing, refresh this page." : "Check the .env.example file for the full list of required variables."}
-          </p>
         </motion.div>
       </div>
     );
@@ -206,12 +240,30 @@ export default function App() {
                 <span className="hidden sm:inline">Sign Out</span>
               </motion.button>
             )}
-            <div className="w-8 h-8 rounded-full bg-stone-200 border-2 border-white shadow-sm overflow-hidden">
-              <img 
-                src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} 
-                alt="avatar" 
-                className="w-full h-full object-cover"
-              />
+            {user && user.isAnonymous && (
+              <motion.button 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                onClick={handleGoogleLogin}
+                className="hidden sm:flex items-center gap-2 px-4 py-2 text-xs font-black uppercase tracking-widest text-emerald-600 hover:bg-emerald-50 rounded-full transition-colors border border-emerald-100"
+              >
+                Link Account
+              </motion.button>
+            )}
+            <div className="w-10 h-10 rounded-2xl bg-stone-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
+              {user?.photoURL ? (
+                <img 
+                  src={user.photoURL} 
+                  alt="avatar" 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <img 
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} 
+                  alt="avatar" 
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
           </div>
         </div>
