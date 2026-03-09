@@ -131,7 +131,7 @@ export default function App() {
               {error ? "Configuration Error" : "Setup Required"}
             </h2>
             <p className="text-stone-500">
-              {error || "Please configure your Firebase environment variables in the AI Studio Secrets panel to start using ShopShare."}
+              {error || "Please configure your Firebase environment variables to start using ShopShare."}
             </p>
           </div>
           
