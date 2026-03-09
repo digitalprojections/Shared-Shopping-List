@@ -30,3 +30,6 @@ if (isFirebaseConfigured) {
 export const db = dbInstance as Firestore;
 export const auth = authInstance as Auth;
 export const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});

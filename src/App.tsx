@@ -20,8 +20,9 @@ import {
   onAuthStateChanged, 
   User,
   signOut,
-  signInWithPopup,
-  linkWithPopup
+  signInWithRedirect,
+  linkWithRedirect,
+  getRedirectResult
 } from 'firebase/auth';
 import { shoppingService } from './services/shoppingService';
 import { ShoppingList, ListItem, ShareLink, Permission } from './types';
@@ -78,6 +79,19 @@ export default function App() {
       setLoading(false);
     });
 
+    getRedirectResult(auth).catch(async (error) => {
+      if (error.code === 'auth/credential-already-in-use') {
+         console.log("Account already exists. Logging out of anonymous session.");
+         await signOut(auth);
+         setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
+      } else {
+         console.error("Redirect error:", error);
+         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+           setError(error.message);
+         }
+      }
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -98,32 +112,18 @@ export default function App() {
     try {
       setLoading(true);
       if (user && user.isAnonymous) {
-        // Try to link first
-        try {
-          await linkWithPopup(user, googleProvider);
-        } catch (linkErr: any) {
-          if (linkErr.code === 'auth/credential-already-in-use') {
-             // Instead of trying to open another popup immediately (which gets blocked),
-             // tell the user what happened and sign them out of the anonymous account
-             // so they can just click "Sign in" normally on the next screen.
-             console.log("Account already exists. Logging out of anonymous session.");
-             await signOut(auth);
-             setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
-          } else {
-             throw linkErr;
-          }
-        }
+        // Use redirect instead of popup to avoid COOP issues
+        await linkWithRedirect(user, googleProvider);
       } else {
-        await signInWithPopup(auth, googleProvider);
+        await signInWithRedirect(auth, googleProvider);
       }
     } catch (err: any) {
       console.error("Google login error:", err);
       if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
         setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
-      } else if (err.code !== 'auth/popup-closed-by-user') { 
+      } else { 
          setError(err.message);
       }
-    } finally {
       setLoading(false);
     }
   };
