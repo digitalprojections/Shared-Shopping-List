@@ -98,17 +98,28 @@ export default function App() {
     try {
       setLoading(true);
       if (user && user.isAnonymous) {
-        // Link anonymous account to Google
-        await linkWithPopup(user, googleProvider);
+        // Try to link anonymous account to Google
+        try {
+          await linkWithPopup(user, googleProvider);
+        } catch (linkErr: any) {
+          // If the Google account is already linked to another Firebase account,
+          // sign in with that Google account instead.
+          if (linkErr.code === 'auth/credential-already-in-use') {
+             console.log("Account already exists, switching to it...");
+             await signInWithPopup(auth, googleProvider);
+          } else {
+            throw linkErr; // Re-throw other errors to be caught below
+          }
+        }
       } else {
         await signInWithPopup(auth, googleProvider);
       }
     } catch (err: any) {
       console.error("Google login error:", err);
       if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-        setError("Google Search is not enabled. Please enable 'Google' provider in your Firebase Console.");
-      } else {
-        setError(err.message);
+        setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
+      } else if (err.code !== 'auth/popup-closed-by-user') { // Ignore user canceling the popup
+         setError(err.message);
       }
     } finally {
       setLoading(false);
