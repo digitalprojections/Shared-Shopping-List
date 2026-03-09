@@ -98,17 +98,19 @@ export default function App() {
     try {
       setLoading(true);
       if (user && user.isAnonymous) {
-        // Try to link anonymous account to Google
+        // Try to link first
         try {
           await linkWithPopup(user, googleProvider);
         } catch (linkErr: any) {
-          // If the Google account is already linked to another Firebase account,
-          // sign in with that Google account instead.
           if (linkErr.code === 'auth/credential-already-in-use') {
-             console.log("Account already exists, switching to it...");
-             await signInWithPopup(auth, googleProvider);
+             // Instead of trying to open another popup immediately (which gets blocked),
+             // tell the user what happened and sign them out of the anonymous account
+             // so they can just click "Sign in" normally on the next screen.
+             console.log("Account already exists. Logging out of anonymous session.");
+             await signOut(auth);
+             setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
           } else {
-            throw linkErr; // Re-throw other errors to be caught below
+             throw linkErr;
           }
         }
       } else {
@@ -118,7 +120,7 @@ export default function App() {
       console.error("Google login error:", err);
       if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
         setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
-      } else if (err.code !== 'auth/popup-closed-by-user') { // Ignore user canceling the popup
+      } else if (err.code !== 'auth/popup-closed-by-user') { 
          setError(err.message);
       }
     } finally {
