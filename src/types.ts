@@ -7,6 +7,7 @@ export interface ShoppingList {
   createdAt: number;
   updatedAt: number;
   color: string;
+  sharedUsers?: string[];
 }
 
 export interface ListItem {
@@ -19,7 +20,8 @@ export interface ListItem {
 
 export interface ShareLink {
   id: string;
-  listId: string;
+  listId: string; // If type is 'collection', this refers to the ownerId instead
+  type?: 'list' | 'collection';
   permission: Permission;
   isActive: boolean;
   createdAt: number;

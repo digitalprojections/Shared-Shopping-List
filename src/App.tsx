@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Plus, 
-  Share2, 
-  Trash2, 
-  CheckCircle2, 
-  Circle, 
-  ChevronLeft, 
-  Copy, 
+import {
+  Plus,
+  Share2,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  ChevronLeft,
+  Copy,
   Link as LinkIcon,
   X,
   MoreVertical,
@@ -15,9 +15,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
-import { 
-  signInAnonymously, 
-  onAuthStateChanged, 
+import {
+  signInAnonymously,
+  onAuthStateChanged,
   User,
   signOut,
   signInWithRedirect,
@@ -54,22 +54,6 @@ export default function App() {
       return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const shareId = params.get('share');
-    
-    if (shareId) {
-      shoppingService.getShare(shareId).then(share => {
-        if (share && share.isActive) {
-          setSharedListId(share.listId);
-          setSharedPermission(share.permission);
-          setActiveListId(share.listId);
-        }
-      }).catch(err => {
-        console.error("Error fetching share:", err);
-        setError("Could not load shared list. Please check your configuration.");
-      });
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -81,19 +65,45 @@ export default function App() {
 
     getRedirectResult(auth).catch(async (error) => {
       if (error.code === 'auth/credential-already-in-use') {
-         console.log("Account already exists. Logging out of anonymous session.");
-         await signOut(auth);
-         setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
+        console.log("Account already exists. Logging out of anonymous session.");
+        await signOut(auth);
+        setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
       } else {
-         console.error("Redirect error:", error);
-         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-           setError(error.message);
-         }
+        console.error("Redirect error:", error);
+        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+          setError(error.message);
+        }
       }
     });
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user && isFirebaseConfigured) {
+      const params = new URLSearchParams(window.location.search);
+      const shareId = params.get('share');
+      if (shareId) {
+        shoppingService.getShare(shareId).then(async (share) => {
+          if (share && share.isActive) {
+            if (share.type === 'collection') {
+              await shoppingService.joinCollection(share.listId, user.uid);
+              setActiveListId(null);
+            } else {
+              await shoppingService.joinList(share.listId, user.uid);
+              setSharedListId(share.listId);
+              setSharedPermission(share.permission);
+              setActiveListId(share.listId);
+            }
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        }).catch(err => {
+          console.error("Error joining share:", err);
+          setError("Could not join shared list. Please check your configuration.");
+        });
+      }
+    }
+  }, [user]);
 
   const handleAnonymously = () => {
     setLoading(true);
@@ -121,8 +131,8 @@ export default function App() {
       console.error("Google login error:", err);
       if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
         setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
-      } else { 
-         setError(err.message);
+      } else {
+        setError(err.message);
       }
       setLoading(false);
     }
@@ -131,8 +141,8 @@ export default function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50">
-        <motion.div 
-          animate={{ 
+        <motion.div
+          animate={{
             scale: [1, 1.2, 1],
             rotate: [0, 10, -10, 0]
           }}
@@ -140,7 +150,7 @@ export default function App() {
         >
           <ShoppingBag className="w-12 h-12 text-emerald-600" />
         </motion.div>
-        <motion.p 
+        <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="mt-4 text-stone-400 font-medium"
@@ -154,7 +164,7 @@ export default function App() {
   if (!isFirebaseConfigured || error || (!user && !loading)) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6 text-stone-900 selection:bg-emerald-100">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.9, rotate: 0 }}
           animate={{ opacity: 1, scale: 1, rotate: 0 }}
           className="max-w-md w-full bg-white p-8 rounded-[3rem] shadow-2xl border border-stone-200 text-center space-y-8"
@@ -165,7 +175,7 @@ export default function App() {
           )}>
             {error ? <X className="w-10 h-10 text-rose-500" /> : <ShoppingBag className="w-10 h-10 text-emerald-600" />}
           </div>
-          
+
           <div className="space-y-3">
             <h2 className="text-3xl font-black tracking-tight text-stone-900">
               {error ? "Configuration" : "Welcome to ShopShare"}
@@ -174,31 +184,31 @@ export default function App() {
               {error || "Collaborative shopping made beautiful. Sign in to start your lists."}
             </p>
           </div>
-          
+
           <div className="space-y-4 pt-4">
-            <motion.button 
+            <motion.button
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={handleGoogleLogin}
               className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-stone-100 rounded-2xl font-bold text-stone-700 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335"/>
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335" />
               </svg>
               Sign in with Google
             </motion.button>
 
-            <button 
+            <button
               onClick={handleAnonymously}
               className="w-full py-4 text-stone-400 font-bold hover:text-stone-600 transition-colors text-sm"
             >
               Continue as Guest
             </button>
           </div>
-          
+
           {error && (
             <div className="text-left space-y-3 pt-6 border-t border-stone-100">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400">Fixing the error:</h4>
@@ -223,7 +233,7 @@ export default function App() {
     <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-emerald-100">
       <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-stone-200/60 px-4 py-4 md:px-8">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3 cursor-pointer"
@@ -240,10 +250,10 @@ export default function App() {
               ShopShare
             </h1>
           </motion.div>
-          
+
           <div className="flex items-center gap-4">
             {user && !user.isAnonymous && (
-              <motion.button 
+              <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 onClick={() => signOut(auth)}
@@ -254,7 +264,7 @@ export default function App() {
               </motion.button>
             )}
             {user && user.isAnonymous && (
-              <motion.button 
+              <motion.button
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 onClick={handleGoogleLogin}
@@ -265,15 +275,15 @@ export default function App() {
             )}
             <div className="w-10 h-10 rounded-2xl bg-stone-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
               {user?.photoURL ? (
-                <img 
-                  src={user.photoURL} 
-                  alt="avatar" 
+                <img
+                  src={user.photoURL}
+                  alt="avatar"
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <img 
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`} 
-                  alt="avatar" 
+                <img
+                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`}
+                  alt="avatar"
                   className="w-full h-full object-cover"
                 />
               )}
@@ -285,13 +295,13 @@ export default function App() {
       <main className="max-w-5xl mx-auto p-4 md:p-8">
         <AnimatePresence mode="wait">
           {!activeListId ? (
-            <Dashboard 
-              userId={user?.uid || ''} 
-              onSelectList={setActiveListId} 
+            <Dashboard
+              userId={user?.uid || ''}
+              onSelectList={setActiveListId}
             />
           ) : (
-            <ListView 
-              listId={activeListId} 
+            <ListView
+              listId={activeListId}
               onBack={() => {
                 setActiveListId(null);
                 setSharedListId(null);
@@ -311,6 +321,7 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -328,7 +339,7 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -339,15 +350,27 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
           <h2 className="text-3xl font-bold text-stone-900">Your Collections</h2>
           <p className="text-stone-500 mt-1">Organize and share your shopping needs.</p>
         </div>
-        <motion.button 
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setIsCreating(true)}
-          className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
-        >
-          <Plus className="w-5 h-5" />
-          Create New List
-        </motion.button>
+        <div className="flex items-center gap-3">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowShare(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-2xl font-semibold shadow-sm hover:shadow-md transition-all"
+          >
+            <Share2 className="w-5 h-5" />
+            <span className="hidden sm:inline">Share Collection</span>
+          </motion.button>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsCreating(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">Create New List</span>
+            <span className="sm:hidden">New List</span>
+          </motion.button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -386,9 +409,9 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
             </button>
           </motion.div>
         ))}
-        
+
         {lists.length === 0 && !isCreating && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="col-span-full py-20 flex flex-col items-center justify-center border-4 border-dashed border-stone-200 rounded-[3rem] bg-stone-50/50"
@@ -397,7 +420,7 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
               <Plus className="w-10 h-10 text-stone-300" />
             </div>
             <p className="text-stone-400 font-medium text-lg">No lists found. Start fresh!</p>
-            <button 
+            <button
               onClick={() => setIsCreating(true)}
               className="mt-4 text-emerald-600 font-bold hover:underline"
             >
@@ -409,13 +432,13 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
 
       <AnimatePresence>
         {isCreating && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md"
           >
-            <motion.form 
+            <motion.form
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -424,8 +447,8 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
             >
               <div className="flex items-center justify-between">
                 <h3 className="text-2xl font-bold text-stone-900">New Collection</h3>
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setIsCreating(false)}
                   className="p-2 hover:bg-stone-100 rounded-full transition-colors"
                 >
@@ -434,7 +457,7 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-widest text-stone-400 ml-1">List Name</label>
-                <input 
+                <input
                   autoFocus
                   type="text"
                   placeholder="e.g., Weekend Camping"
@@ -444,14 +467,14 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
                 />
               </div>
               <div className="flex gap-4 pt-2">
-                <button 
+                <button
                   type="button"
                   onClick={() => setIsCreating(false)}
                   className="flex-1 px-6 py-4 rounded-2xl text-stone-600 font-bold hover:bg-stone-100 transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={!newListName.trim()}
                   className="flex-1 px-6 py-4 rounded-2xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all"
@@ -463,18 +486,23 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
           </motion.div>
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {showShare && (
+          <ShareModal listId={userId} type="collection" onClose={() => setShowShare(false)} />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
-function ListView({ 
-  listId, 
-  onBack, 
-  isShared, 
-  permission 
-}: { 
-  listId: string, 
-  onBack: () => void, 
+function ListView({
+  listId,
+  onBack,
+  isShared,
+  permission
+}: {
+  listId: string,
+  onBack: () => void,
   isShared: boolean,
   permission: Permission
 }) {
@@ -525,7 +553,7 @@ function ListView({
   const progress = items.length > 0 ? (boughtCount / items.length) * 100 : 0;
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: -20 }}
@@ -533,7 +561,7 @@ function ListView({
     >
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.1, x: -4 }}
             whileTap={{ scale: 0.9 }}
             onClick={onBack}
@@ -552,7 +580,7 @@ function ListView({
             </div>
             <div className="flex items-center gap-4 mt-2">
               <div className="flex-1 h-2 w-32 bg-stone-200 rounded-full overflow-hidden">
-                <motion.div 
+                <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${progress}%` }}
                   className="h-full bg-emerald-500"
@@ -564,10 +592,10 @@ function ListView({
             </div>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3 self-end md:self-auto">
           {!isShared && (
-            <motion.button 
+            <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowShare(true)}
@@ -578,7 +606,7 @@ function ListView({
             </motion.button>
           )}
           <div className="relative">
-            <motion.button 
+            <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowOptions(!showOptions)}
@@ -590,14 +618,14 @@ function ListView({
               {showOptions && (
                 <>
                   <div className="fixed inset-0 z-40" onClick={() => setShowOptions(false)} />
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     className="absolute right-0 mt-3 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-stone-100 z-50 overflow-hidden"
                   >
                     {!isShared && (
-                      <button 
+                      <button
                         onClick={handleDeleteList}
                         className="w-full px-5 py-4 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3 transition-colors"
                       >
@@ -605,7 +633,7 @@ function ListView({
                         Delete Collection
                       </button>
                     )}
-                    <button 
+                    <button
                       onClick={() => {
                         navigator.clipboard.writeText(window.location.href);
                         setShowOptions(false);
@@ -624,13 +652,13 @@ function ListView({
       </div>
 
       {permission === 'edit' && (
-        <motion.div 
+        <motion.div
           layout
           className="relative group"
         >
           <form onSubmit={handleAddItem} className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 relative">
-              <input 
+              <input
                 ref={inputRef}
                 type="text"
                 placeholder="What do we need?"
@@ -640,7 +668,7 @@ function ListView({
               />
               <AnimatePresence>
                 {suggestions.length > 0 && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
@@ -665,14 +693,14 @@ function ListView({
               </AnimatePresence>
             </div>
             <div className="flex gap-3">
-              <input 
+              <input
                 type="text"
                 placeholder="Qty"
                 value={newItemQty}
                 onChange={(e) => setNewItemQty(e.target.value)}
                 className="w-full sm:w-24 px-6 py-4 rounded-[1.5rem] border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm transition-all text-lg font-medium"
               />
-              <motion.button 
+              <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
@@ -689,7 +717,7 @@ function ListView({
       <div className="grid grid-cols-1 gap-4">
         <AnimatePresence initial={false}>
           {items.map((item) => (
-            <motion.div 
+            <motion.div
               layout
               key={item.id}
               initial={{ opacity: 0, scale: 0.95 }}
@@ -697,20 +725,20 @@ function ListView({
               exit={{ opacity: 0, scale: 0.95 }}
               className={cn(
                 "group flex items-center justify-between p-5 rounded-[2rem] border-2 transition-all duration-300",
-                item.isBought 
-                  ? "bg-stone-50 border-stone-100 opacity-60" 
+                item.isBought
+                  ? "bg-stone-50 border-stone-100 opacity-60"
                   : "bg-white border-stone-100 shadow-sm hover:shadow-md hover:border-emerald-100"
               )}
             >
               <div className="flex items-center gap-5 flex-1">
-                <motion.button 
+                <motion.button
                   whileTap={{ scale: 0.8 }}
                   disabled={permission === 'read'}
                   onClick={() => shoppingService.toggleItem(listId, item.id, !item.isBought)}
                   className={cn(
                     "w-8 h-8 rounded-full flex items-center justify-center transition-all border-2",
-                    item.isBought 
-                      ? "bg-emerald-500 border-emerald-500 text-white" 
+                    item.isBought
+                      ? "bg-emerald-500 border-emerald-500 text-white"
                       : "bg-white border-stone-200 text-transparent hover:border-emerald-400"
                   )}
                 >
@@ -729,7 +757,7 @@ function ListView({
                 </div>
               </div>
               {permission === 'edit' && (
-                <motion.button 
+                <motion.button
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => shoppingService.deleteItem(listId, item.id)}
@@ -741,7 +769,7 @@ function ListView({
             </motion.div>
           ))}
         </AnimatePresence>
-        
+
         {items.length === 0 && (
           <div className="py-20 flex flex-col items-center justify-center text-center space-y-4">
             <div className="w-24 h-24 bg-stone-100 rounded-[2.5rem] flex items-center justify-center">
@@ -757,9 +785,9 @@ function ListView({
 
       <AnimatePresence>
         {showShare && (
-          <ShareModal 
-            listId={listId} 
-            onClose={() => setShowShare(false)} 
+          <ShareModal
+            listId={listId}
+            onClose={() => setShowShare(false)}
           />
         )}
       </AnimatePresence>
@@ -767,32 +795,34 @@ function ListView({
   );
 }
 
-function ShareModal({ listId, onClose }: { listId: string, onClose: () => void }) {
+function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClose: () => void, type?: 'list' | 'collection' }) {
   const [shares, setShares] = useState<ShareLink[]>([]);
   const [permission, setPermission] = useState<Permission>('read');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     return shoppingService.subscribeToShares(listId, setShares);
   }, [listId]);
 
   const handleCreateShare = async () => {
-    await shoppingService.createShareLink(listId, permission);
+    await shoppingService.createShareLink(listId, permission, type);
   };
 
   const copyShareLink = (shareId: string) => {
     const url = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
     navigator.clipboard.writeText(url);
-    // Simple toast-like feedback could be added here
+    setCopiedId(shareId);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md"
     >
-      <motion.div 
+      <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -800,7 +830,7 @@ function ShareModal({ listId, onClose }: { listId: string, onClose: () => void }
       >
         <div className="flex items-center justify-between">
           <h3 className="text-2xl font-bold text-stone-900">Share Collection</h3>
-          <button 
+          <button
             onClick={onClose}
             className="p-2 hover:bg-stone-100 rounded-full transition-colors"
           >
@@ -810,7 +840,7 @@ function ShareModal({ listId, onClose }: { listId: string, onClose: () => void }
 
         <div className="space-y-6">
           <div className="flex items-center gap-3 p-2 bg-stone-100 rounded-[1.5rem]">
-            <button 
+            <button
               onClick={() => setPermission('read')}
               className={cn(
                 "flex-1 py-3 rounded-2xl text-sm font-bold transition-all",
@@ -819,7 +849,7 @@ function ShareModal({ listId, onClose }: { listId: string, onClose: () => void }
             >
               Read Only
             </button>
-            <button 
+            <button
               onClick={() => setPermission('edit')}
               className={cn(
                 "flex-1 py-3 rounded-2xl text-sm font-bold transition-all",
@@ -830,7 +860,7 @@ function ShareModal({ listId, onClose }: { listId: string, onClose: () => void }
             </button>
           </div>
 
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleCreateShare}
@@ -845,9 +875,9 @@ function ShareModal({ listId, onClose }: { listId: string, onClose: () => void }
           <h4 className="text-xs font-black uppercase tracking-[0.2em] text-stone-400 ml-1">Active Links</h4>
           <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
             {shares.map((share) => (
-              <motion.div 
+              <motion.div
                 layout
-                key={share.id} 
+                key={share.id}
                 className="flex items-center justify-between p-5 rounded-[1.5rem] border-2 border-stone-50 bg-stone-50/50"
               >
                 <div className="flex flex-col">
@@ -860,26 +890,26 @@ function ShareModal({ listId, onClose }: { listId: string, onClose: () => void }
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     onClick={() => copyShareLink(share.id)}
                     className="p-3 bg-white hover:bg-stone-100 rounded-xl shadow-sm border border-stone-200 transition-all text-stone-600"
                     title="Copy Link"
                   >
-                    <Copy className="w-4 h-4" />
+                    {copiedId === share.id ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
-                  <button 
+                  <button
                     onClick={() => shoppingService.toggleShareActive(share.id, !share.isActive)}
                     className={cn(
                       "p-3 rounded-xl shadow-sm border transition-all",
-                      share.isActive 
-                        ? "bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100" 
+                      share.isActive
+                        ? "bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100"
                         : "bg-white border-stone-200 text-stone-400 hover:bg-stone-100"
                     )}
                     title={share.isActive ? "Deactivate" : "Activate"}
                   >
                     <CheckCircle2 className={cn("w-4 h-4", !share.isActive && "opacity-20")} />
                   </button>
-                  <button 
+                  <button
                     onClick={() => shoppingService.deleteShare(share.id)}
                     className="p-3 bg-white hover:bg-rose-50 rounded-xl shadow-sm border border-stone-200 transition-all text-rose-500"
                     title="Delete Link"
