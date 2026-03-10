@@ -57,25 +57,6 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
-
-      const params = new URLSearchParams(window.location.search);
-      const shareId = params.get('share');
-
-      if (u && shareId && !shareProcessed.current) {
-        shareProcessed.current = true;
-        try {
-          const share = await shoppingService.getShare(shareId);
-          if (share && share.isActive) {
-            setSharedListId(share.listId);
-            setSharedPermission(share.permission);
-            setActiveListId(share.listId);
-          }
-        } catch (err) {
-          console.error("Error fetching share:", err);
-          setError("Could not load shared list. Please check your configuration.");
-        }
-      }
-
       setLoading(false);
     }, (err) => {
       console.error("Auth state change error:", err);
