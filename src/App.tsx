@@ -678,7 +678,7 @@ function ListView({
                 placeholder="What do we need?"
                 value={newItemName}
                 onChange={(e) => handleInputChange(e.target.value)}
-                className="w-full px-6 py-4 rounded-[1.5rem] border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm focus:shadow-emerald-500/10 transition-all text-lg font-medium"
+                className="w-full px-5 py-3 rounded-2xl border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm focus:shadow-emerald-500/10 transition-all text-base font-medium"
               />
               <AnimatePresence>
                 {suggestions.length > 0 && (
@@ -686,7 +686,7 @@ function ListView({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute top-full left-0 right-0 mt-2 bg-white border border-stone-100 rounded-[1.5rem] shadow-2xl z-50 overflow-hidden"
+                    className="absolute top-full left-0 right-0 mt-2 bg-white border border-stone-100 rounded-2xl shadow-2xl z-50 overflow-hidden"
                   >
                     {suggestions.map((sug, i) => (
                       <button
@@ -697,7 +697,7 @@ function ListView({
                           setSuggestions([]);
                           inputRef.current?.focus();
                         }}
-                        className="w-full px-6 py-4 text-left text-base font-medium hover:bg-emerald-50 hover:text-emerald-700 transition-colors border-b border-stone-50 last:border-0"
+                        className="w-full px-5 py-3 text-left text-base font-medium hover:bg-emerald-50 hover:text-emerald-700 transition-colors border-b border-stone-50 last:border-0"
                       >
                         {sug}
                       </button>
@@ -712,16 +712,16 @@ function ListView({
                 placeholder="Qty"
                 value={newItemQty}
                 onChange={(e) => setNewItemQty(e.target.value)}
-                className="w-full sm:w-24 px-6 py-4 rounded-[1.5rem] border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm transition-all text-lg font-medium"
+                className="w-full sm:w-24 px-5 py-3 rounded-2xl border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm transition-all text-base font-medium"
               />
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
                 disabled={!newItemName.trim()}
-                className="p-4 rounded-[1.5rem] bg-emerald-600 text-white disabled:opacity-50 shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
+                className="p-3 rounded-2xl bg-emerald-600 text-white disabled:opacity-50 shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center"
               >
-                <Plus className="w-8 h-8" />
+                <Plus className="w-6 h-6" />
               </motion.button>
             </div>
           </form>
