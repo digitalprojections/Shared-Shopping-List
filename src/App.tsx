@@ -46,54 +46,6 @@ const COLORS = [
 ];
 
 export default function App() {
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  Plus,
-  Share2,
-  Trash2,
-  CheckCircle2,
-  Circle,
-  ChevronLeft,
-  Copy,
-  Link as LinkIcon,
-  X,
-  MoreVertical,
-  LogOut,
-  ShoppingBag,
-  Coins,
-  Ticket,
-  Crown
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
-import {
-  signInAnonymously,
-  onAuthStateChanged,
-  User,
-  signOut,
-  signInWithPopup,
-  linkWithPopup,
-  getRedirectResult
-} from 'firebase/auth';
-import { shoppingService } from './services/shoppingService';
-import { userService } from './services/userService';
-import { couponService } from './services/couponService';
-import { ShoppingList, ListItem, ShareLink, Permission, AppUser } from './types';
-import { cn } from './lib/utils';
-
-// --- Components ---
-
-const COLORS = [
-  'bg-rose-100 border-rose-200 text-rose-700',
-  'bg-amber-100 border-amber-200 text-amber-700',
-  'bg-emerald-100 border-emerald-200 text-emerald-700',
-  'bg-sky-100 border-sky-200 text-sky-700',
-  'bg-indigo-100 border-indigo-200 text-indigo-700',
-  'bg-violet-100 border-violet-200 text-violet-700',
-  'bg-fuchsia-100 border-fuchsia-200 text-fuchsia-700',
-];
-
-export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -621,13 +573,14 @@ function ListView({
   onBack,
   isShared,
   permission,
-  user
+  user,
+  appUser
 }: {
   listId: string,
   onBack: () => void,
   isShared: boolean,
   permission: Permission,
-  user: User,
+  user: User | null,
   appUser: AppUser | null
 }) {
   const [list, setList] = useState<ShoppingList | null>(null);
