@@ -89,6 +89,7 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
+      userService.ensureUserProfile(user.uid);
       return userService.subscribeToUserProfile(user.uid, setAppUser);
     } else {
       setAppUser(null);

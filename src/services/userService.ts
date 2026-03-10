@@ -3,6 +3,24 @@ import { db, isFirebaseConfigured } from '../lib/firebase';
 import { AppUser } from '../types';
 
 export const userService = {
+  ensureUserProfile: async (userId: string): Promise<void> => {
+    if (!isFirebaseConfigured) return;
+    const userRef = doc(db, 'users', userId);
+    try {
+      const userDoc = await getDoc(userRef);
+      if (!userDoc.exists()) {
+        const newUser: AppUser = {
+          uid: userId,
+          coinBalance: 0,
+          isAdmin: false
+        };
+        await setDoc(userRef, newUser);
+      }
+    } catch (error) {
+      console.error("Error ensuring user profile:", error);
+    }
+  },
+
   getUserProfile: async (userId: string): Promise<AppUser | null> => {
     if (!isFirebaseConfigured) return null;
     const userRef = doc(db, 'users', userId);
@@ -28,16 +46,9 @@ export const userService = {
     return onSnapshot(userRef, (doc) => {
       if (doc.exists()) {
         callback(doc.data() as AppUser);
-      } else {
-        // Initialize if doesn't exist
-        const newUser: AppUser = {
-          uid: userId,
-          coinBalance: 0,
-          isAdmin: false
-        };
-        setDoc(userRef, newUser);
-        callback(newUser);
       }
+    }, (error) => {
+      console.error("User profile subscription error:", error);
     });
   }
 };
