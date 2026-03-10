@@ -58,9 +58,29 @@ export const couponService = {
           consumedAt: Date.now()
         });
         
-        // Update user balance
+        const now = Date.now();
+        const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
+        
+        const newBatch = {
+          id: Math.random().toString(36).substring(7),
+          amount: couponData.coinsAmount,
+          remaining: couponData.coinsAmount,
+          createdAt: now,
+          expiresAt: expiresAt
+        };
+
+        const userData = (await transaction.get(userRef)).data() as any;
+        const currentBatches = userData?.coinBatches || [];
+        const updatedBatches = [...currentBatches, newBatch];
+        
+        // Recalculate total balance from valid batches
+        const validBatches = updatedBatches.filter(b => b.expiresAt > now);
+        const totalBalance = validBatches.reduce((sum, b) => sum + b.remaining, 0);
+
+        // Update user
         transaction.update(userRef, {
-          coinBalance: increment(couponData.coinsAmount)
+          coinBatches: updatedBatches,
+          coinBalance: totalBalance
         });
         
         return couponData.coinsAmount;

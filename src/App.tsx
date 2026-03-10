@@ -601,12 +601,22 @@ function ListView({
 
   const handleAddItem = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!newItemName.trim() || permission === 'read') return;
-    await shoppingService.addItem(listId, newItemName, newItemQty);
-    setNewItemName('');
-    setNewItemQty('');
-    setSuggestions([]);
-    inputRef.current?.focus();
+    if (!newItemName.trim() || permission === 'read' || !user) return;
+
+    if (!appUser || appUser.coinBalance <= 0) {
+      alert("Insufficient coins! Please redeem a coupon to add more items.");
+      return;
+    }
+
+    try {
+      await shoppingService.addItem(listId, newItemName, newItemQty, user.uid);
+      setNewItemName('');
+      setNewItemQty('');
+      setSuggestions([]);
+      inputRef.current?.focus();
+    } catch (error: any) {
+      alert(error.message || "Failed to add item");
+    }
   };
 
   const handleInputChange = async (val: string) => {

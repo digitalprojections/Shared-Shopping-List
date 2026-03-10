@@ -32,9 +32,18 @@ export interface UserSuggestion {
   count: number;
 }
 
+export interface CoinBatch {
+  id: string;
+  amount: number;
+  remaining: number;
+  expiresAt: number;
+  createdAt: number;
+}
+
 export interface AppUser {
   uid: string;
   coinBalance: number;
+  coinBatches?: CoinBatch[];
   isAdmin?: boolean;
 }
 

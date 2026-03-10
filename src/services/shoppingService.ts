@@ -18,6 +18,7 @@ import {
 import { db, isFirebaseConfigured } from '../lib/firebase';
 import { localDB } from '../lib/db';
 import { ShoppingList, ListItem, ShareLink, Permission } from '../types';
+import { userService } from './userService';
 
 export const shoppingService = {
   // Lists
@@ -157,7 +158,15 @@ export const shoppingService = {
     });
   },
 
-  addItem: async (listId: string, name: string, quantity: string) => {
+  addItem: async (listId: string, name: string, quantity: string, userId: string) => {
+    // Consume coin first
+    if (isFirebaseConfigured) {
+      const consumption = await userService.consumeCoin(userId);
+      if (!consumption.success) {
+        throw new Error(consumption.error || 'Failed to consume coin');
+      }
+    }
+
     const newItem: Omit<ListItem, 'id'> = {
       name,
       quantity,
