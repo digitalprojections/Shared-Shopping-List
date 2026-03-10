@@ -46,6 +46,54 @@ const COLORS = [
 ];
 
 export default function App() {
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Plus,
+  Share2,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  ChevronLeft,
+  Copy,
+  Link as LinkIcon,
+  X,
+  MoreVertical,
+  LogOut,
+  ShoppingBag,
+  Coins,
+  Ticket,
+  Crown
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
+import {
+  signInAnonymously,
+  onAuthStateChanged,
+  User,
+  signOut,
+  signInWithPopup,
+  linkWithPopup,
+  getRedirectResult
+} from 'firebase/auth';
+import { shoppingService } from './services/shoppingService';
+import { userService } from './services/userService';
+import { couponService } from './services/couponService';
+import { ShoppingList, ListItem, ShareLink, Permission, AppUser } from './types';
+import { cn } from './lib/utils';
+
+// --- Components ---
+
+const COLORS = [
+  'bg-rose-100 border-rose-200 text-rose-700',
+  'bg-amber-100 border-amber-200 text-amber-700',
+  'bg-emerald-100 border-emerald-200 text-emerald-700',
+  'bg-sky-100 border-sky-200 text-sky-700',
+  'bg-indigo-100 border-indigo-200 text-indigo-700',
+  'bg-violet-100 border-violet-200 text-violet-700',
+  'bg-fuchsia-100 border-fuchsia-200 text-fuchsia-700',
+];
+
+export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +101,7 @@ export default function App() {
   const [sharedListId, setSharedListId] = useState<string | null>(null);
   const [sharedPermission, setSharedPermission] = useState<Permission>('read');
   const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [showRedeemModal, setShowRedeemModal] = useState(false);
   const shareProcessed = useRef(false);
 
   useEffect(() => {
@@ -274,7 +323,20 @@ export default function App() {
           </motion.div>
 
           <div className="flex items-center gap-4">
-            {appUser && <CoinDisplay balance={appUser.coinBalance} />}
+            {appUser && (
+              <div className="flex items-center gap-2">
+                <CoinDisplay balance={appUser.coinBalance} />
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowRedeemModal(true)}
+                  className="p-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm"
+                  title="Redeem Coupon"
+                >
+                  <Ticket className="w-5 h-5" />
+                </motion.button>
+              </div>
+            )}
             {user && !user.isAnonymous && (
               <motion.button
                 initial={{ opacity: 0 }}
@@ -340,13 +402,22 @@ export default function App() {
           )}
         </AnimatePresence>
       </main>
+
+      <AnimatePresence>
+        {showRedeemModal && user && (
+          <RedeemModal
+            userId={user.uid}
+            onClose={() => setShowRedeemModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 function CoinDisplay({ balance }: { balance: number }) {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full shadow-sm"
@@ -476,7 +547,6 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
         </div>
 
         <div className="space-y-6">
-          <CouponRedemption userId={userId} />
           {appUser?.isAdmin && <CouponGenerator />}
         </div>
       </div>
@@ -985,7 +1055,7 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
   );
 }
 
-function CouponRedemption({ userId }: { userId: string }) {
+function RedeemModal({ userId, onClose }: { userId: string, onClose: () => void }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
@@ -1000,44 +1070,81 @@ function CouponRedemption({ userId }: { userId: string }) {
     if (res.success) {
       setMsg({ text: res.message, type: 'success' });
       setCode('');
+      setTimeout(onClose, 2000);
     } else {
       setMsg({ text: res.message, type: 'error' });
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm space-y-4">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-          <Ticket className="w-5 h-5 text-amber-600" />
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md space-y-6"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
+              <Ticket className="w-6 h-6 text-amber-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-stone-900">Redeem Coupon</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6 text-stone-400" />
+          </button>
         </div>
-        <h3 className="font-bold text-stone-900">Redeem Coupon</h3>
-      </div>
-      <form onSubmit={handleRedeem} className="space-y-3">
-        <input
-          type="text"
-          placeholder="SHOP-XXXX-YYYY"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          className="w-full px-4 py-3 rounded-xl border-2 border-stone-50 bg-stone-50 focus:outline-none focus:border-amber-400 focus:bg-white transition-all font-mono text-sm"
-        />
-        <button
-          type="submit"
-          disabled={loading || !code.trim()}
-          className="w-full py-3 rounded-xl bg-amber-600 text-white font-bold text-sm shadow-md shadow-amber-600/10 hover:bg-amber-700 disabled:opacity-50 transition-all"
-        >
-          {loading ? 'Redeeming...' : 'Apply Code'}
-        </button>
-      </form>
-      {msg && (
-        <p className={cn(
-          "text-xs font-semibold text-center",
-          msg.type === 'success' ? "text-emerald-600" : "text-rose-500"
-        )}>
-          {msg.text}
+
+        <form onSubmit={handleRedeem} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-xs font-bold uppercase tracking-widest text-stone-400 ml-1">Coupon Code</label>
+            <input
+              autoFocus
+              type="text"
+              placeholder="SHOP-XXXX-YYYY"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              className="w-full px-6 py-4 rounded-2xl border-2 border-stone-100 bg-stone-50 focus:outline-none focus:border-amber-400 focus:bg-white transition-all font-mono text-lg"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading || !code.trim()}
+            className="w-full py-5 rounded-2xl bg-amber-600 text-white font-bold shadow-xl shadow-amber-600/20 hover:bg-amber-700 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
+          >
+            {loading ? 'Validating...' : 'Claim Coins'}
+          </button>
+        </form>
+
+        <AnimatePresence>
+          {msg && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              className={cn(
+                "p-4 rounded-xl text-sm font-bold text-center",
+                msg.type === 'success' ? "bg-emerald-50 text-emerald-600" : "bg-rose-50 text-rose-500"
+              )}
+            >
+              {msg.text}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <p className="text-center text-xs text-stone-400 font-medium">
+          Coins will be added to your balance instantly upon successful redemption.
         </p>
-      )}
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -1088,7 +1195,7 @@ function CouponGenerator() {
           <div className="space-y-3">
             <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
               <code className="text-amber-400 font-mono text-xs">{generatedCode}</code>
-              <button 
+              <button
                 onClick={() => navigator.clipboard.writeText(generatedCode)}
                 className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
               >
