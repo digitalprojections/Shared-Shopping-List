@@ -11,7 +11,10 @@ import {
   X,
   MoreVertical,
   LogOut,
-  ShoppingBag
+  ShoppingBag,
+  Coins,
+  Ticket,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
@@ -25,7 +28,9 @@ import {
   getRedirectResult
 } from 'firebase/auth';
 import { shoppingService } from './services/shoppingService';
-import { ShoppingList, ListItem, ShareLink, Permission } from './types';
+import { userService } from './services/userService';
+import { couponService } from './services/couponService';
+import { ShoppingList, ListItem, ShareLink, Permission, AppUser } from './types';
 import { cn } from './lib/utils';
 
 // --- Components ---
@@ -47,6 +52,7 @@ export default function App() {
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [sharedListId, setSharedListId] = useState<string | null>(null);
   const [sharedPermission, setSharedPermission] = useState<Permission>('read');
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
   const shareProcessed = useRef(false);
 
   useEffect(() => {
@@ -79,6 +85,14 @@ export default function App() {
 
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      return userService.subscribeToUserProfile(user.uid, setAppUser);
+    } else {
+      setAppUser(null);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (user && isFirebaseConfigured) {
@@ -260,6 +274,7 @@ export default function App() {
           </motion.div>
 
           <div className="flex items-center gap-4">
+            {appUser && <CoinDisplay balance={appUser.coinBalance} />}
             {user && !user.isAnonymous && (
               <motion.button
                 initial={{ opacity: 0 }}
@@ -307,6 +322,7 @@ export default function App() {
               userId={user?.uid || ''}
               onSelectList={setActiveListId}
               user={user}
+              appUser={appUser}
             />
           ) : (
             <ListView
@@ -319,6 +335,7 @@ export default function App() {
               isShared={!!sharedListId}
               permission={sharedListId ? sharedPermission : 'edit'}
               user={user}
+              appUser={appUser}
             />
           )}
         </AnimatePresence>
@@ -327,7 +344,20 @@ export default function App() {
   );
 }
 
-function Dashboard({ userId, onSelectList, user }: { userId: string, onSelectList: (id: string) => void, user: User }) {
+function CoinDisplay({ balance }: { balance: number }) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full shadow-sm"
+    >
+      <Coins className="w-4 h-4 text-amber-600" />
+      <span className="text-sm font-bold text-amber-900">{balance}</span>
+    </motion.div>
+  );
+}
+
+function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, onSelectList: (id: string) => void, user: User, appUser: AppUser | null }) {
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
@@ -385,61 +415,70 @@ function Dashboard({ userId, onSelectList, user }: { userId: string, onSelectLis
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {lists.map((list, index) => (
-          <motion.div
-            key={list.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            whileHover={{ y: -4 }}
-            className="group relative"
-          >
-            <button
-              onClick={() => onSelectList(list.id)}
-              className={cn(
-                "w-full aspect-[4/3] p-6 rounded-[2.5rem] border-2 flex flex-col justify-between text-left transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-emerald-900/5",
-                list.color || COLORS[0]
-              )}
-            >
-              <div className="space-y-2">
-                <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                  <ShoppingBag className="w-6 h-6 opacity-80" />
-                </div>
-                <h3 className="font-bold text-2xl leading-tight line-clamp-2">
-                  {list.name}
-                </h3>
-              </div>
-              <div className="flex items-center justify-between mt-4">
-                <span className="text-xs font-bold uppercase tracking-widest opacity-60">
-                  {new Date(list.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                </span>
-                <div className="p-2 bg-white/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                  <ChevronLeft className="w-5 h-5 rotate-180" />
-                </div>
-              </div>
-            </button>
-          </motion.div>
-        ))}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {lists.map((list, index) => (
+              <motion.div
+                key={list.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ y: -4 }}
+                className="group relative"
+              >
+                <button
+                  onClick={() => onSelectList(list.id)}
+                  className={cn(
+                    "w-full aspect-[4/3] p-6 rounded-[2.5rem] border-2 flex flex-col justify-between text-left transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-emerald-900/5",
+                    list.color || COLORS[0]
+                  )}
+                >
+                  <div className="space-y-2">
+                    <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <ShoppingBag className="w-6 h-6 opacity-80" />
+                    </div>
+                    <h3 className="font-bold text-2xl leading-tight line-clamp-2">
+                      {list.name}
+                    </h3>
+                  </div>
+                  <div className="flex items-center justify-between mt-4">
+                    <span className="text-xs font-bold uppercase tracking-widest opacity-60">
+                      {new Date(list.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                    <div className="p-2 bg-white/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ChevronLeft className="w-5 h-5 rotate-180" />
+                    </div>
+                  </div>
+                </button>
+              </motion.div>
+            ))}
 
-        {lists.length === 0 && !isCreating && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="col-span-full py-20 flex flex-col items-center justify-center border-4 border-dashed border-stone-200 rounded-[3rem] bg-stone-50/50"
-          >
-            <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center mb-4">
-              <Plus className="w-10 h-10 text-stone-300" />
-            </div>
-            <p className="text-stone-400 font-medium text-lg">No lists found. Start fresh!</p>
-            <button
-              onClick={() => setIsCreating(true)}
-              className="mt-4 text-emerald-600 font-bold hover:underline"
-            >
-              Create your first list
-            </button>
-          </motion.div>
-        )}
+            {lists.length === 0 && !isCreating && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="col-span-full py-20 flex flex-col items-center justify-center border-4 border-dashed border-stone-200 rounded-[3rem] bg-stone-50/50"
+              >
+                <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center mb-4">
+                  <Plus className="w-10 h-10 text-stone-300" />
+                </div>
+                <p className="text-stone-400 font-medium text-lg">No lists found. Start fresh!</p>
+                <button
+                  onClick={() => setIsCreating(true)}
+                  className="mt-4 text-emerald-600 font-bold hover:underline"
+                >
+                  Create your first list
+                </button>
+              </motion.div>
+            )}
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <CouponRedemption userId={userId} />
+          {appUser?.isAdmin && <CouponGenerator />}
+        </div>
       </div>
 
       <AnimatePresence>
@@ -518,7 +557,8 @@ function ListView({
   onBack: () => void,
   isShared: boolean,
   permission: Permission,
-  user: User
+  user: User,
+  appUser: AppUser | null
 }) {
   const [list, setList] = useState<ShoppingList | null>(null);
   const [items, setItems] = useState<ListItem[]>([]);
@@ -942,5 +982,128 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+function CouponRedemption({ userId }: { userId: string }) {
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+
+  const handleRedeem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setLoading(true);
+    setMsg(null);
+    const res = await couponService.redeemCoupon(userId, code);
+    setLoading(false);
+    if (res.success) {
+      setMsg({ text: res.message, type: 'success' });
+      setCode('');
+    } else {
+      setMsg({ text: res.message, type: 'error' });
+    }
+  };
+
+  return (
+    <div className="bg-white p-6 rounded-[2rem] border border-stone-100 shadow-sm space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+          <Ticket className="w-5 h-5 text-amber-600" />
+        </div>
+        <h3 className="font-bold text-stone-900">Redeem Coupon</h3>
+      </div>
+      <form onSubmit={handleRedeem} className="space-y-3">
+        <input
+          type="text"
+          placeholder="SHOP-XXXX-YYYY"
+          value={code}
+          onChange={(e) => setCode(e.target.value.toUpperCase())}
+          className="w-full px-4 py-3 rounded-xl border-2 border-stone-50 bg-stone-50 focus:outline-none focus:border-amber-400 focus:bg-white transition-all font-mono text-sm"
+        />
+        <button
+          type="submit"
+          disabled={loading || !code.trim()}
+          className="w-full py-3 rounded-xl bg-amber-600 text-white font-bold text-sm shadow-md shadow-amber-600/10 hover:bg-amber-700 disabled:opacity-50 transition-all"
+        >
+          {loading ? 'Redeeming...' : 'Apply Code'}
+        </button>
+      </form>
+      {msg && (
+        <p className={cn(
+          "text-xs font-semibold text-center",
+          msg.type === 'success' ? "text-emerald-600" : "text-rose-500"
+        )}>
+          {msg.text}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function CouponGenerator() {
+  const [amount, setAmount] = useState('100');
+  const [loading, setLoading] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    const code = await couponService.generateCoupon(parseInt(amount));
+    setLoading(false);
+    setGeneratedCode(code);
+  };
+
+  return (
+    <div className="bg-stone-900 p-6 rounded-[2rem] text-white shadow-xl space-y-4">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
+          <Crown className="w-5 h-5 text-amber-400" />
+        </div>
+        <h3 className="font-bold">Admin: Mint Coins</h3>
+      </div>
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-2">
+          {['50', '100', '500', '1000'].map(val => (
+            <button
+              key={val}
+              onClick={() => setAmount(val)}
+              className={cn(
+                "py-2 rounded-lg text-xs font-bold transition-all",
+                amount === val ? "bg-amber-500 text-stone-900" : "bg-white/5 hover:bg-white/10"
+              )}
+            >
+              {val} Coins
+            </button>
+          ))}
+        </div>
+        {!generatedCode ? (
+          <button
+            onClick={handleGenerate}
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-white text-stone-900 font-bold text-sm hover:bg-stone-100 disabled:opacity-50 transition-all"
+          >
+            {loading ? 'Generating...' : 'Generate Coupon'}
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <div className="p-3 bg-white/5 rounded-xl border border-white/10 flex items-center justify-between">
+              <code className="text-amber-400 font-mono text-xs">{generatedCode}</code>
+              <button 
+                onClick={() => navigator.clipboard.writeText(generatedCode)}
+                className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <button
+              onClick={() => setGeneratedCode(null)}
+              className="w-full py-2 text-xs font-bold text-stone-400 hover:text-white transition-colors"
+            >
+              Generate Another
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

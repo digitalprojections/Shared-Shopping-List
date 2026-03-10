@@ -31,3 +31,18 @@ export interface UserSuggestion {
   name: string;
   count: number;
 }
+
+export interface AppUser {
+  uid: string;
+  coinBalance: number;
+  isAdmin?: boolean;
+}
+
+export interface Coupon {
+  id: string; // Document ID is the code
+  code: string;
+  coinsAmount: number;
+  isConsumed: boolean;
+  consumedBy: string | null;
+  createdAt: number;
+}
