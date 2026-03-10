@@ -85,6 +85,10 @@ export default function App() {
       const params = new URLSearchParams(window.location.search);
       const shareId = params.get('share');
       if (shareId) {
+        if (user.isAnonymous) {
+          setError("You must sign in with a real account to join shared lists.");
+          return;
+        }
         shoppingService.getShare(shareId).then(async (share) => {
           if (share && share.isActive) {
             if (share.type === 'collection') {
@@ -302,6 +306,7 @@ export default function App() {
             <Dashboard
               userId={user?.uid || ''}
               onSelectList={setActiveListId}
+              user={user}
             />
           ) : (
             <ListView
@@ -313,6 +318,7 @@ export default function App() {
               }}
               isShared={!!sharedListId}
               permission={sharedListId ? sharedPermission : 'edit'}
+              user={user}
             />
           )}
         </AnimatePresence>
@@ -321,7 +327,7 @@ export default function App() {
   );
 }
 
-function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id: string) => void }) {
+function Dashboard({ userId, onSelectList, user }: { userId: string, onSelectList: (id: string) => void, user: User }) {
   const [lists, setLists] = useState<ShoppingList[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
@@ -355,15 +361,17 @@ function Dashboard({ userId, onSelectList }: { userId: string, onSelectList: (id
           <p className="text-stone-500 mt-1">Organize and share your shopping needs.</p>
         </div>
         <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowShare(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-2xl font-semibold shadow-sm hover:shadow-md transition-all"
-          >
-            <Share2 className="w-5 h-5" />
-            <span className="hidden sm:inline">Share Collection</span>
-          </motion.button>
+          {!user.isAnonymous && (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowShare(true)}
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-2xl font-semibold shadow-sm hover:shadow-md transition-all"
+            >
+              <Share2 className="w-5 h-5" />
+              <span className="hidden sm:inline">Share Collection</span>
+            </motion.button>
+          )}
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -503,12 +511,14 @@ function ListView({
   listId,
   onBack,
   isShared,
-  permission
+  permission,
+  user
 }: {
   listId: string,
   onBack: () => void,
   isShared: boolean,
-  permission: Permission
+  permission: Permission,
+  user: User
 }) {
   const [list, setList] = useState<ShoppingList | null>(null);
   const [items, setItems] = useState<ListItem[]>([]);
@@ -598,7 +608,7 @@ function ListView({
         </div>
 
         <div className="flex items-center gap-3 self-end md:self-auto">
-          {!isShared && (
+          {!isShared && !user?.isAnonymous && (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
