@@ -21,7 +21,8 @@ import {
   User,
   signOut,
   signInWithPopup,
-  linkWithPopup
+  linkWithPopup,
+  getRedirectResult
 } from 'firebase/auth';
 import { shoppingService } from './services/shoppingService';
 import { ShoppingList, ListItem, ShareLink, Permission } from './types';
