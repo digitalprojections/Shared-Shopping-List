@@ -37,6 +37,7 @@ ShopShare is a premium, real-time shared shopping list application built with Re
    ```bash
    npm install
    ```
+   
 
 3. Configure Environment Variables:
    Create a `.env` file in the root directory and add your Firebase credentials:
