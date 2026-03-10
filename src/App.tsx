@@ -738,35 +738,35 @@ function ListView({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className={cn(
-                "group flex items-center justify-between p-5 rounded-[2rem] border-2 transition-all duration-300",
+                "group flex items-center justify-between p-3 sm:p-4 rounded-2xl border transition-all duration-300",
                 item.isBought
-                  ? "bg-stone-50 border-stone-100 opacity-60"
+                  ? "bg-stone-50 border-transparent opacity-60"
                   : "bg-white border-stone-100 shadow-sm hover:shadow-md hover:border-emerald-100"
               )}
             >
-              <div className="flex items-center gap-5 flex-1">
+              <div className="flex items-center gap-4 flex-1">
                 <motion.button
                   whileTap={{ scale: 0.8 }}
                   disabled={permission === 'read'}
                   onClick={() => shoppingService.toggleItem(listId, item.id, !item.isBought)}
                   className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center transition-all border-2",
+                    "w-6 h-6 rounded-full flex items-center justify-center transition-all border-2 flex-shrink-0",
                     item.isBought
                       ? "bg-emerald-500 border-emerald-500 text-white"
                       : "bg-white border-stone-200 text-transparent hover:border-emerald-400"
                   )}
                 >
-                  <CheckCircle2 className="w-5 h-5" />
+                  <CheckCircle2 className="w-4 h-4" />
                 </motion.button>
                 <div className="flex flex-col">
                   <span className={cn(
-                    "text-xl font-bold transition-all",
+                    "text-lg font-semibold transition-all",
                     item.isBought && "line-through text-stone-400"
                   )}>
                     {item.name}
                   </span>
                   {item.quantity && (
-                    <span className="text-sm font-bold text-stone-400 uppercase tracking-widest">{item.quantity}</span>
+                    <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{item.quantity}</span>
                   )}
                 </div>
               </div>
@@ -775,9 +775,9 @@ function ListView({
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.9 }}
                   onClick={() => shoppingService.deleteItem(listId, item.id)}
-                  className="p-3 text-stone-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-2 text-stone-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
                 >
-                  <Trash2 className="w-5 h-5" />
+                  <Trash2 className="w-4 h-4" />
                 </motion.button>
               )}
             </motion.div>
