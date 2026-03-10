@@ -416,15 +416,6 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
           <p className="text-stone-500 mt-1">Organize and share your shopping needs.</p>
         </div>
         <div className="flex items-center gap-3">
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setShowRedeemModal(true)}
-            className="flex items-center justify-center gap-2 px-6 py-3 bg-amber-50 border border-amber-200 text-amber-700 rounded-2xl font-semibold shadow-sm hover:shadow-md transition-all"
-          >
-            <Ticket className="w-5 h-5" />
-            <span>Redeem Code</span>
-          </motion.button>
           {!user.isAnonymous && (
             <motion.button
               whileHover={{ scale: 1.05 }}
