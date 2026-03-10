@@ -20,9 +20,8 @@ import {
   onAuthStateChanged, 
   User,
   signOut,
-  signInWithRedirect,
-  linkWithRedirect,
-  getRedirectResult
+  signInWithPopup,
+  linkWithPopup
 } from 'firebase/auth';
 import { shoppingService } from './services/shoppingService';
 import { ShoppingList, ListItem, ShareLink, Permission } from './types';
@@ -47,6 +46,7 @@ export default function App() {
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [sharedListId, setSharedListId] = useState<string | null>(null);
   const [sharedPermission, setSharedPermission] = useState<Permission>('read');
+  const shareProcessed = useRef(false);
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -54,42 +54,32 @@ export default function App() {
       return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const shareId = params.get('share');
-    
-    if (shareId) {
-      shoppingService.getShare(shareId).then(share => {
-        if (share && share.isActive) {
-          setSharedListId(share.listId);
-          setSharedPermission(share.permission);
-          setActiveListId(share.listId);
-        }
-      }).catch(err => {
-        console.error("Error fetching share:", err);
-        setError("Could not load shared list. Please check your configuration.");
-      });
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, (u) => {
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
       setUser(u);
+      
+      const params = new URLSearchParams(window.location.search);
+      const shareId = params.get('share');
+      
+      if (u && shareId && !shareProcessed.current) {
+        shareProcessed.current = true;
+        try {
+          const share = await shoppingService.getShare(shareId);
+          if (share && share.isActive) {
+            setSharedListId(share.listId);
+            setSharedPermission(share.permission);
+            setActiveListId(share.listId);
+          }
+        } catch (err) {
+          console.error("Error fetching share:", err);
+          setError("Could not load shared list. Please check your configuration.");
+        }
+      }
+
       setLoading(false);
     }, (err) => {
       console.error("Auth state change error:", err);
       setError("Firebase connection failed. Check your API keys.");
       setLoading(false);
-    });
-
-    getRedirectResult(auth).catch(async (error) => {
-      if (error.code === 'auth/credential-already-in-use') {
-         console.log("Account already exists. Logging out of anonymous session.");
-         await signOut(auth);
-         setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
-      } else {
-         console.error("Redirect error:", error);
-         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-           setError(error.message);
-         }
-      }
     });
 
     return () => unsubscribe();
@@ -112,16 +102,19 @@ export default function App() {
     try {
       setLoading(true);
       if (user && user.isAnonymous) {
-        // Use redirect instead of popup to avoid COOP issues
-        await linkWithRedirect(user, googleProvider);
+        await linkWithPopup(user, googleProvider);
       } else {
-        await signInWithRedirect(auth, googleProvider);
+        await signInWithPopup(auth, googleProvider);
       }
     } catch (err: any) {
       console.error("Google login error:", err);
-      if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+      if (err.code === 'auth/credential-already-in-use') {
+         console.log("Account already exists. Logging out of anonymous session.");
+         await signOut(auth);
+         setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
+      } else if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
         setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
-      } else { 
+      } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
          setError(err.message);
       }
       setLoading(false);
