@@ -45,6 +45,7 @@ export interface AppUser {
   coinBalance: number;
   coinBatches?: CoinBatch[];
   isAdmin?: boolean;
+  lastActionAt?: number;
 }
 
 export interface Coupon {

@@ -9,7 +9,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
-import { Coupon } from '../types';
+import { Coupon, AppUser } from '../types';
 
 export const couponService = {
   generateCoupon: async (coinsAmount: number): Promise<string | null> => {
@@ -53,7 +53,14 @@ export const couponService = {
           throw new Error('This coupon has already been used');
         }
         
+        const userData = userDoc.data() as AppUser;
         const now = Date.now();
+
+        // Anti-abuse: 10-second cooldown for coupon redemption
+        if (userData?.lastActionAt && (now - userData.lastActionAt < 10000)) {
+          throw new Error('Please wait 10 seconds between coupon redemptions');
+        }
+
         const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
         
         const newBatch = {
@@ -64,7 +71,6 @@ export const couponService = {
           expiresAt: expiresAt
         };
 
-        const userData = userDoc.data() as any;
         const currentBatches = userData?.coinBatches || [];
         const updatedBatches = [...currentBatches, newBatch];
         
@@ -82,7 +88,8 @@ export const couponService = {
         // Update user
         transaction.update(userRef, {
           coinBatches: updatedBatches,
-          coinBalance: totalBalance
+          coinBalance: totalBalance,
+          lastActionAt: now
         });
         
         return couponData.coinsAmount;

@@ -367,6 +367,7 @@ export default function App() {
         {showRedeemModal && user && (
           <RedeemModal
             userId={user.uid}
+            appUser={appUser}
             onClose={() => setShowRedeemModal(false)}
           />
         )}
@@ -703,6 +704,14 @@ function ListView({
   const [showShare, setShowShare] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [isThrottled, setIsThrottled] = useState(false);
+
+  useEffect(() => {
+    if (isThrottled) {
+      const timer = setTimeout(() => setIsThrottled(false), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isThrottled]);
 
   useEffect(() => {
     shoppingService.getList(listId).then(setList);
@@ -723,6 +732,7 @@ function ListView({
       setNewItemName('');
       setNewItemQty('');
       setSuggestions([]);
+      setIsThrottled(true);
       inputRef.current?.focus();
     } catch (error: any) {
       alert(error.message || "Failed to add item");
@@ -903,10 +913,10 @@ function ListView({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 type="submit"
-                disabled={!newItemName.trim()}
-                className="p-3 rounded-2xl bg-emerald-600 text-white disabled:opacity-50 shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center"
+                disabled={!newItemName.trim() || isThrottled}
+                className="p-3 rounded-2xl bg-emerald-600 text-white disabled:opacity-50 shadow-md shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center min-w-[3rem]"
               >
-                <Plus className="w-6 h-6" />
+                {isThrottled ? <Clock className="w-5 h-5 animate-pulse" /> : <Plus className="w-6 h-6" />}
               </motion.button>
             </div>
           </form>
@@ -1130,10 +1140,21 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
   );
 }
 
-function RedeemModal({ userId, onClose }: { userId: string, onClose: () => void }) {
+function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: () => void, appUser: AppUser | null }) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const cooldownMs = 10000;
+  const lastAction = appUser?.lastActionAt || 0;
+  const remaining = Math.max(0, Math.ceil((cooldownMs - (now - lastAction)) / 1000));
+  const isThrottled = remaining > 0;
 
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1193,10 +1214,10 @@ function RedeemModal({ userId, onClose }: { userId: string, onClose: () => void 
           </div>
           <button
             type="submit"
-            disabled={loading || !code.trim()}
+            disabled={loading || !code.trim() || isThrottled}
             className="w-full py-5 rounded-2xl bg-amber-600 text-white font-bold shadow-xl shadow-amber-600/20 hover:bg-amber-700 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
           >
-            {loading ? 'Validating...' : 'Claim Coins'}
+            {loading ? 'Validating...' : isThrottled ? `Wait ${remaining}s...` : 'Claim Coins'}
           </button>
         </form>
 

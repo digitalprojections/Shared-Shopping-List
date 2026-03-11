@@ -13,7 +13,8 @@ export const userService = {
           uid: userId,
           coinBalance: 0,
           coinBatches: [],
-          isAdmin: false
+          isAdmin: false,
+          lastActionAt: 0
         };
         await setDoc(userRef, newUser);
       }
@@ -32,7 +33,8 @@ export const userService = {
         uid: userId,
         coinBalance: 0,
         coinBatches: [],
-        isAdmin: false
+        isAdmin: false,
+        lastActionAt: 0
       };
       await setDoc(userRef, newUser);
       return newUser;
@@ -84,6 +86,11 @@ export const userService = {
         const userData = userDoc.data() as AppUser;
         const now = Date.now();
         
+        // Anti-abuse: 2-second cooldown
+        if (userData.lastActionAt && (now - userData.lastActionAt < 2000)) {
+          throw new Error('Please wait 2 seconds between actions');
+        }
+        
         // Filter valid batches and sort by creation time (FIFO)
         const validBatches = (userData.coinBatches || [])
           .filter(b => b.expiresAt > now && b.remaining > 0)
@@ -109,7 +116,8 @@ export const userService = {
           
         transaction.update(userRef, {
           coinBatches: updatedBatches,
-          coinBalance: totalBalance
+          coinBalance: totalBalance,
+          lastActionAt: now
         });
       });
       
