@@ -5,10 +5,12 @@ import { AppUser } from '../types';
 export const userService = {
   ensureUserProfile: async (userId: string): Promise<void> => {
     if (!isFirebaseConfigured) return;
+    console.log("Ensuring User Profile for:", userId);
     const userRef = doc(db, 'users', userId);
     try {
       const userDoc = await getDoc(userRef);
       if (!userDoc.exists()) {
+        console.log("Creating NEW User Profile for:", userId);
         const newUser: AppUser = {
           uid: userId,
           coinBalance: 0,
@@ -17,6 +19,8 @@ export const userService = {
           lastActionAt: 0
         };
         await setDoc(userRef, newUser);
+      } else {
+        console.log("Existing user profile found for:", userId);
       }
     } catch (error) {
       console.error("Error ensuring user profile:", error);
@@ -45,11 +49,13 @@ export const userService = {
 
   subscribeToUserProfile: (userId: string, callback: (user: AppUser) => void) => {
     if (!isFirebaseConfigured) return () => {};
+    console.log("Subscribing to User Profile:", userId);
     const userRef = doc(db, 'users', userId);
     
     return onSnapshot(userRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data() as AppUser;
+        console.log("User Profile Update Received:", data.uid);
         const now = Date.now();
         // Calculate effective balance based on non-expired batches
         const effectiveBalance = (data.coinBatches || [])
@@ -60,6 +66,8 @@ export const userService = {
           ...data,
           coinBalance: effectiveBalance
         });
+      } else {
+        console.warn("User Profile Doc does not exist for:", userId);
       }
     }, (error) => {
       console.error("User profile subscription error:", error);

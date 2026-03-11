@@ -55,11 +55,15 @@ export const shoppingService = {
 
     // Query 1: Owned lists
     const qOwned = query(collection(db, 'lists'), where('ownerId', '==', userId));
-    unsubscribes.push(onSnapshot(qOwned, handleSnapshot));
+    unsubscribes.push(onSnapshot(qOwned, handleSnapshot, (err) => {
+      console.error("Firestore error (Owned Lists):", err);
+    }));
 
     // Query 2: Directly shared lists
     const qShared = query(collection(db, 'lists'), where('sharedUsers', 'array-contains', userId));
-    unsubscribes.push(onSnapshot(qShared, handleSnapshot));
+    unsubscribes.push(onSnapshot(qShared, handleSnapshot, (err) => {
+      console.error("Firestore error (Shared Lists):", err);
+    }));
 
     // Query 3: Followed collections
     const qCol = query(collection(db, 'followed_collections'), where('followerId', '==', userId));
@@ -70,7 +74,9 @@ export const shoppingService = {
         const ownerId = change.doc.data().ownerId;
         if (change.type === 'added') {
           const qList = query(collection(db, 'lists'), where('ownerId', '==', ownerId));
-          colUnsubscribes[ownerId] = onSnapshot(qList, handleSnapshot);
+          colUnsubscribes[ownerId] = onSnapshot(qList, handleSnapshot, (err) => {
+            console.error(`Firestore error (Followed Collection ${ownerId}):`, err);
+          });
         }
         if (change.type === 'removed') {
           if (colUnsubscribes[ownerId]) {
@@ -79,6 +85,8 @@ export const shoppingService = {
           }
         }
       });
+    }, (err) => {
+      console.error("Firestore error (Followed Collections):", err);
     }));
 
     return () => {

@@ -19,6 +19,8 @@ import {
   Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
 import {
   signInAnonymously,
@@ -66,6 +68,7 @@ export default function App() {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      console.log("Auth State Changed:", u ? "User logged in: " + u.uid : "No user");
       setUser(u);
       setLoading(false);
     }, (err) => {
@@ -87,7 +90,18 @@ export default function App() {
       }
     });
 
-    return () => unsubscribe();
+    // Safety fallback: ensure loading is set to false after 8 seconds
+    const safetyTimeout = setTimeout(() => {
+      if (loading) {
+        console.warn("Safety timeout: forcing loading to false");
+        setLoading(false);
+      }
+    }, 8000);
+
+    return () => {
+      unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   useEffect(() => {
@@ -144,11 +158,23 @@ export default function App() {
 
   const handleGoogleLogin = async () => {
     try {
+      console.log("Starting Google Login...");
       setLoading(true);
-      if (user && user.isAnonymous) {
-        await linkWithPopup(user, googleProvider);
+      
+      // Use native Capacitor authentication on mobile
+      if (Capacitor.isNativePlatform()) {
+        console.log("Detected native platform, using FirebaseAuthentication plugin");
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        console.log("Native Google Sign-In Result:", result);
+        // Fallback: if plugin completes, ensure loading is set to false
+        setLoading(false);
       } else {
-        await signInWithPopup(auth, googleProvider);
+        console.log("Detected web platform, using link/signInWithPopup");
+        if (user && user.isAnonymous) {
+          await linkWithPopup(user, googleProvider);
+        } else {
+          await signInWithPopup(auth, googleProvider);
+        }
       }
     } catch (err: any) {
       console.error("Google login error:", err);
@@ -501,7 +527,11 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
 
   useEffect(() => {
     if (!userId) return;
-    return shoppingService.subscribeToLists(userId, setLists);
+    console.log("Dashboard: Subscribing to lists for user:", userId);
+    return shoppingService.subscribeToLists(userId, (newLists) => {
+      console.log(`Dashboard: Received ${newLists.length} lists`);
+      setLists(newLists);
+    });
   }, [userId]);
 
   const handleCreate = async (e: React.FormEvent) => {

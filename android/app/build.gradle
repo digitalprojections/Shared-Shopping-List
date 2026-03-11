@@ -1,6 +1,14 @@
 apply plugin: 'com.android.application'
 
 android {
+    signingConfigs {
+        debug {
+            storeFile file('C:\\Users\\user\\source\\repos\\Shared-Shopping-List\\android\\baa.keystore')
+            storePassword '1285422'
+            keyAlias 'baa'
+            keyPassword '1285422'
+        }
+    }
     namespace = "link.created.sharedlist"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
