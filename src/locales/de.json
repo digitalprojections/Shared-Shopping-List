@@ -1,0 +1,90 @@
+{
+  "app": {
+    "loading": "Lade deine Listen...",
+    "welcome": "Willkommen bei ShopShare",
+    "subtitle": "Gemeinsames Einkaufen schön gemacht. Melden Sie sich an, um Ihre Listen zu erstellen.",
+    "config_error": "Konfiguration",
+    "config_fix": "Behebung des Fehlers:",
+    "config_step1": "Aktivieren Sie Google und Anonymous in der Firebase Auth Console",
+    "config_step2": "Stellen Sie sicher, dass die Firestore-Regeln den Zugriff zulassen",
+    "sign_in_google": "Melden Sie sich mit Google an",
+    "continue_guest": "Als Gast fortfahren",
+    "sign_out": "Abmelden",
+    "link_account": "Konto verknüpfen",
+    "redeem": "Tilgen"
+  },
+  "header": {
+    "title": "ShopShare"
+  },
+  "coins": {
+    "history_title": "Münzgeschichte",
+    "no_coins": "Keine Münzen gefunden.",
+    "consumed_info": "Coins are consumed starting from the oldest non-expired batch.",
+    "expired": "Abgelaufen",
+    "expires": "Läuft ab"
+  },
+  "dashboard": {
+    "title": "Ihre Sammlungen",
+    "subtitle": "Organisieren und teilen Sie Ihre Einkaufsbedürfnisse.",
+    "share_collection": "Sammlung teilen",
+    "create_list": "Neue Liste erstellen",
+    "new_list_short": "Neue Liste",
+    "no_lists": "Keine Listen gefunden. Fangen Sie neu an!",
+    "create_first": "Erstellen Sie Ihre erste Liste",
+    "new_collection": "Neue Kollektion",
+    "list_name": "Listenname",
+    "list_name_placeholder": "z. B. Wochenendcamping",
+    "cancel": "Stornieren",
+    "create": "Erstellen"
+  },
+  "list_view": {
+    "delete_collection": "Sammlung löschen",
+    "delete_confirm": "Sind Sie sicher, dass Sie diese Liste löschen möchten?",
+    "copy_link": "Link kopieren",
+    "share": "Aktie",
+    "add_item_placeholder": "Was brauchen wir?",
+    "qty_placeholder": "Menge",
+    "items_count": "{{gekauft}}/{{total}} Artikel",
+    "empty_list": "Ihre Liste ist leer",
+    "empty_suggest": "Fügen Sie einige Elemente hinzu, um loszulegen!",
+    "insufficient_coins": "Nicht genügend Münzen! Bitte lösen Sie einen Gutschein ein, um weitere Artikel hinzuzufügen.",
+    "add_item_fail": "Element konnte nicht hinzugefügt werden"
+  },
+  "share_modal": {
+    "title": "Sammlung teilen",
+    "read_only": "Nur lesen",
+    "can_edit": "Kann bearbeiten",
+    "generate_link": "Zugangslink generieren",
+    "active_links": "Aktive Links",
+    "access_type": "{{permission}} Zugriff",
+    "active": "Aktiv",
+    "deactivated": "Deaktiviert",
+    "no_links": "Keine aktiven Freigabelinks"
+  },
+  "redeem_modal": {
+    "title": "Gutschein einlösen",
+    "code_label": "Gutscheincode",
+    "code_placeholder": "SHOP-XXXX-YYYY",
+    "validating": "Validierung...",
+    "wait": "Warte {{time}}s...",
+    "claim": "Fordern Sie Münzen an",
+    "info": "Münzen werden Ihrem Guthaben sofort nach erfolgreicher Einlösung gutgeschrieben."
+  },
+  "admin": {
+    "title": "Admin: Münzen prägen",
+    "generating": "Generieren...",
+    "generate_coupon": "Gutschein generieren",
+    "generate_another": "Generieren Sie einen anderen",
+    "coins": "Münzen"
+  },
+  "emoji_picker": {
+    "title": "Wählen Sie Symbol",
+    "categories": {
+      "Food": "Essen",
+      "Home": "Heim",
+      "Health": "Gesundheit",
+      "Fun": "Spaß",
+      "Pets": "Haustiere"
+    }
+  }
+}

@@ -39,6 +39,8 @@ import { userService } from './services/userService';
 import { couponService } from './services/couponService';
 import { localDB } from './lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useTranslation, Trans } from 'react-i18next';
+import './i18n'; // Import i18n configuration
 import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
 import { cn } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
@@ -59,6 +61,7 @@ console.log("App.tsx: Module loading", { motion, AnimatePresence, useLiveQuery, 
 
 export default function App() {
   console.log("App: Component rendering");
+  const { t, i18n } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -169,13 +172,13 @@ export default function App() {
     try {
       console.log("Starting Google Login...");
       setLoading(true);
-      
+
       // Use native Capacitor authentication on mobile
       if (Capacitor.isNativePlatform()) {
         console.log("Detected native platform, using FirebaseAuthentication plugin");
         const result = await FirebaseAuthentication.signInWithGoogle();
         console.log("Native Google Sign-In Result:", result);
-        
+
         if (result.credential?.idToken) {
           const credential = GoogleAuthProvider.credential(result.credential.idToken);
           if (user && user.isAnonymous) {
@@ -228,7 +231,7 @@ export default function App() {
           animate={{ opacity: 1 }}
           className="mt-4 text-stone-400 font-medium"
         >
-          Loading your lists...
+          {t('app.loading')}
         </motion.p>
       </div>
     );
@@ -251,10 +254,10 @@ export default function App() {
 
           <div className="space-y-3">
             <h2 className="text-3xl font-black tracking-tight text-stone-900">
-              {error ? "Configuration" : "Welcome to ShopShare"}
+              {error ? t('app.config_error') : t('app.welcome')}
             </h2>
             <p className="text-stone-500 font-medium">
-              {error || "Collaborative shopping made beautiful. Sign in to start your lists."}
+              {error || t('app.subtitle')}
             </p>
           </div>
 
@@ -271,28 +274,28 @@ export default function App() {
                 <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335" />
               </svg>
-              Sign in with Google
+              {t('app.sign_in_google')}
             </motion.button>
 
             <button
               onClick={handleAnonymously}
               className="w-full py-4 text-stone-400 font-bold hover:text-stone-600 transition-colors text-sm"
             >
-              Continue as Guest
+              {t('app.continue_guest')}
             </button>
           </div>
 
           {error && (
             <div className="text-left space-y-3 pt-6 border-t border-stone-100">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400">Fixing the error:</h4>
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400">{t('app.config_fix')}</h4>
               <ul className="text-xs text-stone-500 space-y-2 font-medium">
                 <li className="flex items-start gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
-                  <span>Enable <b>Google</b> & <b>Anonymous</b> in Firebase Auth Console</span>
+                  <span><Trans i18nKey="app.config_step1" components={{ 1: <b />, 2: <b /> }}>Enable <b>Google</b> & <b>Anonymous</b> in Firebase Auth Console</Trans></span>
                 </li>
                 <li className="flex items-start gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0" />
-                  <span>Ensure <b>Firestore</b> rules allow access</span>
+                  <span><Trans i18nKey="app.config_step2" components={{ 1: <b /> }}>Ensure <b>Firestore</b> rules allow access</Trans></span>
                 </li>
               </ul>
             </div>
@@ -325,10 +328,11 @@ export default function App() {
           </motion.div>
 
           <div className="flex items-center gap-2 sm:gap-4">
+            <LanguageSwitcher />
             {appUser && (
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <CoinDisplay 
-                  balance={appUser.coinBalance} 
+                <CoinDisplay
+                  balance={appUser.coinBalance}
                   onClick={() => setShowCoinHistoryModal(true)}
                 />
                 <motion.button
@@ -431,6 +435,37 @@ export default function App() {
     </div>
   );
 }
+function LanguageSwitcher() {
+  const { i18n } = useTranslation();
+  
+  const languages = [
+    { code: 'en', label: 'EN' },
+    { code: 'es', label: 'ES' },
+    { code: 'fr', label: 'FR' },
+  ];
+
+  // Depending on detector, i18n.language might look like 'en-US', so check startsWith
+  const currentLang = i18n.language ? i18n.language.split('-')[0] : 'en';
+
+  return (
+    <div className="flex items-center gap-1 bg-stone-100 p-1 rounded-full hidden xs:flex shadow-inner">
+      {languages.map(lang => (
+        <button
+          key={lang.code}
+          onClick={() => i18n.changeLanguage(lang.code)}
+          className={cn(
+            "px-2 py-1 text-xs font-bold rounded-full transition-all",
+            currentLang === lang.code 
+              ? "bg-white text-emerald-600 border border-stone-200/50 shadow-sm" 
+              : "text-stone-400 hover:text-stone-600"
+          )}
+        >
+          {lang.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function CoinDisplay({ balance, onClick }: { balance: number, onClick?: () => void }) {
   return (
@@ -452,9 +487,10 @@ function CoinDisplay({ balance, onClick }: { balance: number, onClick?: () => vo
 }
 
 function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose: () => void }) {
+  const { t } = useTranslation();
   const now = Date.now();
   const sortedBatches = [...batches].sort((a, b) => b.createdAt - a.createdAt);
-  
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -473,7 +509,7 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
               <Coins className="w-6 h-6 text-amber-600" />
             </div>
-            <h3 className="text-2xl font-bold text-stone-900">Coin History</h3>
+            <h3 className="text-2xl font-bold text-stone-900">{t('coins.history_title')}</h3>
           </div>
           <button
             onClick={onClose}
@@ -493,8 +529,8 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
                     key={batch.id}
                     className={cn(
                       "p-4 rounded-2xl border-2 transition-all flex items-center justify-between",
-                      isExpired 
-                        ? "bg-stone-50 border-stone-100 opacity-60" 
+                      isExpired
+                        ? "bg-stone-50 border-stone-100 opacity-60"
                         : "bg-white border-amber-100 shadow-sm"
                     )}
                   >
@@ -507,16 +543,16 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
                       </div>
                       <div>
                         <p className="font-bold text-stone-900">
-                          {batch.remaining} / {batch.amount} Coins
+                          {batch.remaining} / {batch.amount}
                         </p>
                         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-0.5">
-                          {isExpired ? 'Expired' : 'Expires'}: {new Date(batch.expiresAt).toLocaleDateString()}
+                          {isExpired ? t('coins.expired') : t('coins.expires')}: {new Date(batch.expiresAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
                     {isExpired && (
                       <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-1 rounded-lg">
-                        Expired
+                        {t('coins.expired')}
                       </span>
                     )}
                   </div>
@@ -528,13 +564,13 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
               <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto">
                 <History className="w-8 h-8 text-stone-300" />
               </div>
-              <p className="text-stone-500 font-medium">No coin batches found.</p>
+              <p className="text-stone-500 font-medium">{t('coins.no_coins')}</p>
             </div>
           )}
         </div>
 
         <p className="text-center text-xs text-stone-400 font-medium pt-2">
-          Coins are consumed starting from the oldest non-expired batch.
+          {t('coins.consumed_info')}
         </p>
       </motion.div>
     </motion.div>
@@ -542,6 +578,7 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
 }
 
 function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, onSelectList: (id: string) => void, user: User, appUser: AppUser | null }) {
+  const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [showShare, setShowShare] = useState(false);
@@ -579,8 +616,8 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
     >
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-stone-900">Your Collections</h2>
-          <p className="text-stone-500 mt-1">Organize and share your shopping needs.</p>
+          <h2 className="text-3xl font-bold text-stone-900">{t('dashboard.title')}</h2>
+          <p className="text-stone-500 mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <div className="flex items-center gap-3">
           {!user.isAnonymous && (
@@ -591,7 +628,7 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
               className="flex items-center justify-center gap-2 px-6 py-3 bg-white border border-stone-200 text-stone-700 rounded-2xl font-semibold shadow-sm hover:shadow-md transition-all"
             >
               <Share2 className="w-5 h-5" />
-              <span className="hidden sm:inline">Share Collection</span>
+              <span className="hidden sm:inline">{t('dashboard.share_collection')}</span>
             </motion.button>
           )}
           <motion.button
@@ -601,8 +638,8 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
             className="flex items-center justify-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-semibold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Create New List</span>
-            <span className="sm:hidden">New List</span>
+            <span className="hidden sm:inline">{t('dashboard.create_list')}</span>
+            <span className="sm:hidden">{t('dashboard.new_list_short')}</span>
           </motion.button>
         </div>
       </div>
@@ -627,7 +664,7 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
                   )}
                 >
                   <div className="space-y-1.5">
-                    <div 
+                    <div
                       className="w-9 h-9 bg-white/40 rounded-xl flex items-center justify-center backdrop-blur-sm hover:bg-white/60 transition-colors cursor-pointer"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -665,12 +702,12 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
                 <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center mb-4">
                   <Plus className="w-10 h-10 text-stone-300" />
                 </div>
-                <p className="text-stone-400 font-medium text-lg">No lists found. Start fresh!</p>
+                <p className="text-stone-400 font-medium text-lg">{t('dashboard.no_lists')}</p>
                 <button
                   onClick={() => setIsCreating(true)}
                   className="mt-4 text-emerald-600 font-bold hover:underline"
                 >
-                  Create your first list
+                  {t('dashboard.create_first')}
                 </button>
               </motion.div>
             )}
@@ -698,7 +735,7 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
               className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-md space-y-6"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-2xl font-bold text-stone-900">New Collection</h3>
+                <h3 className="text-2xl font-bold text-stone-900">{t('dashboard.new_collection')}</h3>
                 <button
                   type="button"
                   onClick={() => setIsCreating(false)}
@@ -708,11 +745,11 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
                 </button>
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-stone-400 ml-1">List Name</label>
+                <label className="text-xs font-bold uppercase tracking-widest text-stone-400 ml-1">{t('dashboard.list_name')}</label>
                 <input
                   autoFocus
                   type="text"
-                  placeholder="e.g., Weekend Camping"
+                  placeholder={t('dashboard.list_name_placeholder')}
                   value={newListName}
                   onChange={(e) => setNewListName(e.target.value)}
                   className="w-full px-6 py-4 rounded-2xl border-2 border-stone-100 bg-stone-50 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all text-lg font-medium"
@@ -724,14 +761,14 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
                   onClick={() => setIsCreating(false)}
                   className="flex-1 px-6 py-4 rounded-2xl text-stone-600 font-bold hover:bg-stone-100 transition-colors"
                 >
-                  Cancel
+                  {t('dashboard.cancel')}
                 </button>
                 <button
                   type="submit"
                   disabled={!newListName.trim()}
                   className="flex-1 px-6 py-4 rounded-2xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all"
                 >
-                  Create
+                  {t('dashboard.create')}
                 </button>
               </div>
             </motion.form>
@@ -772,6 +809,7 @@ function ListView({
   user: User | null,
   appUser: AppUser | null
 }) {
+  const { t } = useTranslation();
   const [list, setList] = useState<ShoppingList | null>(null);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
@@ -805,7 +843,7 @@ function ListView({
     if (!newItemName.trim() || permission === 'read' || !user) return;
 
     if (!appUser || appUser.coinBalance <= 0) {
-      alert("Insufficient coins! Please redeem a coupon to add more items.");
+      alert(t('list_view.insufficient_coins'));
       return;
     }
 
@@ -817,7 +855,7 @@ function ListView({
       setIsThrottled(true);
       inputRef.current?.focus();
     } catch (error: any) {
-      alert(error.message || "Failed to add item");
+      alert(error.message || t('list_view.add_item_fail'));
     }
   };
 
@@ -832,7 +870,7 @@ function ListView({
   };
 
   const handleDeleteList = async () => {
-    if (window.confirm('Are you sure you want to delete this list?')) {
+    if (window.confirm(t('list_view.delete_confirm'))) {
       await shoppingService.deleteList(listId);
       onBack();
     }
@@ -862,7 +900,7 @@ function ListView({
           </motion.button>
           <div>
             <div className="flex items-center gap-2">
-              <div 
+              <div
                 className="w-10 h-10 sm:w-12 sm:h-12 bg-white/40 rounded-xl sm:rounded-2xl flex items-center justify-center backdrop-blur-sm hover:bg-white/60 transition-colors cursor-pointer flex-shrink-0"
                 onClick={() => setShowEmojiPicker(true)}
               >
@@ -888,7 +926,7 @@ function ListView({
                 />
               </div>
               <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                {boughtCount}/{items.length} Items
+                {t('list_view.items_count', { bought: boughtCount, total: items.length })}
               </span>
             </div>
           </div>
@@ -903,7 +941,7 @@ function ListView({
               className="flex items-center gap-2 px-5 py-3 bg-white border border-stone-200 rounded-2xl font-bold text-stone-700 shadow-sm hover:shadow-md transition-all"
             >
               <Share2 className="w-5 h-5" />
-              Share
+              {t('list_view.share')}
             </motion.button>
           )}
           <div className="relative">
@@ -931,7 +969,7 @@ function ListView({
                         className="w-full px-5 py-4 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3 transition-colors"
                       >
                         <Trash2 className="w-5 h-5" />
-                        Delete Collection
+                        {t('list_view.delete_collection')}
                       </button>
                     )}
                     <button
@@ -942,7 +980,7 @@ function ListView({
                       className="w-full px-5 py-4 text-left text-sm font-bold text-stone-600 hover:bg-stone-50 flex items-center gap-3 transition-colors"
                     >
                       <Copy className="w-5 h-5" />
-                      Copy Link
+                      {t('list_view.copy_link')}
                     </button>
                   </motion.div>
                 </>
@@ -962,7 +1000,7 @@ function ListView({
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="What do we need?"
+                placeholder={t('list_view.add_item_placeholder')}
                 value={newItemName}
                 onChange={(e) => handleInputChange(e.target.value)}
                 className="w-full px-5 py-3 rounded-2xl border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm focus:shadow-emerald-500/10 transition-all text-base font-medium"
@@ -996,7 +1034,7 @@ function ListView({
             <div className="flex gap-3">
               <input
                 type="text"
-                placeholder="Qty"
+                placeholder={t('list_view.qty_placeholder')}
                 value={newItemQty}
                 onChange={(e) => setNewItemQty(e.target.value)}
                 className="w-full sm:w-24 px-5 py-3 rounded-2xl border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm transition-all text-base font-medium"
@@ -1077,8 +1115,8 @@ function ListView({
               <ShoppingBag className="w-10 h-10 text-stone-300" />
             </div>
             <div className="space-y-1">
-              <p className="text-stone-900 font-bold text-xl">Your list is empty</p>
-              <p className="text-stone-400">Add some items to get started!</p>
+              <p className="text-stone-900 font-bold text-xl">{t('list_view.empty_list')}</p>
+              <p className="text-stone-400">{t('list_view.empty_suggest')}</p>
             </div>
           </div>
         )}
@@ -1088,7 +1126,10 @@ function ListView({
         {showEmojiPicker && (
           <EmojiPicker
             currentEmoji={list.icon}
-            onSelect={(emoji) => shoppingService.updateListIcon(listId, emoji)}
+            onSelect={(emoji) => {
+              shoppingService.updateListIcon(listId, emoji);
+              setList({ ...list, icon: emoji });
+            }}
             onClose={() => setShowEmojiPicker(false)}
           />
         )}
@@ -1107,6 +1148,7 @@ function ListView({
 }
 
 function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClose: () => void, type?: 'list' | 'collection' }) {
+  const { t } = useTranslation();
   const [shares, setShares] = useState<ShareLink[]>([]);
   const [permission, setPermission] = useState<Permission>('read');
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -1140,7 +1182,7 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
         className="bg-white p-8 rounded-[3rem] shadow-2xl w-full max-w-lg space-y-8"
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-2xl font-bold text-stone-900">Share Collection</h3>
+          <h3 className="text-2xl font-bold text-stone-900">{t('share_modal.title')}</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-stone-100 rounded-full transition-colors"
@@ -1158,7 +1200,7 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
                 permission === 'read' ? "bg-white shadow-md text-emerald-600" : "text-stone-500 hover:text-stone-700"
               )}
             >
-              Read Only
+              {t('share_modal.read_only')}
             </button>
             <button
               onClick={() => setPermission('edit')}
@@ -1167,7 +1209,7 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
                 permission === 'edit' ? "bg-white shadow-md text-emerald-600" : "text-stone-500 hover:text-stone-700"
               )}
             >
-              Can Edit
+              {t('share_modal.can_edit')}
             </button>
           </div>
 
@@ -1178,12 +1220,12 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
             className="w-full py-5 rounded-[1.5rem] bg-emerald-600 text-white font-bold shadow-xl shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center justify-center gap-3"
           >
             <LinkIcon className="w-5 h-5" />
-            Generate Access Link
+            {t('share_modal.generate_link')}
           </motion.button>
         </div>
 
         <div className="space-y-4">
-          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-stone-400 ml-1">Active Links</h4>
+          <h4 className="text-xs font-black uppercase tracking-[0.2em] text-stone-400 ml-1">{t('share_modal.active_links')}</h4>
           <div className="space-y-3 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
             {shares.map((share) => (
               <motion.div
@@ -1192,12 +1234,12 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
                 className="flex items-center justify-between p-5 rounded-[1.5rem] border-2 border-stone-50 bg-stone-50/50"
               >
                 <div className="flex flex-col">
-                  <span className="text-sm font-black uppercase tracking-widest text-stone-900">{share.permission} Access</span>
+                  <span className="text-sm font-black uppercase tracking-widest text-stone-900">{t('share_modal.access_type', { permission: share.permission })}</span>
                   <span className={cn(
                     "text-[10px] font-bold uppercase tracking-widest mt-1",
                     share.isActive ? "text-emerald-500" : "text-stone-400"
                   )}>
-                    {share.isActive ? 'Active' : 'Deactivated'}
+                    {share.isActive ? t('share_modal.active') : t('share_modal.deactivated')}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1232,7 +1274,7 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
             ))}
             {shares.length === 0 && (
               <div className="text-center py-8 bg-stone-50 rounded-[1.5rem] border-2 border-dashed border-stone-200">
-                <p className="text-sm font-bold text-stone-400">No active share links</p>
+                <p className="text-sm font-bold text-stone-400">{t('share_modal.no_links')}</p>
               </div>
             )}
           </div>
@@ -1243,6 +1285,7 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
 }
 
 function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: () => void, appUser: AppUser | null }) {
+  const { t } = useTranslation();
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
@@ -1292,7 +1335,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
               <Ticket className="w-6 h-6 text-amber-600" />
             </div>
-            <h3 className="text-2xl font-bold text-stone-900">Redeem Coupon</h3>
+            <h3 className="text-2xl font-bold text-stone-900">{t('redeem_modal.title')}</h3>
           </div>
           <button
             onClick={onClose}
@@ -1304,11 +1347,11 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
 
         <form onSubmit={handleRedeem} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-stone-400 ml-1">Coupon Code</label>
+            <label className="text-xs font-bold uppercase tracking-widest text-stone-400 ml-1">{t('redeem_modal.code_label')}</label>
             <input
               autoFocus
               type="text"
-              placeholder="SHOP-XXXX-YYYY"
+              placeholder={t('redeem_modal.code_placeholder')}
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               className="w-full px-6 py-4 rounded-2xl border-2 border-stone-100 bg-stone-50 focus:outline-none focus:border-amber-400 focus:bg-white transition-all font-mono text-lg"
@@ -1319,7 +1362,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
             disabled={loading || !code.trim() || isThrottled}
             className="w-full py-5 rounded-2xl bg-amber-600 text-white font-bold shadow-xl shadow-amber-600/20 hover:bg-amber-700 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
           >
-            {loading ? 'Validating...' : isThrottled ? `Wait ${remaining}s...` : 'Claim Coins'}
+            {loading ? t('redeem_modal.validating') : isThrottled ? t('redeem_modal.wait', { time: remaining }) : t('redeem_modal.claim')}
           </button>
         </form>
 
@@ -1339,7 +1382,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
         </AnimatePresence>
 
         <p className="text-center text-xs text-stone-400 font-medium">
-          Coins will be added to your balance instantly upon successful redemption.
+          {t('redeem_modal.info')}
         </p>
       </motion.div>
     </motion.div>
@@ -1347,6 +1390,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
 }
 
 function CouponGenerator() {
+  const { t } = useTranslation();
   const [amount, setAmount] = useState('100');
   const [loading, setLoading] = useState(false);
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
@@ -1364,7 +1408,7 @@ function CouponGenerator() {
         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
           <Crown className="w-5 h-5 text-amber-400" />
         </div>
-        <h3 className="font-bold">Admin: Mint Coins</h3>
+        <h3 className="font-bold">{t('admin.title')}</h3>
       </div>
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
@@ -1377,7 +1421,7 @@ function CouponGenerator() {
                 amount === val ? "bg-amber-500 text-stone-900" : "bg-white/5 hover:bg-white/10"
               )}
             >
-              {val} Coins
+              {val} {t('admin.coins')}
             </button>
           ))}
         </div>
@@ -1387,7 +1431,7 @@ function CouponGenerator() {
             disabled={loading}
             className="w-full py-3 rounded-xl bg-white text-stone-900 font-bold text-sm hover:bg-stone-100 disabled:opacity-50 transition-all"
           >
-            {loading ? 'Generating...' : 'Generate Coupon'}
+            {loading ? t('admin.generating') : t('admin.generate_coupon')}
           </button>
         ) : (
           <div className="space-y-3">
@@ -1404,7 +1448,7 @@ function CouponGenerator() {
               onClick={() => setGeneratedCode(null)}
               className="w-full py-2 text-xs font-bold text-stone-400 hover:text-white transition-colors"
             >
-              Generate Another
+              {t('admin.generate_another')}
             </button>
           </div>
         )}

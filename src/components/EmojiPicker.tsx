@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 
 const EMOJI_CATEGORIES = [
@@ -33,6 +34,7 @@ interface EmojiPickerProps {
 }
 
 export function EmojiPicker({ onSelect, onClose, currentEmoji }: EmojiPickerProps) {
+  const { t } = useTranslation();
   const modalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,7 +62,7 @@ export function EmojiPicker({ onSelect, onClose, currentEmoji }: EmojiPickerProp
         className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[80vh]"
       >
         <div className="flex items-center justify-between px-6 py-5 border-b border-stone-100 flex-shrink-0">
-          <h3 className="text-xl font-bold text-stone-900">Select Icon</h3>
+          <h3 className="text-xl font-bold text-stone-900">{t('emoji_picker.title')}</h3>
           <button
             onClick={onClose}
             className="p-1.5 hover:bg-stone-100 rounded-full transition-colors"
@@ -73,7 +75,7 @@ export function EmojiPicker({ onSelect, onClose, currentEmoji }: EmojiPickerProp
           {EMOJI_CATEGORIES.map((category) => (
             <div key={category.name} className="space-y-3">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-stone-400 ml-1">
-                {category.name}
+                {t(`emoji_picker.categories.${category.name}`)}
               </h4>
               <div className="grid grid-cols-5 gap-2">
                 {category.emojis.map((emoji) => (
