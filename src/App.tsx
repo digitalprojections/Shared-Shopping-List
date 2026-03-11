@@ -29,7 +29,10 @@ import {
   signOut,
   signInWithPopup,
   linkWithPopup,
-  getRedirectResult
+  getRedirectResult,
+  GoogleAuthProvider,
+  signInWithCredential,
+  linkWithCredential
 } from 'firebase/auth';
 import { shoppingService } from './services/shoppingService';
 import { userService } from './services/userService';
@@ -166,8 +169,20 @@ export default function App() {
         console.log("Detected native platform, using FirebaseAuthentication plugin");
         const result = await FirebaseAuthentication.signInWithGoogle();
         console.log("Native Google Sign-In Result:", result);
-        // Fallback: if plugin completes, ensure loading is set to false
-        setLoading(false);
+        
+        if (result.credential?.idToken) {
+          const credential = GoogleAuthProvider.credential(result.credential.idToken);
+          if (user && user.isAnonymous) {
+            console.log("Linking anonymous user with native Google credential");
+            await linkWithCredential(user, credential);
+          } else {
+            console.log("Signing in with native Google credential");
+            await signInWithCredential(auth, credential);
+          }
+        } else {
+          console.warn("Native login succeeded but no ID token was returned.");
+          setLoading(false);
+        }
       } else {
         console.log("Detected web platform, using link/signInWithPopup");
         if (user && user.isAnonymous) {

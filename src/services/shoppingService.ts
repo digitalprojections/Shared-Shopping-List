@@ -23,75 +23,107 @@ import { userService } from './userService';
 export const shoppingService = {
   // Lists
   subscribeToLists: (userId: string, callback: (lists: ShoppingList[]) => void) => {
-    // 1. Initial load from local DB
+    const ownedSource = new Map<string, ShoppingList>();
+    const sharedSource = new Map<string, ShoppingList>();
+    const followedSources = new Map<string, Map<string, ShoppingList>>();
+
+    const notify = () => {
+      const mergedMap = new Map<string, ShoppingList>();
+      
+      // Merge results from all sources
+      followedSources.forEach(source => {
+        source.forEach((list, id) => mergedMap.set(id, list));
+      });
+      sharedSource.forEach((list, id) => mergedMap.set(id, list));
+      ownedSource.forEach((list, id) => mergedMap.set(id, list));
+
+      const finalLists = Array.from(mergedMap.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+      
+      // Emit to UI
+      callback(finalLists);
+
+      // Sync to Local DB and handle deletions
+      const finalIds = finalLists.map(l => l.id);
+      localDB.lists.bulkPut(finalLists).then(() => {
+        localDB.lists.toCollection().filter(l => !finalIds.includes(l.id)).delete();
+      });
+    };
+
+    // 1. Initial load from local DB to map (immediate UI update)
     localDB.lists.toArray().then(lists => {
-      callback(lists.sort((a, b) => b.updatedAt - a.updatedAt));
+      if (lists.length > 0 && ownedSource.size === 0) {
+        lists.forEach(l => ownedSource.set(l.id, l));
+        notify();
+      }
     });
 
     if (!isFirebaseConfigured) return () => { };
 
-    const listMap = new Map<string, ShoppingList>();
-    const notify = () => {
-      const finalLists = Array.from(listMap.values()).sort((a, b) => b.updatedAt - a.updatedAt);
-      callback(finalLists);
-      localDB.lists.bulkPut(finalLists);
-    };
-
     const unsubscribes: (() => void)[] = [];
-
-    const handleSnapshot = (snapshot: any) => {
-      let changed = false;
-      snapshot.docChanges().forEach((change: any) => {
-        changed = true;
-        if (change.type === 'removed') {
-          listMap.delete(change.doc.id);
-          localDB.lists.delete(change.doc.id);
-        } else {
-          listMap.set(change.doc.id, { id: change.doc.id, ...change.doc.data() } as ShoppingList);
-        }
-      });
-      if (changed) notify();
-    };
 
     // Query 1: Owned lists
     const qOwned = query(collection(db, 'lists'), where('ownerId', '==', userId));
-    unsubscribes.push(onSnapshot(qOwned, handleSnapshot, (err) => {
-      console.error("Firestore error (Owned Lists):", err);
-    }));
+    unsubscribes.push(onSnapshot(qOwned, (snapshot) => {
+      ownedSource.clear();
+      snapshot.docs.forEach(doc => {
+        ownedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
+      });
+      notify();
+    }, (err) => console.error("Firestore error (Owned Lists):", err)));
 
     // Query 2: Directly shared lists
     const qShared = query(collection(db, 'lists'), where('sharedUsers', 'array-contains', userId));
-    unsubscribes.push(onSnapshot(qShared, handleSnapshot, (err) => {
-      console.error("Firestore error (Shared Lists):", err);
-    }));
+    unsubscribes.push(onSnapshot(qShared, (snapshot) => {
+      sharedSource.clear();
+      snapshot.docs.forEach(doc => {
+        sharedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
+      });
+      notify();
+    }, (err) => console.error("Firestore error (Shared Lists):", err)));
 
     // Query 3: Followed collections
     const qCol = query(collection(db, 'followed_collections'), where('followerId', '==', userId));
-    const colUnsubscribes: { [ownerId: string]: () => void } = {};
+    const colUnsubscribes = new Map<string, () => void>();
 
     unsubscribes.push(onSnapshot(qCol, (snap) => {
-      snap.docChanges().forEach((change: any) => {
-        const ownerId = change.doc.data().ownerId;
-        if (change.type === 'added') {
-          const qList = query(collection(db, 'lists'), where('ownerId', '==', ownerId));
-          colUnsubscribes[ownerId] = onSnapshot(qList, handleSnapshot, (err) => {
-            console.error(`Firestore error (Followed Collection ${ownerId}):`, err);
-          });
-        }
-        if (change.type === 'removed') {
-          if (colUnsubscribes[ownerId]) {
-            colUnsubscribes[ownerId]();
-            delete colUnsubscribes[ownerId];
+      const currentFollowedIds = new Set(snap.docs.map(doc => doc.data().ownerId));
+      
+      // Cleanup unsollowed
+      followedSources.forEach((_, ownerId) => {
+        if (!currentFollowedIds.has(ownerId)) {
+          if (colUnsubscribes.has(ownerId)) {
+            colUnsubscribes.get(ownerId)!();
+            colUnsubscribes.delete(ownerId);
           }
+          followedSources.delete(ownerId);
         }
       });
-    }, (err) => {
-      console.error("Firestore error (Followed Collections):", err);
-    }));
+
+      // Add newly followed
+      snap.docs.forEach(doc => {
+        const ownerId = doc.data().ownerId;
+        if (!followedSources.has(ownerId)) {
+          const sourceMap = new Map<string, ShoppingList>();
+          followedSources.set(ownerId, sourceMap);
+          
+          const qList = query(collection(db, 'lists'), where('ownerId', '==', ownerId));
+          const unsub = onSnapshot(qList, (listSnap) => {
+            sourceMap.clear();
+            listSnap.docs.forEach(listDoc => {
+              sourceMap.set(listDoc.id, { id: listDoc.id, ...listDoc.data() } as ShoppingList);
+            });
+            notify();
+          }, (err) => console.error(`Firestore error (Followed Collection ${ownerId}):`, err));
+          
+          colUnsubscribes.set(ownerId, unsub);
+        }
+      });
+      notify();
+    }, (err) => console.error("Firestore error (Followed Collections):", err)));
 
     return () => {
       unsubscribes.forEach(u => u());
-      Object.values(colUnsubscribes).forEach(u => u());
+      colUnsubscribes.forEach(u => u());
     };
   },
 
