@@ -48,15 +48,14 @@ export const userService = {
     return onSnapshot(userRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data() as AppUser;
-        // Optimization: Filter out expired batches client-side for immediate UI feedback
-        // although the source of truth should be sanitized by the backend or periodically.
         const now = Date.now();
-        const validBatches = (data.coinBatches || []).filter(b => b.expiresAt > now);
-        const effectiveBalance = validBatches.reduce((sum, b) => sum + b.remaining, 0);
+        // Calculate effective balance based on non-expired batches
+        const effectiveBalance = (data.coinBatches || [])
+          .filter(b => b.expiresAt > now)
+          .reduce((sum, b) => sum + b.remaining, 0);
         
         callback({
           ...data,
-          coinBatches: validBatches,
           coinBalance: effectiveBalance
         });
       }
