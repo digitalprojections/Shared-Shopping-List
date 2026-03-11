@@ -14,7 +14,9 @@ import {
   ShoppingBag,
   Coins,
   Ticket,
-  Crown
+  Crown,
+  History,
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
@@ -30,7 +32,7 @@ import {
 import { shoppingService } from './services/shoppingService';
 import { userService } from './services/userService';
 import { couponService } from './services/couponService';
-import { ShoppingList, ListItem, ShareLink, Permission, AppUser } from './types';
+import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
 import { cn } from './lib/utils';
 
 // --- Components ---
@@ -54,6 +56,7 @@ export default function App() {
   const [sharedPermission, setSharedPermission] = useState<Permission>('read');
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
+  const [showCoinHistoryModal, setShowCoinHistoryModal] = useState(false);
   const shareProcessed = useRef(false);
 
   useEffect(() => {
@@ -278,7 +281,10 @@ export default function App() {
           <div className="flex items-center gap-4">
             {appUser && (
               <div className="flex items-center gap-2">
-                <CoinDisplay balance={appUser.coinBalance} />
+                <CoinDisplay 
+                  balance={appUser.coinBalance} 
+                  onClick={() => setShowCoinHistoryModal(true)}
+                />
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -365,19 +371,123 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {showCoinHistoryModal && appUser && (
+          <CoinHistoryModal
+            batches={appUser.coinBatches || []}
+            onClose={() => setShowCoinHistoryModal(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function CoinDisplay({ balance }: { balance: number }) {
+function CoinDisplay({ balance, onClick }: { balance: number, onClick?: () => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-full shadow-sm"
+      whileHover={onClick ? { scale: 1.05, backgroundColor: '#fffbeb' } : {}}
+      whileTap={onClick ? { scale: 0.95 } : {}}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 px-3 py-1.5 border rounded-full shadow-sm transition-colors",
+        onClick ? "cursor-pointer bg-white border-amber-200 hover:border-amber-400" : "bg-amber-50 border-amber-100"
+      )}
     >
       <Coins className="w-4 h-4 text-amber-600" />
       <span className="text-sm font-bold text-amber-900">{balance}</span>
+    </motion.div>
+  );
+}
+
+function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose: () => void }) {
+  const now = Date.now();
+  const sortedBatches = [...batches].sort((a, b) => b.createdAt - a.createdAt);
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md"
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-lg space-y-6"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
+              <Coins className="w-6 h-6 text-amber-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-stone-900">Coin History</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+          >
+            <X className="w-6 h-6 text-stone-400" />
+          </button>
+        </div>
+
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
+          {sortedBatches.length > 0 ? (
+            <div className="grid gap-3">
+              {sortedBatches.map((batch) => {
+                const isExpired = batch.expiresAt <= now;
+                return (
+                  <div
+                    key={batch.id}
+                    className={cn(
+                      "p-4 rounded-2xl border-2 transition-all flex items-center justify-between",
+                      isExpired 
+                        ? "bg-stone-50 border-stone-100 opacity-60" 
+                        : "bg-white border-amber-100 shadow-sm"
+                    )}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "w-10 h-10 rounded-xl flex items-center justify-center",
+                        isExpired ? "bg-stone-200" : "bg-amber-100"
+                      )}>
+                        {isExpired ? <Clock className="w-5 h-5 text-stone-400" /> : <Coins className="w-5 h-5 text-amber-600" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-stone-900">
+                          {batch.remaining} / {batch.amount} Coins
+                        </p>
+                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-0.5">
+                          {isExpired ? 'Expired' : 'Expires'}: {new Date(batch.expiresAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    {isExpired && (
+                      <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-1 rounded-lg">
+                        Expired
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 space-y-3">
+              <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto">
+                <History className="w-8 h-8 text-stone-300" />
+              </div>
+              <p className="text-stone-500 font-medium">No coin batches found.</p>
+            </div>
+          )}
+        </div>
+
+        <p className="text-center text-xs text-stone-400 font-medium pt-2">
+          Coins are consumed starting from the oldest non-expired batch.
+        </p>
+      </motion.div>
     </motion.div>
   );
 }
