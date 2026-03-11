@@ -140,6 +140,7 @@ export const shoppingService = {
       name,
       ownerId: userId,
       color,
+      icon: '🛒',
       createdAt: Date.now(),
       updatedAt: Date.now(),
       sharedUsers: []
@@ -171,6 +172,16 @@ export const shoppingService = {
       const shareBatch = writeBatch(db);
       shares.forEach(shareDoc => shareBatch.delete(shareDoc.ref));
       await shareBatch.commit();
+    }
+  },
+
+  updateListIcon: async (listId: string, icon: string) => {
+    await localDB.lists.update(listId, { icon, updatedAt: Date.now() });
+    if (isFirebaseConfigured) {
+      await updateDoc(doc(db, 'lists', listId), { 
+        icon, 
+        updatedAt: Date.now() 
+      });
     }
   },
 

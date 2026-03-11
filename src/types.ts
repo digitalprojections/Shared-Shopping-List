@@ -7,6 +7,7 @@ export interface ShoppingList {
   createdAt: number;
   updatedAt: number;
   color: string;
+  icon?: string;
   sharedUsers?: string[];
 }
 

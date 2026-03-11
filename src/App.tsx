@@ -41,6 +41,7 @@ import { localDB } from './lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
 import { cn } from './lib/utils';
+import { EmojiPicker } from './components/EmojiPicker';
 
 // --- Components ---
 
@@ -216,12 +217,11 @@ export default function App() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50">
         <motion.div
           animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 10, -10, 0]
+            scale: [1, 1.1, 1],
           }}
           transition={{ repeat: Infinity, duration: 2 }}
         >
-          <ShoppingBag className="w-12 h-12 text-emerald-600" />
+          <img src="/logo.png" alt="ShopShare Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
         </motion.div>
         <motion.p
           initial={{ opacity: 0 }}
@@ -243,10 +243,10 @@ export default function App() {
           className="max-w-md w-full bg-white p-8 rounded-[3rem] shadow-2xl border border-stone-200 text-center space-y-8"
         >
           <div className={cn(
-            "w-20 h-20 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner",
-            error ? "bg-rose-50" : "bg-emerald-50"
+            "w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner overflow-hidden",
+            error ? "bg-rose-50" : "bg-white"
           )}>
-            {error ? <X className="w-10 h-10 text-rose-500" /> : <ShoppingBag className="w-10 h-10 text-emerald-600" />}
+            {error ? <X className="w-12 h-12 text-rose-500" /> : <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />}
           </div>
 
           <div className="space-y-3">
@@ -303,8 +303,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 font-sans selection:bg-emerald-100">
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-stone-200/60 px-4 py-4 md:px-8">
+    <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100 safe-top">
+      <header className="flex-none bg-white/70 backdrop-blur-xl border-b border-stone-200/60 px-4 py-3 md:px-8">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -316,17 +316,17 @@ export default function App() {
               window.history.replaceState({}, '', window.location.pathname);
             }}
           >
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/20">
-              <ShoppingBag className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/10 overflow-hidden">
+              <img src="/logo.png" alt="L" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600 hidden xs:block">
               ShopShare
             </h1>
           </motion.div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {appUser && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <CoinDisplay 
                   balance={appUser.coinBalance} 
                   onClick={() => setShowCoinHistoryModal(true)}
@@ -335,11 +335,11 @@ export default function App() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setShowRedeemModal(true)}
-                  className="flex items-center gap-2 px-3 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm"
                   title="Redeem Coupon"
                 >
-                  <Ticket className="w-5 h-5" />
-                  <span className="text-xs font-bold uppercase tracking-wider hidden md:inline">Redeem</span>
+                  <Ticket className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">Redeem</span>
                 </motion.button>
               </div>
             )}
@@ -348,9 +348,9 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 onClick={() => signOut(auth)}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-full transition-colors"
+                className="flex items-center gap-1.5 px-2 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-stone-600 hover:bg-stone-100 rounded-full transition-colors"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5 sm:w-4 h-4" />
                 <span className="hidden sm:inline">Sign Out</span>
               </motion.button>
             )}
@@ -364,7 +364,7 @@ export default function App() {
                 Link Account
               </motion.button>
             )}
-            <div className="w-10 h-10 rounded-2xl bg-stone-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-stone-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center">
               {user?.photoURL ? (
                 <img
                   src={user.photoURL}
@@ -383,30 +383,32 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4 md:p-8">
-        <AnimatePresence mode="wait">
-          {!activeListId ? (
-            <Dashboard
-              userId={user?.uid || ''}
-              onSelectList={setActiveListId}
-              user={user}
-              appUser={appUser}
-            />
-          ) : (
-            <ListView
-              listId={activeListId}
-              onBack={() => {
-                setActiveListId(null);
-                setSharedListId(null);
-                window.history.replaceState({}, '', window.location.pathname);
-              }}
-              isShared={!!sharedListId}
-              permission={sharedListId ? sharedPermission : 'edit'}
-              user={user}
-              appUser={appUser}
-            />
-          )}
-        </AnimatePresence>
+      <main className="scroll-container px-4 py-6 md:px-8">
+        <div className="max-w-5xl mx-auto">
+          <AnimatePresence mode="wait">
+            {!activeListId ? (
+              <Dashboard
+                userId={user?.uid || ''}
+                onSelectList={setActiveListId}
+                user={user}
+                appUser={appUser}
+              />
+            ) : (
+              <ListView
+                listId={activeListId}
+                onBack={() => {
+                  setActiveListId(null);
+                  setSharedListId(null);
+                  window.history.replaceState({}, '', window.location.pathname);
+                }}
+                isShared={!!sharedListId}
+                permission={sharedListId ? sharedPermission : 'edit'}
+                user={user}
+                appUser={appUser}
+              />
+            )}
+          </AnimatePresence>
+        </div>
       </main>
 
       <AnimatePresence>
@@ -439,7 +441,7 @@ function CoinDisplay({ balance, onClick }: { balance: number, onClick?: () => vo
       whileTap={onClick ? { scale: 0.95 } : {}}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 px-3 py-1.5 border rounded-full shadow-sm transition-colors",
+        "flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 border rounded-full shadow-sm transition-colors",
         onClick ? "cursor-pointer bg-white border-amber-200 hover:border-amber-400" : "bg-amber-50 border-amber-100"
       )}
     >
@@ -543,6 +545,7 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [showShare, setShowShare] = useState(false);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
 
   // SSOT: Read lists directly from local DB
   const lists = useLiveQuery(
@@ -604,39 +607,49 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {lists.map((list, index) => (
               <motion.div
                 key={list.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                whileHover={{ y: -4 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: index * 0.03 }}
+                whileHover={{ y: -2 }}
                 className="group relative"
               >
                 <button
                   onClick={() => onSelectList(list.id)}
                   className={cn(
-                    "w-full aspect-[4/3] p-6 rounded-[2.5rem] border-2 flex flex-col justify-between text-left transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-emerald-900/5",
+                    "w-full aspect-[16/10] p-4 rounded-3xl border-2 flex flex-col justify-between text-left transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50",
                     list.color || COLORS[0]
                   )}
                 >
-                  <div className="space-y-2">
-                    <div className="w-12 h-12 bg-white/40 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <ShoppingBag className="w-6 h-6 opacity-80" />
+                  <div className="space-y-1.5">
+                    <div 
+                      className="w-9 h-9 bg-white/40 rounded-xl flex items-center justify-center backdrop-blur-sm hover:bg-white/60 transition-colors cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingListId(list.id);
+                      }}
+                    >
+                      {list.icon ? (
+                        <span className="text-xl">{list.icon}</span>
+                      ) : (
+                        <ShoppingBag className="w-5 h-5 opacity-80" />
+                      )}
                     </div>
-                    <h3 className="font-bold text-2xl leading-tight line-clamp-2">
+                    <h3 className="font-bold text-lg leading-tight line-clamp-2">
                       {list.name}
                     </h3>
                   </div>
-                  <div className="flex items-center justify-between mt-4">
-                    <span className="text-xs font-bold uppercase tracking-widest opacity-60">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">
                       {new Date(list.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                     </span>
-                    <div className="p-2 bg-white/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ChevronLeft className="w-5 h-5 rotate-180" />
+                    <div className="p-1.5 bg-white/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                      <ChevronLeft className="w-4 h-4 rotate-180" />
                     </div>
                   </div>
                 </button>
@@ -730,6 +743,16 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
           <ShareModal listId={userId} type="collection" onClose={() => setShowShare(false)} />
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {editingListId && (
+          <EmojiPicker
+            currentEmoji={lists.find(l => l.id === editingListId)?.icon}
+            onSelect={(emoji) => shoppingService.updateListIcon(editingListId, emoji)}
+            onClose={() => setEditingListId(null)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -755,6 +778,7 @@ function ListView({
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showShare, setShowShare] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isThrottled, setIsThrottled] = useState(false);
 
@@ -826,19 +850,29 @@ function ListView({
       exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
           <motion.button
-            whileHover={{ scale: 1.1, x: -4 }}
+            whileHover={{ scale: 1.1, x: -2 }}
             whileTap={{ scale: 0.9 }}
             onClick={onBack}
-            className="p-3 bg-white hover:bg-stone-100 rounded-2xl shadow-sm border border-stone-200 transition-colors"
+            className="p-2.5 bg-white hover:bg-stone-100 rounded-xl shadow-sm border border-stone-200 transition-colors"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </motion.button>
           <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-3xl font-bold text-stone-900">{list.name}</h2>
+            <div className="flex items-center gap-2">
+              <div 
+                className="w-10 h-10 sm:w-12 sm:h-12 bg-white/40 rounded-xl sm:rounded-2xl flex items-center justify-center backdrop-blur-sm hover:bg-white/60 transition-colors cursor-pointer flex-shrink-0"
+                onClick={() => setShowEmojiPicker(true)}
+              >
+                {list.icon ? (
+                  <span className="text-2xl sm:text-3xl">{list.icon}</span>
+                ) : (
+                  <ShoppingBag className="w-6 h-6 sm:w-7 sm:h-7 opacity-80" />
+                )}
+              </div>
+              <h2 className="text-2xl font-bold text-stone-900 truncate">{list.name}</h2>
               {isShared && (
                 <span className="text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
                   {permission}
@@ -987,11 +1021,11 @@ function ListView({
             <motion.div
               layout
               key={item.id}
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              exit={{ opacity: 0, scale: 0.98 }}
               className={cn(
-                "group flex items-center justify-between p-3 sm:p-4 rounded-2xl border transition-all duration-300",
+                "group flex items-center justify-between p-3 rounded-xl border transition-all duration-300",
                 item.isBought
                   ? "bg-stone-50 border-transparent opacity-60"
                   : "bg-white border-stone-100 shadow-sm hover:shadow-md hover:border-emerald-100"
@@ -1049,6 +1083,16 @@ function ListView({
           </div>
         )}
       </div>
+
+      <AnimatePresence>
+        {showEmojiPicker && (
+          <EmojiPicker
+            currentEmoji={list.icon}
+            onSelect={(emoji) => shoppingService.updateListIcon(listId, emoji)}
+            onClose={() => setShowEmojiPicker(false)}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showShare && (
@@ -1315,7 +1359,7 @@ function CouponGenerator() {
   };
 
   return (
-    <div className="bg-stone-900 p-6 rounded-[2rem] text-white shadow-xl space-y-4">
+    <div className="bg-stone-900 p-5 rounded-3xl text-white shadow-xl space-y-4">
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
           <Crown className="w-5 h-5 text-amber-400" />

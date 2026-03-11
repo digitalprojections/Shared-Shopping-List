@@ -3,12 +3,32 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --breakpoint-xs: 380px;
 }
 
 @layer base {
-  body {
-    @apply bg-stone-50 text-stone-900 antialiased;
+  html, body {
+    @apply h-full overflow-hidden bg-stone-50 text-stone-900 antialiased;
+    /* Prevent rubber-banding/panning on mobile */
+    position: fixed;
+    width: 100%;
+    overscroll-behavior: none;
   }
+
+  #root {
+    @apply h-full flex flex-col;
+  }
+}
+
+/* Scroll area with safe area padding */
+.scroll-container {
+  @apply flex-1 overflow-y-auto overflow-x-hidden;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom, 20px);
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .line-clamp-2 {
