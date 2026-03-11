@@ -42,6 +42,8 @@ export const couponService = {
     try {
       const result = await runTransaction(db, async (transaction) => {
         const couponDoc = await transaction.get(couponRef);
+        const userDoc = await transaction.get(userRef);
+        
         if (!couponDoc.exists()) {
           throw new Error('Invalid coupon code');
         }
@@ -50,13 +52,6 @@ export const couponService = {
         if (couponData.isConsumed) {
           throw new Error('This coupon has already been used');
         }
-        
-        // Update coupon
-        transaction.update(couponRef, {
-          isConsumed: true,
-          consumedBy: userId,
-          consumedAt: Date.now()
-        });
         
         const now = Date.now();
         const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
@@ -69,7 +64,7 @@ export const couponService = {
           expiresAt: expiresAt
         };
 
-        const userData = (await transaction.get(userRef)).data() as any;
+        const userData = userDoc.data() as any;
         const currentBatches = userData?.coinBatches || [];
         const updatedBatches = [...currentBatches, newBatch];
         
@@ -77,6 +72,13 @@ export const couponService = {
         const validBatches = updatedBatches.filter(b => b.expiresAt > now);
         const totalBalance = validBatches.reduce((sum, b) => sum + b.remaining, 0);
 
+        // Update coupon
+        transaction.update(couponRef, {
+          isConsumed: true,
+          consumedBy: userId,
+          consumedAt: now
+        });
+        
         // Update user
         transaction.update(userRef, {
           coinBatches: updatedBatches,
