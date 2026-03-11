@@ -37,6 +37,8 @@ import {
 import { shoppingService } from './services/shoppingService';
 import { userService } from './services/userService';
 import { couponService } from './services/couponService';
+import { localDB } from './lib/db';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
 import { cn } from './lib/utils';
 
@@ -52,7 +54,10 @@ const COLORS = [
   'bg-fuchsia-100 border-fuchsia-200 text-fuchsia-700',
 ];
 
+console.log("App.tsx: Module loading", { motion, AnimatePresence, useLiveQuery, localDB });
+
 export default function App() {
+  console.log("App: Component rendering");
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -535,18 +540,21 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
 }
 
 function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, onSelectList: (id: string) => void, user: User, appUser: AppUser | null }) {
-  const [lists, setLists] = useState<ShoppingList[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [showShare, setShowShare] = useState(false);
 
+  // SSOT: Read lists directly from local DB
+  const lists = useLiveQuery(
+    () => localDB.lists.toArray().then(items => items.sort((a, b) => b.updatedAt - a.updatedAt)),
+    []
+  ) || [];
+
   useEffect(() => {
     if (!userId) return;
-    console.log("Dashboard: Subscribing to lists for user:", userId);
-    return shoppingService.subscribeToLists(userId, (newLists) => {
-      console.log(`Dashboard: Received ${newLists.length} lists`);
-      setLists(newLists);
-    });
+    console.log("Dashboard: Starting background sync for user:", userId);
+    // subscribeToLists now handles internal SSOT updates via debounced commitSync
+    return shoppingService.subscribeToLists(userId);
   }, [userId]);
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -742,7 +750,6 @@ function ListView({
   appUser: AppUser | null
 }) {
   const [list, setList] = useState<ShoppingList | null>(null);
-  const [items, setItems] = useState<ListItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -750,6 +757,12 @@ function ListView({
   const [showOptions, setShowOptions] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isThrottled, setIsThrottled] = useState(false);
+
+  // SSOT: Read items directly from local DB
+  const items = useLiveQuery(
+    () => localDB.items.where('listId').equals(listId).sortBy('createdAt'),
+    [listId]
+  ) || [];
 
   useEffect(() => {
     if (isThrottled) {
@@ -760,7 +773,7 @@ function ListView({
 
   useEffect(() => {
     shoppingService.getList(listId).then(setList);
-    return shoppingService.subscribeToItems(listId, setItems);
+    return shoppingService.subscribeToItems(listId);
   }, [listId]);
 
   const handleAddItem = async (e?: React.FormEvent) => {

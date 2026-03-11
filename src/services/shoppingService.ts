@@ -20,42 +20,50 @@ import { localDB } from '../lib/db';
 import { ShoppingList, ListItem, ShareLink, Permission } from '../types';
 import { userService } from './userService';
 
+// Module-level sync state to persist across source updates
+let syncTimeout: any = null;
+const ownedSource = new Map<string, ShoppingList>();
+const sharedSource = new Map<string, ShoppingList>();
+const followedSources = new Map<string, Map<string, ShoppingList>>();
+
+const commitSync = async () => {
+  const mergedMap = new Map<string, ShoppingList>();
+  
+  // Merge results from all sources: Followed < Shared < Owned (priority)
+  followedSources.forEach(source => {
+    source.forEach((list, id) => mergedMap.set(id, list));
+  });
+  sharedSource.forEach((list, id) => mergedMap.set(id, list));
+  ownedSource.forEach((list, id) => mergedMap.set(id, list));
+
+  const finalLists = Array.from(mergedMap.values());
+  const finalIds = finalLists.map(l => l.id);
+
+  // Transactional bulk update
+  await localDB.lists.bulkPut(finalLists);
+  
+  // Handled targeted deletions: remove local lists not present in any Firestore query
+  const localIds = await localDB.lists.toCollection().primaryKeys() as string[];
+  const toDelete = localIds.filter(id => !finalIds.includes(id as string));
+  if (toDelete.length > 0) {
+    await localDB.lists.bulkDelete(toDelete);
+  }
+};
+
+const debouncedSync = () => {
+  if (syncTimeout) clearTimeout(syncTimeout);
+  syncTimeout = setTimeout(() => {
+    commitSync().catch(err => console.error("[Sync] Error during commit:", err));
+  }, 200);
+};
+
 export const shoppingService = {
   // Lists
-  subscribeToLists: (userId: string, callback: (lists: ShoppingList[]) => void) => {
-    const ownedSource = new Map<string, ShoppingList>();
-    const sharedSource = new Map<string, ShoppingList>();
-    const followedSources = new Map<string, Map<string, ShoppingList>>();
-
-    const notify = () => {
-      const mergedMap = new Map<string, ShoppingList>();
-      
-      // Merge results from all sources
-      followedSources.forEach(source => {
-        source.forEach((list, id) => mergedMap.set(id, list));
-      });
-      sharedSource.forEach((list, id) => mergedMap.set(id, list));
-      ownedSource.forEach((list, id) => mergedMap.set(id, list));
-
-      const finalLists = Array.from(mergedMap.values()).sort((a, b) => b.updatedAt - a.updatedAt);
-      
-      // Emit to UI
-      callback(finalLists);
-
-      // Sync to Local DB and handle deletions
-      const finalIds = finalLists.map(l => l.id);
-      localDB.lists.bulkPut(finalLists).then(() => {
-        localDB.lists.toCollection().filter(l => !finalIds.includes(l.id)).delete();
-      });
-    };
-
-    // 1. Initial load from local DB to map (immediate UI update)
-    localDB.lists.toArray().then(lists => {
-      if (lists.length > 0 && ownedSource.size === 0) {
-        lists.forEach(l => ownedSource.set(l.id, l));
-        notify();
-      }
-    });
+  subscribeToLists: (userId: string) => {
+    // Clear state on new subscription
+    ownedSource.clear();
+    sharedSource.clear();
+    followedSources.clear();
 
     if (!isFirebaseConfigured) return () => { };
 
@@ -68,7 +76,7 @@ export const shoppingService = {
       snapshot.docs.forEach(doc => {
         ownedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
       });
-      notify();
+      debouncedSync();
     }, (err) => console.error("Firestore error (Owned Lists):", err)));
 
     // Query 2: Directly shared lists
@@ -78,7 +86,7 @@ export const shoppingService = {
       snapshot.docs.forEach(doc => {
         sharedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
       });
-      notify();
+      debouncedSync();
     }, (err) => console.error("Firestore error (Shared Lists):", err)));
 
     // Query 3: Followed collections
@@ -88,7 +96,7 @@ export const shoppingService = {
     unsubscribes.push(onSnapshot(qCol, (snap) => {
       const currentFollowedIds = new Set(snap.docs.map(doc => doc.data().ownerId));
       
-      // Cleanup unsollowed
+      // Cleanup unfollowed
       followedSources.forEach((_, ownerId) => {
         if (!currentFollowedIds.has(ownerId)) {
           if (colUnsubscribes.has(ownerId)) {
@@ -112,13 +120,13 @@ export const shoppingService = {
             listSnap.docs.forEach(listDoc => {
               sourceMap.set(listDoc.id, { id: listDoc.id, ...listDoc.data() } as ShoppingList);
             });
-            notify();
+            debouncedSync();
           }, (err) => console.error(`Firestore error (Followed Collection ${ownerId}):`, err));
           
           colUnsubscribes.set(ownerId, unsub);
         }
       });
-      notify();
+      debouncedSync();
     }, (err) => console.error("Firestore error (Followed Collections):", err)));
 
     return () => {
@@ -167,15 +175,10 @@ export const shoppingService = {
   },
 
   // Items
-  subscribeToItems: (listId: string, callback: (items: ListItem[]) => void) => {
-    // 1. Initial load from local DB
-    localDB.items.where('listId').equals(listId).sortBy('createdAt').then(items => {
-      callback(items);
-    });
-
+  subscribeToItems: (listId: string) => {
     if (!isFirebaseConfigured) return () => { };
 
-    // 2. Listen to Firebase and sync to local
+    // Listen to Firebase and sync to local
     const q = query(
       collection(db, 'lists', listId, 'items'),
       orderBy('createdAt', 'asc')
@@ -193,8 +196,6 @@ export const shoppingService = {
       const localItems = await localDB.items.where('listId').equals(listId).toArray();
       const toDelete = localItems.filter(i => !remoteIds.includes(i.id)).map(i => i.id);
       if (toDelete.length > 0) await localDB.items.bulkDelete(toDelete);
-
-      callback(remoteItems);
     });
   },
 
