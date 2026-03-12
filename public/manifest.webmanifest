@@ -1,19 +1,19 @@
 {
   "name": "ShopShare",
   "short_name": "ShopShare",
-  "start_url": "/",
+  "start_url": "/flashshare/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#10b981",
   "icons": [
     {
-      "src": "/favicon.png",
+      "src": "/flashshare/favicon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/splash-icon.png",
+      "src": "/flashshare/splash-icon.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
