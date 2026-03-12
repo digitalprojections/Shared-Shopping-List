@@ -16,8 +16,7 @@ import {
   Ticket,
   Crown,
   History,
-  Clock,
-  Languages
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Capacitor } from '@capacitor/core';
@@ -328,8 +327,7 @@ export default function App() {
             </h1>
           </motion.div>
 
-          <div className="flex items-center gap-2 sm:gap-4">
-            <LanguageSwitcher />
+          <div className="flex items-center gap-1 sm:gap-2">
             {appUser && (
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <CoinDisplay
@@ -431,73 +429,6 @@ export default function App() {
             batches={appUser.coinBatches || []}
             onClose={() => setShowCoinHistoryModal(false)}
           />
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-function LanguageSwitcher() {
-  const { i18n } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const languages = [
-    { code: 'en', label: 'English', short: 'EN' },
-    { code: 'es', label: 'Español', short: 'ES' },
-    { code: 'fr', label: 'Français', short: 'FR' },
-  ];
-
-  const currentLang = i18n.language ? i18n.language.split('-')[0] : 'en';
-  const currentLangLabel = languages.find(l => l.code === currentLang)?.short || 'EN';
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <motion.button
-        whileHover={{ scale: 1.05, backgroundColor: '#f5f5f4' }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 text-stone-500 hover:text-stone-900 rounded-xl transition-all font-bold text-xs"
-      >
-        <Languages className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400" />
-        <span className="hidden xs:inline">{currentLangLabel}</span>
-      </motion.button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 5 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 5 }}
-            className="absolute right-0 mt-2 w-32 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50 overflow-hidden"
-          >
-            {languages.map(lang => (
-              <button
-                key={lang.code}
-                onClick={() => {
-                  i18n.changeLanguage(lang.code);
-                  setIsOpen(false);
-                }}
-                className={cn(
-                  "w-full px-4 py-2 text-left text-xs font-bold transition-all",
-                  currentLang === lang.code 
-                    ? "text-emerald-600 bg-emerald-50" 
-                    : "text-stone-500 hover:bg-stone-50 hover:text-stone-900"
-                )}
-              >
-                {lang.label}
-              </button>
-            ))}
-          </motion.div>
         )}
       </AnimatePresence>
     </div>
