@@ -63,8 +63,19 @@ console.log("App.tsx: Module loading", { motion, AnimatePresence, useLiveQuery, 
 export default function App() {
   console.log("App: Component rendering");
   const { t, i18n } = useTranslation();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    const cached = localStorage.getItem('ss_cached_user');
+    if (cached) {
+      try {
+        console.log("App: Initializing with cached user");
+        return JSON.parse(cached);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!localStorage.getItem('ss_cached_user'));
   const [error, setError] = useState<string | null>(null);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [sharedListId, setSharedListId] = useState<string | null>(null);
@@ -151,6 +162,17 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       console.log("Auth State Changed:", u ? "User logged in: " + u.uid : "No user");
+      if (u) {
+        const minimalUser = {
+          uid: u.uid,
+          displayName: u.displayName,
+          photoURL: u.photoURL,
+          isAnonymous: u.isAnonymous
+        };
+        localStorage.setItem('ss_cached_user', JSON.stringify(minimalUser));
+      } else {
+        localStorage.removeItem('ss_cached_user');
+      }
       setUser(u);
       setLoading(false);
     }, (err) => {
@@ -172,13 +194,15 @@ export default function App() {
       }
     });
 
-    // Safety fallback: ensure loading is set to false after 8 seconds
+    // For mobile: if we have a cached user but Firebase is taking its time,
+    // we already showed the dashboard. If we DON'T have a user,
+    // we wait a much shorter time before showing the welcome screen.
     const safetyTimeout = setTimeout(() => {
       if (loading) {
         console.warn("Safety timeout: forcing loading to false");
         setLoading(false);
       }
-    }, 8000);
+    }, user ? 8000 : 2000); 
 
     return () => {
       unsubscribe();
