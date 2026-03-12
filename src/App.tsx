@@ -224,7 +224,7 @@ export default function App() {
           }}
           transition={{ repeat: Infinity, duration: 2 }}
         >
-          <img src="/logo.png" alt="ShopShare Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <img src="/flashshare/logo.png" alt="ShopShare Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
         </motion.div>
         <motion.p
           initial={{ opacity: 0 }}
@@ -249,7 +249,7 @@ export default function App() {
             "w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner overflow-hidden",
             error ? "bg-rose-50" : "bg-white"
           )}>
-            {error ? <X className="w-12 h-12 text-rose-500" /> : <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />}
+            {error ? <X className="w-12 h-12 text-rose-500" /> : <img src="/flashshare/logo.png" alt="Logo" className="w-full h-full object-cover" />}
           </div>
 
           <div className="space-y-3">
@@ -320,7 +320,7 @@ export default function App() {
             }}
           >
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/10 overflow-hidden">
-              <img src="/logo.png" alt="L" className="w-full h-full object-cover" />
+              <img src="/flashshare/logo.png" alt="L" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600 hidden xs:block">
               ShopShare
