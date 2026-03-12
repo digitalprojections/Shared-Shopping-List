@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
 import {
@@ -72,6 +73,70 @@ export default function App() {
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [showCoinHistoryModal, setShowCoinHistoryModal] = useState(false);
   const shareProcessed = useRef(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  useEffect(() => {
+    // 1. Handle PWA Install Prompt
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+      console.log("PWA: install prompt captured");
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    // 2. Handle Hardware/Browser Back Button
+    let backListener: any;
+    if (Capacitor.isNativePlatform()) {
+      backListener = CapApp.addListener('backButton', () => {
+        if (activeListId) {
+          setActiveListId(null);
+          setSharedListId(null);
+          window.history.replaceState({}, '', window.location.pathname);
+        } else {
+          setShowExitConfirm(true);
+        }
+      });
+    } else {
+      // For PWA: standard browser back button behavior
+      const handlePopState = (e: PopStateEvent) => {
+        if (!activeListId) {
+          // If already at home, and they press back, try to show exit confirm
+          // Note: browser might still exit, but we can try to pushState back
+          window.history.pushState({ noBackExits: true }, '');
+          setShowExitConfirm(true);
+        } else {
+          setActiveListId(null);
+          setSharedListId(null);
+        }
+      };
+      // Push first state to prevent immediate exit
+      if (!window.history.state?.noBackExits) {
+        window.history.pushState({ noBackExits: true }, '');
+      }
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      };
+    }
+
+    return () => {
+      if (backListener) backListener.remove();
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, [activeListId]);
+
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    console.log(`PWA: user choice: ${outcome}`);
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+    }
+  };
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
@@ -429,6 +494,53 @@ export default function App() {
             batches={appUser.coinBatches || []}
             onClose={() => setShowCoinHistoryModal(false)}
           />
+        )}
+      </AnimatePresence>
+      {/* Exit Confirmation Modal */}
+      <AnimatePresence>
+        {showExitConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                  <LogOut className="w-8 h-8" />
+                </div>
+                <h3 className="text-xl font-bold text-stone-900 mb-2">
+                  {t('exit_app_title', 'Exit App?')}
+                </h3>
+                <p className="text-stone-500 text-sm leading-relaxed">
+                  {t('exit_app_confirm', 'Are you sure you want to close the application?')}
+                </p>
+              </div>
+              <div className="p-4 bg-stone-50 flex gap-3">
+                <button
+                  onClick={() => setShowExitConfirm(false)}
+                  className="flex-1 py-4 text-stone-600 font-bold hover:bg-stone-100 rounded-2xl transition-colors"
+                >
+                  {t('common_cancel', 'Cancel')}
+                </button>
+                <button
+                  onClick={() => {
+                    if (Capacitor.isNativePlatform()) {
+                      CapApp.exitApp();
+                    } else {
+                      window.close(); // Note: browsers often block window.close() unless opened by script
+                      setShowExitConfirm(false);
+                      // In PWA, we can't really "force exit", but we can clarify that they should just close the tab if they want
+                    }
+                  }}
+                  className="flex-1 py-4 bg-red-500 text-white font-bold hover:bg-red-600 rounded-2xl shadow-lg shadow-red-200 transition-all"
+                >
+                  {t('common_exit', 'Exit')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
