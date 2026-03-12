@@ -963,7 +963,12 @@ function ListView({
   appUser: AppUser | null
 }) {
   const { t } = useTranslation();
-  const [list, setList] = useState<ShoppingList | null>(null);
+  // SSOT: Read list metadata directly from local DB
+  const list = useLiveQuery(
+    () => localDB.lists.get(listId),
+    [listId]
+  );
+
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -972,6 +977,8 @@ function ListView({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isThrottled, setIsThrottled] = useState(false);
+
+  // SSOT: Read items directly from local DB
 
   // SSOT: Read items directly from local DB
   const items = useLiveQuery(
@@ -987,7 +994,7 @@ function ListView({
   }, [isThrottled]);
 
   useEffect(() => {
-    shoppingService.getList(listId).then(setList);
+    // Only background sync for items, useLiveQuery handles the UI
     return shoppingService.subscribeToItems(listId);
   }, [listId]);
 
@@ -1281,7 +1288,6 @@ function ListView({
             currentEmoji={list.icon}
             onSelect={(emoji) => {
               shoppingService.updateListIcon(listId, emoji);
-              setList({ ...list, icon: emoji });
             }}
             onClose={() => setShowEmojiPicker(false)}
           />

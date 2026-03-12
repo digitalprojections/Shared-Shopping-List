@@ -26,6 +26,11 @@ const ownedSource = new Map<string, ShoppingList>();
 const sharedSource = new Map<string, ShoppingList>();
 const followedSources = new Map<string, Map<string, ShoppingList>>();
 
+// Sync status tracking
+let isOwnedLoaded = false;
+let isSharedLoaded = false;
+let isFollowedMetaLoaded = false;
+
 const commitSync = async () => {
   const mergedMap = new Map<string, ShoppingList>();
   
@@ -39,14 +44,32 @@ const commitSync = async () => {
   const finalLists = Array.from(mergedMap.values());
   const finalIds = finalLists.map(l => l.id);
 
-  // Transactional bulk update
-  await localDB.lists.bulkPut(finalLists);
+  // Transactional bulk update - Always update what we have, but avoid overwriting newer local data
+  if (finalLists.length > 0) {
+    const localLists = await localDB.lists.toArray();
+    const localMap = new Map(localLists.map(l => [l.id, l]));
+    
+    const toUpdate = finalLists.filter(remote => {
+      const local = localMap.get(remote.id);
+      // Update if: 1) Doesn't exist locally, 2) Remote is strictly newer
+      return !local || remote.updatedAt > local.updatedAt;
+    });
+
+    if (toUpdate.length > 0) {
+      console.log("[Sync] Updating local lists with newer remote data:", toUpdate.length);
+      await localDB.lists.bulkPut(toUpdate);
+    }
+  }
   
-  // Handled targeted deletions: remove local lists not present in any Firestore query
-  const localIds = await localDB.lists.toCollection().primaryKeys() as string[];
-  const toDelete = localIds.filter(id => !finalIds.includes(id as string));
-  if (toDelete.length > 0) {
-    await localDB.lists.bulkDelete(toDelete);
+  // Only handle deletions after all core sources have reported in at least once
+  // This prevents lists from disappearing during the initial sync wave on refresh
+  if (isOwnedLoaded && isSharedLoaded && isFollowedMetaLoaded) {
+    const localIds = await localDB.lists.toCollection().primaryKeys() as string[];
+    const toDelete = localIds.filter(id => !finalIds.includes(id as string));
+    if (toDelete.length > 0) {
+      console.log("[Sync] Cleaning up deleted lists:", toDelete.length);
+      await localDB.lists.bulkDelete(toDelete);
+    }
   }
 };
 
@@ -64,6 +87,9 @@ export const shoppingService = {
     ownedSource.clear();
     sharedSource.clear();
     followedSources.clear();
+    isOwnedLoaded = false;
+    isSharedLoaded = false;
+    isFollowedMetaLoaded = false;
 
     if (!isFirebaseConfigured) return () => { };
 
@@ -76,8 +102,12 @@ export const shoppingService = {
       snapshot.docs.forEach(doc => {
         ownedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
       });
+      isOwnedLoaded = true;
       debouncedSync();
-    }, (err) => console.error("Firestore error (Owned Lists):", err)));
+    }, (err) => {
+      console.error("Firestore error (Owned Lists):", err);
+      isOwnedLoaded = true; // Still mark as loaded to unblock sync
+    }));
 
     // Query 2: Directly shared lists
     const qShared = query(collection(db, 'lists'), where('sharedUsers', 'array-contains', userId));
@@ -86,8 +116,12 @@ export const shoppingService = {
       snapshot.docs.forEach(doc => {
         sharedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
       });
+      isSharedLoaded = true;
       debouncedSync();
-    }, (err) => console.error("Firestore error (Shared Lists):", err)));
+    }, (err) => {
+      console.error("Firestore error (Shared Lists):", err);
+      isSharedLoaded = true;
+    }));
 
     // Query 3: Followed collections
     const qCol = query(collection(db, 'followed_collections'), where('followerId', '==', userId));
@@ -126,8 +160,12 @@ export const shoppingService = {
           colUnsubscribes.set(ownerId, unsub);
         }
       });
+      isFollowedMetaLoaded = true;
       debouncedSync();
-    }, (err) => console.error("Firestore error (Followed Collections):", err)));
+    }, (err) => {
+      console.error("Firestore error (Followed Collections):", err);
+      isFollowedMetaLoaded = true;
+    }));
 
     return () => {
       unsubscribes.forEach(u => u());
