@@ -99,22 +99,27 @@ export default function App() {
         }
       });
     } else {
-      // For PWA: standard browser back button behavior
+      // For PWA/Web: manual state management to intercept back
       const handlePopState = (e: PopStateEvent) => {
-        if (!activeListId) {
-          // If already at home, and they press back, try to show exit confirm
-          // Note: browser might still exit, but we can try to pushState back
-          window.history.pushState({ noBackExits: true }, '');
-          setShowExitConfirm(true);
-        } else {
+        // If we are in a list, back should go to dashboard
+        if (activeListId) {
           setActiveListId(null);
           setSharedListId(null);
+          // Stay on the same URL but reset state
+          window.history.pushState({ noBackExits: true }, '');
+          return;
         }
+        
+        // If we are on dashboard and press back
+        setShowExitConfirm(true);
+        window.history.pushState({ noBackExits: true }, '');
       };
-      // Push first state to prevent immediate exit
+
+      // Push initial state if not present
       if (!window.history.state?.noBackExits) {
         window.history.pushState({ noBackExits: true }, '');
       }
+
       window.addEventListener('popstate', handlePopState);
       return () => {
         window.removeEventListener('popstate', handlePopState);
@@ -458,8 +463,10 @@ export default function App() {
               <Dashboard
                 userId={user?.uid || ''}
                 onSelectList={setActiveListId}
-                user={user}
+                user={user!}
                 appUser={appUser}
+                installPrompt={installPrompt}
+                onInstall={handleInstallApp}
               />
             ) : (
               <ListView
@@ -657,12 +664,69 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
   );
 }
 
-function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, onSelectList: (id: string) => void, user: User, appUser: AppUser | null }) {
+function InstallAppBanner({ onInstall, onClose }: { onInstall: () => void, onClose: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      className="bg-emerald-600 p-4 sm:p-6 rounded-[2rem] text-white shadow-xl shadow-emerald-600/20 mb-8 relative overflow-hidden group"
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/20 transition-colors" />
+      <div className="relative flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+            <ShoppingBag className="w-6 h-6" />
+          </div>
+          <div className="text-center sm:text-left">
+            <h3 className="font-bold text-lg">{t('pwa.install_title', 'Install ShopShare')}</h3>
+            <p className="text-emerald-50 text-sm opacity-90">
+              {t('pwa.install_desc', 'Get the full app experience on your home screen')}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <button
+            onClick={onInstall}
+            className="flex-1 sm:flex-none px-6 py-3 bg-white text-emerald-600 font-bold rounded-xl shadow-lg hover:bg-emerald-50 transition-all active:scale-95"
+          >
+            {t('pwa.install_button', 'Install App')}
+          </button>
+          <button
+            onClick={onClose}
+            className="p-3 bg-white/10 hover:bg-white/20 rounded-xl transition-colors"
+            title="Dismiss"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function Dashboard({ 
+  userId, 
+  onSelectList, 
+  user, 
+  appUser,
+  installPrompt,
+  onInstall
+}: { 
+  userId: string, 
+  onSelectList: (id: string) => void, 
+  user: User, 
+  appUser: AppUser | null,
+  installPrompt: any,
+  onInstall: () => void
+}) {
   const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [showShare, setShowShare] = useState(false);
   const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [showInstallBanner, setShowInstallBanner] = useState(true);
 
   // SSOT: Read lists directly from local DB
   const lists = useLiveQuery(
@@ -694,6 +758,15 @@ function Dashboard({ userId, onSelectList, user, appUser }: { userId: string, on
       exit={{ opacity: 0, y: -20 }}
       className="space-y-8"
     >
+      <AnimatePresence>
+        {installPrompt && showInstallBanner && (
+          <InstallAppBanner 
+            onInstall={onInstall} 
+            onClose={() => setShowInstallBanner(false)} 
+          />
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-stone-900">{t('dashboard.title')}</h2>
