@@ -481,7 +481,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="scroll-container px-4 pt-2 pb-8 md:px-8">
+      <main className="scroll-container px-4 pt-6 pb-8 md:px-8">
         <div className="max-w-5xl mx-auto">
           <AnimatePresence mode="wait">
             {!activeListId ? (
