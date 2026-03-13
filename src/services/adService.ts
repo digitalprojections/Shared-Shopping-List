@@ -2,7 +2,7 @@ import { AdMob, AdMobRewardItem, RewardAdOptions, RewardAdPluginEvents } from '@
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
 
-const REWARDED_AD_ID = 'ca-app-pub-3940256099942544/5224354917'; // Test ID
+const REWARDED_AD_ID = 'ca-app-pub-3838820812386239/1441303359'; // Real Reward ID
 
 export const adService = {
   initialize: async () => {

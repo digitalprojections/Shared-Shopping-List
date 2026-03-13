@@ -11,7 +11,7 @@ const config: CapacitorConfig = {
     },
     AdMob: {
       initializeOnStartup: true,
-      androidAppId: 'ca-app-pub-3940256099942544~3347511713'
+      androidAppId: 'ca-app-pub-3838820812386239~9298923713'
     },
     SplashScreen: {
       launchShowDuration: 1500,
