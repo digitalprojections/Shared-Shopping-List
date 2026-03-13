@@ -35,7 +35,12 @@
     "list_name": "List Name",
     "list_name_placeholder": "e.g., Weekend Camping",
     "cancel": "Cancel",
-    "create": "Create"
+    "create": "Create",
+    "get_free_coins": "Earn Free Coins",
+    "watch_ad": "Watch Video Ad",
+    "reward_success": "Reward received! +1 Coin",
+    "reward_fail": "Failed to get reward. Try again later.",
+    "ad_error": "Failed to load or show ad. Please try again later."
   },
   "list_view": {
     "delete_collection": "Delete Collection",
@@ -52,7 +57,14 @@
     "sync_changes": "Sync Changes",
     "syncing": "Syncing...",
     "new_tag": "NEW",
-    "sync_fail": "Sync failed"
+    "sync_fail": "Sync failed",
+    "get_free_coins": "Earn Free Coins",
+    "watch_ad": "Watch Video Ad",
+    "reward_success": "Reward received! +1 Coin",
+    "reward_fail": "Failed to get reward. Try again later.",
+    "ad_loading": "Loading ad...",
+    "ad_limit_reached": "Daily limit reached. Try again tomorrow.",
+    "ad_cooldown": "Please wait a minute before the next ad."
   },
   "share_modal": {
     "title": "Share Collection",

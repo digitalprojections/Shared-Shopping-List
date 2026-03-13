@@ -9,6 +9,19 @@ const config: CapacitorConfig = {
       skipNativeAuth: false,
       providers: ["google.com"],
     },
+    AdMob: {
+      initializeOnStartup: true,
+      androidAppId: 'ca-app-pub-3940256099942544~3347511713'
+    },
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      backgroundColor: "#10b981",
+      androidScaleType: "CENTER_CROP",
+      showSpinner: false,
+      splashFullScreen: true,
+      splashImmersive: true,
+    }
   },
 };
 

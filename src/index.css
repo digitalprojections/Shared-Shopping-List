@@ -8,10 +8,13 @@
 
 @layer base {
   html, body {
-    @apply h-full overflow-hidden bg-stone-50 text-stone-900 antialiased;
+    @apply h-full w-full overflow-hidden bg-stone-50 text-stone-900 antialiased;
     /* Prevent rubber-banding/panning on mobile */
     position: fixed;
-    width: 100%;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     overscroll-behavior: none;
   }
 

@@ -17,8 +17,10 @@ import {
   Crown,
   History,
   Clock,
-  RefreshCw
+  RefreshCw,
+  PlayCircle
 } from 'lucide-react';
+import { adService } from './services/adService';
 import { motion, AnimatePresence } from 'motion/react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
@@ -317,7 +319,7 @@ export default function App() {
           }}
           transition={{ repeat: Infinity, duration: 2 }}
         >
-          <img src="/flashshare/logo.png" alt="ShopShare Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="ShopShare Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
         </motion.div>
         <motion.p
           initial={{ opacity: 0 }}
@@ -342,7 +344,7 @@ export default function App() {
             "w-24 h-24 rounded-[2rem] flex items-center justify-center mx-auto shadow-inner overflow-hidden",
             error ? "bg-rose-50" : "bg-white"
           )}>
-            {error ? <X className="w-12 h-12 text-rose-500" /> : <img src="/flashshare/logo.png" alt="Logo" className="w-full h-full object-cover" />}
+            {error ? <X className="w-12 h-12 text-rose-500" /> : <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Logo" className="w-full h-full object-cover" />}
           </div>
 
           <div className="space-y-3">
@@ -399,8 +401,8 @@ export default function App() {
   }
 
   return (
-    <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100 safe-top">
-      <header className="flex-none bg-white/70 backdrop-blur-xl border-b border-stone-200/60 px-4 py-3 md:px-8">
+    <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100">
+      <header className="flex-none bg-white/70 backdrop-blur-xl border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -413,7 +415,7 @@ export default function App() {
             }}
           >
             <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/10 overflow-hidden">
-              <img src="/flashshare/logo.png" alt="L" className="w-full h-full object-cover" />
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="L" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600 hidden xs:block">
               ShopShare
@@ -479,7 +481,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="scroll-container px-4 py-6 md:px-8">
+      <main className="scroll-container px-4 pt-2 pb-8 md:px-8">
         <div className="max-w-5xl mx-auto">
           <AnimatePresence mode="wait">
             {!activeListId ? (
@@ -751,7 +753,12 @@ function Dashboard({
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(true);
   const [isPending, setIsPending] = useState(false);
+  const [isAdLoading, setIsAdLoading] = useState(false);
   const [lists, setLists] = useState<ShoppingList[]>([]);
+
+  useEffect(() => {
+    adService.initialize().catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -774,6 +781,24 @@ function Dashboard({
       alert(error.message || t('dashboard.create_error', 'Failed to create list'));
     } finally {
       setIsPending(false);
+    }
+  };
+
+  const handleWatchAd = async () => {
+    if (isAdLoading) return;
+    setIsAdLoading(true);
+    try {
+      const result = await adService.showRewardedAd();
+      if (result.success) {
+        alert(t('dashboard.reward_success', 'Reward received! +1 Coin'));
+      } else {
+        alert(result.error || t('dashboard.reward_fail', 'Failed to get reward. Try again later.'));
+      }
+    } catch (error) {
+      console.error("Error showing rewarded ad:", error);
+      alert(t('dashboard.ad_error', 'Failed to load or show ad. Please try again later.'));
+    } finally {
+      setIsAdLoading(false);
     }
   };
 
@@ -871,6 +896,38 @@ function Dashboard({
                 </button>
               </motion.div>
             ))}
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: lists.length * 0.03 }}
+              whileHover={{ y: -2 }}
+              className="group"
+            >
+              <button
+                onClick={handleWatchAd}
+                disabled={isAdLoading}
+                className="w-full aspect-[16/10] p-4 rounded-3xl border-2 border-dashed border-emerald-200 bg-emerald-50/30 flex flex-col items-center justify-center text-center gap-2 transition-all hover:bg-emerald-50 hover:border-emerald-300 disabled:opacity-50"
+              >
+                {isAdLoading ? (
+                  <div className="w-8 h-8 border-3 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <div className="p-2 bg-emerald-100 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform">
+                      <PlayCircle className="w-7 h-7" />
+                    </div>
+                    <div>
+                      <span className="block font-bold text-stone-900 leading-tight">
+                        {t('dashboard.get_free_coins')}
+                      </span>
+                      <span className="text-xs text-stone-500">
+                        {t('dashboard.watch_ad')}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </button>
+            </motion.div>
 
             {lists.length === 0 && !isCreating && (
               <motion.div
