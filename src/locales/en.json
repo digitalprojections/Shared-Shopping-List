@@ -48,7 +48,11 @@
     "empty_list": "Your list is empty",
     "empty_suggest": "Add some items to get started!",
     "insufficient_coins": "Insufficient coins! Please redeem a coupon to add more items.",
-    "add_item_fail": "Failed to add item"
+    "add_item_fail": "Failed to add item",
+    "sync_changes": "Sync Changes",
+    "syncing": "Syncing...",
+    "new_tag": "NEW",
+    "sync_fail": "Sync failed"
   },
   "share_modal": {
     "title": "Share Collection",

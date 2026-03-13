@@ -52,8 +52,12 @@ service cloud.firestore {
     // User Profiles
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId && isNotThrottled(2000);
-      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId && 
+                    isNotThrottled(2000) &&
+                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coinBalance', 'coinBatches']);
+      allow create: if request.auth != null && request.auth.uid == userId &&
+                    request.resource.data.coinBalance == 0 &&
+                    request.resource.data.coinBatches == [];
     }
     
     // Coupons

@@ -16,7 +16,8 @@ import {
   Ticket,
   Crown,
   History,
-  Clock
+  Clock,
+  RefreshCw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Capacitor } from '@capacitor/core';
@@ -38,8 +39,6 @@ import {
 import { shoppingService } from './services/shoppingService';
 import { userService } from './services/userService';
 import { couponService } from './services/couponService';
-import { localDB } from './lib/db';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { useTranslation, Trans } from 'react-i18next';
 import './i18n'; // Import i18n configuration
 import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
@@ -58,7 +57,7 @@ const COLORS = [
   'bg-fuchsia-100 border-fuchsia-200 text-fuchsia-700',
 ];
 
-console.log("App.tsx: Module loading", { motion, AnimatePresence, useLiveQuery, localDB });
+console.log("App.tsx: Module loading", { motion, AnimatePresence });
 
 export default function App() {
   console.log("App: Component rendering");
@@ -751,28 +750,31 @@ function Dashboard({
   const [showShare, setShowShare] = useState(false);
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(true);
-
-  // SSOT: Read lists directly from local DB
-  const lists = useLiveQuery(
-    () => localDB.lists.toArray().then(items => items.sort((a, b) => b.updatedAt - a.updatedAt)),
-    []
-  ) || [];
+  const [isPending, setIsPending] = useState(false);
+  const [lists, setLists] = useState<ShoppingList[]>([]);
 
   useEffect(() => {
     if (!userId) return;
-    console.log("Dashboard: Starting background sync for user:", userId);
-    // subscribeToLists now handles internal SSOT updates via debounced commitSync
-    return shoppingService.subscribeToLists(userId);
+    console.log("Dashboard: Subscribing to lists for user:", userId);
+    return shoppingService.subscribeToLists(userId, setLists);
   }, [userId]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newListName.trim()) return;
-    const color = COLORS[Math.floor(Math.random() * COLORS.length)];
-    const id = await shoppingService.createList(userId, newListName, color);
-    setNewListName('');
-    setIsCreating(false);
-    if (id) onSelectList(id);
+    if (!newListName.trim() || isPending) return;
+    
+    setIsPending(true);
+    try {
+      const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+      const id = await shoppingService.createList(userId, newListName, color);
+      setNewListName('');
+      setIsCreating(false);
+      if (id) onSelectList(id);
+    } catch (error: any) {
+      alert(error.message || t('dashboard.create_error', 'Failed to create list'));
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -942,10 +944,17 @@ function Dashboard({
                 </button>
                 <button
                   type="submit"
-                  disabled={!newListName.trim()}
-                  className="flex-1 px-6 py-4 rounded-2xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all"
+                  disabled={!newListName.trim() || isPending}
+                  className="flex-1 px-6 py-4 rounded-2xl bg-emerald-600 text-white font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                 >
-                  {t('dashboard.create')}
+                  {isPending ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      {t('dashboard.creating', 'Creating...')}
+                    </>
+                  ) : (
+                    t('dashboard.create')
+                  )}
                 </button>
               </div>
             </motion.form>
@@ -987,12 +996,8 @@ function ListView({
   appUser: AppUser | null
 }) {
   const { t } = useTranslation();
-  // SSOT: Read list metadata directly from local DB
-  const list = useLiveQuery(
-    () => localDB.lists.get(listId),
-    [listId]
-  );
-
+  const [list, setList] = useState<ShoppingList | null>(null);
+  const [items, setItems] = useState<ListItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -1001,14 +1006,23 @@ function ListView({
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [isThrottled, setIsThrottled] = useState(false);
+  const [localDraftItems, setLocalDraftItems] = useState<ListItem[]>([]);
+  const [isSyncing, setIsSyncing] = useState(false);
 
-  // SSOT: Read items directly from local DB
+  useEffect(() => {
+    if (!listId) return;
+    return shoppingService.subscribeToList(listId, setList);
+  }, [listId]);
 
-  // SSOT: Read items directly from local DB
-  const items = useLiveQuery(
-    () => localDB.items.where('listId').equals(listId).sortBy('createdAt'),
-    [listId]
-  ) || [];
+  useEffect(() => {
+    if (!listId) return;
+    return shoppingService.subscribeToItems(listId, (remoteItems) => {
+      // When remote items update, we reset the local draft IF there are no unsynced changes
+      // Or we merge? For simplicity, we'll keep remote as the source of truth when not syncing.
+      setItems(remoteItems);
+      setLocalDraftItems(remoteItems);
+    });
+  }, [listId]);
 
   useEffect(() => {
     if (isThrottled) {
@@ -1017,29 +1031,57 @@ function ListView({
     }
   }, [isThrottled]);
 
-  useEffect(() => {
-    // Only background sync for items, useLiveQuery handles the UI
-    return shoppingService.subscribeToItems(listId);
-  }, [listId]);
-
-  const handleAddItem = async (e?: React.FormEvent) => {
+  const handleAddItem = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!newItemName.trim() || permission === 'read' || !user) return;
 
-    if (!appUser || appUser.coinBalance <= 0) {
+    const newItem: ListItem = {
+      id: `temp-${Date.now()}`,
+      name: newItemName,
+      quantity: newItemQty,
+      isBought: false,
+      createdAt: Date.now()
+    };
+
+    setLocalDraftItems(prev => [...prev, newItem]);
+    setNewItemName('');
+    setNewItemQty('');
+    setSuggestions([]);
+    inputRef.current?.focus();
+  };
+
+  const handleSync = async () => {
+    if (!user || !appUser || isSyncing) return;
+
+    if (appUser.coinBalance <= 0) {
       alert(t('list_view.insufficient_coins'));
       return;
     }
 
+    setIsSyncing(true);
     try {
-      await shoppingService.addItem(listId, newItemName, newItemQty, user.uid);
-      setNewItemName('');
-      setNewItemQty('');
-      setSuggestions([]);
-      setIsThrottled(true);
-      inputRef.current?.focus();
+      // Compare localDraftItems with items (remote) to find changes
+      const itemsToAdd = localDraftItems.filter(item => item.id.startsWith('temp-')).map(({ id, ...rest }) => rest);
+      
+      const itemsToUpdate = localDraftItems.filter(local => {
+        const remote = items.find(r => r.id === local.id);
+        return remote && (remote.isBought !== local.isBought || remote.name !== local.name || remote.quantity !== local.quantity);
+      });
+
+      const itemsToDelete = items.filter(remote => !localDraftItems.find(local => local.id === remote.id)).map(i => i.id);
+
+      if (itemsToAdd.length === 0 && itemsToUpdate.length === 0 && itemsToDelete.length === 0) {
+        alert("No changes to sync");
+        setIsSyncing(false);
+        return;
+      }
+
+      await shoppingService.syncListChanges(listId, user.uid, itemsToAdd, itemsToUpdate, itemsToDelete);
+      // Remote listener will update items and localDraftItems via useEffect
     } catch (error: any) {
-      alert(error.message || t('list_view.add_item_fail'));
+      alert(error.message || t('list_view.sync_fail'));
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -1117,6 +1159,19 @@ function ListView({
         </div>
 
         <div className="flex items-center gap-3 self-end md:self-auto">
+          {permission === 'edit' && (localDraftItems.length !== items.length || 
+           JSON.stringify(localDraftItems) !== JSON.stringify(items)) ? (
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSync}
+              disabled={isSyncing}
+              className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all"
+            >
+              <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
+              {isSyncing ? t('list_view.syncing') : t('list_view.sync_changes')} (1 🪙)
+            </motion.button>
+          ) : null}
           {!isShared && !user?.isAnonymous && (
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -1239,7 +1294,7 @@ function ListView({
 
       <div className="grid grid-cols-1 gap-4">
         <AnimatePresence initial={false}>
-          {items.map((item) => (
+          {localDraftItems.map((item) => (
             <motion.div
               layout
               key={item.id}
@@ -1250,14 +1305,19 @@ function ListView({
                 "group flex items-center justify-between p-3 rounded-xl border transition-all duration-300",
                 item.isBought
                   ? "bg-stone-50 border-transparent opacity-60"
-                  : "bg-white border-stone-100 shadow-sm hover:shadow-md hover:border-emerald-100"
+                  : "bg-white border-stone-100 shadow-sm hover:shadow-md hover:border-emerald-100",
+                item.id.startsWith('temp-') && "border-emerald-200 border-dashed"
               )}
             >
               <div className="flex items-center gap-4 flex-1">
                 <motion.button
                   whileTap={{ scale: 0.8 }}
                   disabled={permission === 'read'}
-                  onClick={() => shoppingService.toggleItem(listId, item.id, !item.isBought)}
+                  onClick={() => {
+                    setLocalDraftItems(prev => prev.map(i => 
+                      i.id === item.id ? { ...i, isBought: !i.isBought } : i
+                    ));
+                  }}
                   className={cn(
                     "w-6 h-6 rounded-full flex items-center justify-center transition-all border-2 flex-shrink-0",
                     item.isBought
@@ -1273,6 +1333,7 @@ function ListView({
                     item.isBought && "line-through text-stone-400"
                   )}>
                     {item.name}
+                    {item.id.startsWith('temp-') && <span className="ml-2 text-[10px] text-emerald-500 font-black italic">{t('list_view.new_tag')}</span>}
                   </span>
                   {item.quantity && (
                     <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{item.quantity}</span>
@@ -1283,7 +1344,9 @@ function ListView({
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   whileTap={{ scale: 0.9 }}
-                  onClick={() => shoppingService.deleteItem(listId, item.id)}
+                  onClick={() => {
+                    setLocalDraftItems(prev => prev.filter(i => i.id !== item.id));
+                  }}
                   className="p-2 text-stone-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
                 >
                   <Trash2 className="w-4 h-4" />

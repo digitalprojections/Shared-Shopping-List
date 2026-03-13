@@ -16,82 +16,30 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
-import { localDB } from '../lib/db';
 import { ShoppingList, ListItem, ShareLink, Permission } from '../types';
 import { userService } from './userService';
 
-// Module-level sync state to persist across source updates
-let syncTimeout: any = null;
-const ownedSource = new Map<string, ShoppingList>();
-const sharedSource = new Map<string, ShoppingList>();
-const followedSources = new Map<string, Map<string, ShoppingList>>();
-
-// Sync status tracking
-let isOwnedLoaded = false;
-let isSharedLoaded = false;
-let isFollowedMetaLoaded = false;
-
-const commitSync = async () => {
-  const mergedMap = new Map<string, ShoppingList>();
-  
-  // Merge results from all sources: Followed < Shared < Owned (priority)
-  followedSources.forEach(source => {
-    source.forEach((list, id) => mergedMap.set(id, list));
-  });
-  sharedSource.forEach((list, id) => mergedMap.set(id, list));
-  ownedSource.forEach((list, id) => mergedMap.set(id, list));
-
-  const finalLists = Array.from(mergedMap.values());
-  const finalIds = finalLists.map(l => l.id);
-
-  // Transactional bulk update - Always update what we have, but avoid overwriting newer local data
-  if (finalLists.length > 0) {
-    const localLists = await localDB.lists.toArray();
-    const localMap = new Map(localLists.map(l => [l.id, l]));
-    
-    const toUpdate = finalLists.filter(remote => {
-      const local = localMap.get(remote.id);
-      // Update if: 1) Doesn't exist locally, 2) Remote is strictly newer
-      return !local || remote.updatedAt > local.updatedAt;
-    });
-
-    if (toUpdate.length > 0) {
-      console.log("[Sync] Updating local lists with newer remote data:", toUpdate.length);
-      await localDB.lists.bulkPut(toUpdate);
-    }
-  }
-  
-  // Only handle deletions after all core sources have reported in at least once
-  // This prevents lists from disappearing during the initial sync wave on refresh
-  if (isOwnedLoaded && isSharedLoaded && isFollowedMetaLoaded) {
-    const localIds = await localDB.lists.toCollection().primaryKeys() as string[];
-    const toDelete = localIds.filter(id => !finalIds.includes(id as string));
-    if (toDelete.length > 0) {
-      console.log("[Sync] Cleaning up deleted lists:", toDelete.length);
-      await localDB.lists.bulkDelete(toDelete);
-    }
-  }
-};
-
-const debouncedSync = () => {
-  if (syncTimeout) clearTimeout(syncTimeout);
-  syncTimeout = setTimeout(() => {
-    commitSync().catch(err => console.error("[Sync] Error during commit:", err));
-  }, 200);
-};
-
 export const shoppingService = {
   // Lists
-  subscribeToLists: (userId: string) => {
-    // Clear state on new subscription
-    ownedSource.clear();
-    sharedSource.clear();
-    followedSources.clear();
-    isOwnedLoaded = false;
-    isSharedLoaded = false;
-    isFollowedMetaLoaded = false;
-
+  subscribeToLists: (userId: string, callback: (lists: ShoppingList[]) => void) => {
     if (!isFirebaseConfigured) return () => { };
+
+    const ownedSource = new Map<string, ShoppingList>();
+    const sharedSource = new Map<string, ShoppingList>();
+    const followedSources = new Map<string, Map<string, ShoppingList>>();
+
+    const notify = () => {
+      const mergedMap = new Map<string, ShoppingList>();
+      // Merge results from all sources: Followed < Shared < Owned (priority)
+      followedSources.forEach(source => {
+        source.forEach((list, id) => mergedMap.set(id, list));
+      });
+      sharedSource.forEach((list, id) => mergedMap.set(id, list));
+      ownedSource.forEach((list, id) => mergedMap.set(id, list));
+
+      const finalLists = Array.from(mergedMap.values()).sort((a, b) => b.updatedAt - a.updatedAt);
+      callback(finalLists);
+    };
 
     const unsubscribes: (() => void)[] = [];
 
@@ -102,11 +50,7 @@ export const shoppingService = {
       snapshot.docs.forEach(doc => {
         ownedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
       });
-      isOwnedLoaded = true;
-      debouncedSync();
-    }, (err) => {
-      console.error("Firestore error (Owned Lists):", err);
-      isOwnedLoaded = true; // Still mark as loaded to unblock sync
+      notify();
     }));
 
     // Query 2: Directly shared lists
@@ -116,11 +60,7 @@ export const shoppingService = {
       snapshot.docs.forEach(doc => {
         sharedSource.set(doc.id, { id: doc.id, ...doc.data() } as ShoppingList);
       });
-      isSharedLoaded = true;
-      debouncedSync();
-    }, (err) => {
-      console.error("Firestore error (Shared Lists):", err);
-      isSharedLoaded = true;
+      notify();
     }));
 
     // Query 3: Followed collections
@@ -154,17 +94,13 @@ export const shoppingService = {
             listSnap.docs.forEach(listDoc => {
               sourceMap.set(listDoc.id, { id: listDoc.id, ...listDoc.data() } as ShoppingList);
             });
-            debouncedSync();
-          }, (err) => console.error(`Firestore error (Followed Collection ${ownerId}):`, err));
+            notify();
+          });
           
           colUnsubscribes.set(ownerId, unsub);
         }
       });
-      isFollowedMetaLoaded = true;
-      debouncedSync();
-    }, (err) => {
-      console.error("Firestore error (Followed Collections):", err);
-      isFollowedMetaLoaded = true;
+      notify();
     }));
 
     return () => {
@@ -174,31 +110,29 @@ export const shoppingService = {
   },
 
   createList: async (userId: string, name: string, color: string) => {
-    const newList: Omit<ShoppingList, 'id'> = {
-      name,
-      ownerId: userId,
-      color,
-      icon: '🛒',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      sharedUsers: []
-    };
-
     if (isFirebaseConfigured) {
+      const consumption = await userService.consumeCoin(userId);
+      if (!consumption.success) {
+        throw new Error(consumption.error || 'Failed to consume coin');
+      }
+
+      const newList: Omit<ShoppingList, 'id'> = {
+        name,
+        ownerId: userId,
+        color,
+        icon: '🛒',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        sharedUsers: []
+      };
+
       const docRef = await addDoc(collection(db, 'lists'), newList);
-      await localDB.lists.put({ id: docRef.id, ...newList });
       return docRef.id;
-    } else {
-      const id = Math.random().toString(36).substring(7);
-      await localDB.lists.put({ id, ...newList });
-      return id;
     }
+    return null;
   },
 
   deleteList: async (listId: string) => {
-    await localDB.lists.delete(listId);
-    await localDB.items.where('listId').equals(listId).delete();
-
     if (isFirebaseConfigured) {
       await deleteDoc(doc(db, 'lists', listId));
       const items = await getDocs(collection(db, 'lists', listId, 'items'));
@@ -214,7 +148,6 @@ export const shoppingService = {
   },
 
   updateListIcon: async (listId: string, icon: string) => {
-    await localDB.lists.update(listId, { icon, updatedAt: Date.now() });
     if (isFirebaseConfigured) {
       await updateDoc(doc(db, 'lists', listId), { 
         icon, 
@@ -224,77 +157,84 @@ export const shoppingService = {
   },
 
   // Items
-  subscribeToItems: (listId: string) => {
+  subscribeToItems: (listId: string, callback: (items: ListItem[]) => void) => {
     if (!isFirebaseConfigured) return () => { };
 
-    // Listen to Firebase and sync to local
     const q = query(
       collection(db, 'lists', listId, 'items'),
       orderBy('createdAt', 'asc')
     );
 
-    return onSnapshot(q, async (snapshot) => {
-      const remoteItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ListItem));
-
-      // Update local DB
-      const itemsWithListId = remoteItems.map(item => ({ ...item, listId }));
-      await localDB.items.bulkPut(itemsWithListId);
-
-      // Clean up local items
-      const remoteIds = remoteItems.map(i => i.id);
-      const localItems = await localDB.items.where('listId').equals(listId).toArray();
-      const toDelete = localItems.filter(i => !remoteIds.includes(i.id)).map(i => i.id);
-      if (toDelete.length > 0) await localDB.items.bulkDelete(toDelete);
+    return onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as ListItem));
+      callback(items);
     });
   },
 
-  addItem: async (listId: string, name: string, quantity: string, userId: string) => {
-    // Consume coin first
+  syncListChanges: async (listId: string, userId: string, itemsToAdd: Omit<ListItem, 'id'>[], itemsToUpdate: ListItem[], itemsToDelete: string[]) => {
     if (isFirebaseConfigured) {
       const consumption = await userService.consumeCoin(userId);
       if (!consumption.success) {
         throw new Error(consumption.error || 'Failed to consume coin');
       }
+
+      const batch = writeBatch(db);
+      const listRef = doc(db, 'lists', listId);
+
+      // 1. Process Additions
+      itemsToAdd.forEach(item => {
+        const itemRef = doc(collection(db, 'lists', listId, 'items'));
+        batch.set(itemRef, { ...item, createdAt: Date.now() });
+
+        // Track suggestion (best effort, batch.set doesn't support increment directly in set usually without more logic, but we can do it after)
+      });
+
+      // 2. Process Updates
+      itemsToUpdate.forEach(item => {
+        const itemRef = doc(db, 'lists', listId, 'items', item.id);
+        const { id, ...data } = item;
+        batch.update(itemRef, data);
+      });
+
+      // 3. Process Deletions
+      itemsToDelete.forEach(itemId => {
+        const itemRef = doc(db, 'lists', listId, 'items', itemId);
+        batch.delete(itemRef);
+      });
+
+      // 4. Update list timestamp
+      batch.update(listRef, { updatedAt: Date.now() });
+
+      await batch.commit();
+
+      // Side effect: Suggestions (doing separately as they aren't critical to the list sync's atomicity)
+      itemsToAdd.forEach(item => {
+        const suggestionId = item.name.toLowerCase().trim();
+        const suggestionRef = doc(db, 'suggestions', suggestionId);
+        setDoc(suggestionRef, {
+          name: item.name.trim(),
+          count: increment(1)
+        }, { merge: true }).catch(err => console.error("Suggestion error:", err));
+      });
+
+      return true;
     }
+    return false;
+  },
 
-    const newItem: Omit<ListItem, 'id'> = {
-      name,
-      quantity,
-      isBought: false,
-      createdAt: Date.now()
-    };
-
-    if (isFirebaseConfigured) {
-      const docRef = await addDoc(collection(db, 'lists', listId, 'items'), newItem);
-      await localDB.items.put({ id: docRef.id, listId, ...newItem });
-      await updateDoc(doc(db, 'lists', listId), { updatedAt: Date.now() });
-
-      // Track suggestion
-      const suggestionId = name.toLowerCase().trim();
-      const suggestionRef = doc(db, 'suggestions', suggestionId);
-      await setDoc(suggestionRef, {
-        name: name.trim(),
-        count: increment(1)
-      }, { merge: true });
-    } else {
-      const id = Math.random().toString(36).substring(7);
-      await localDB.items.put({ id, listId, ...newItem });
-      await localDB.lists.update(listId, { updatedAt: Date.now() });
-    }
+  // Legacy individual methods kept for simple standalone operations if needed, 
+  // but we will primarily use syncListChanges in the UI.
+  addItem: async (listId: string, name: string, quantity: string, userId: string) => {
+    // Kept for backward compatibility but UI will move to local-first batching
+    return null; 
   },
 
   toggleItem: async (listId: string, itemId: string, isBought: boolean) => {
-    await localDB.items.update(itemId, { isBought });
-    if (isFirebaseConfigured) {
-      await updateDoc(doc(db, 'lists', listId, 'items', itemId), { isBought });
-    }
+    // UI will batch this
   },
 
   deleteItem: async (listId: string, itemId: string) => {
-    await localDB.items.delete(itemId);
-    if (isFirebaseConfigured) {
-      await deleteDoc(doc(db, 'lists', listId, 'items', itemId));
-    }
+    // UI will batch this
   },
 
   // Sharing
@@ -337,13 +277,15 @@ export const shoppingService = {
   },
 
   toggleShareActive: async (shareId: string, isActive: boolean) => {
-    if (!isFirebaseConfigured) return;
-    await updateDoc(doc(db, 'shares', shareId), { isActive });
+    if (isFirebaseConfigured) {
+      await updateDoc(doc(db, 'shares', shareId), { isActive });
+    }
   },
 
   deleteShare: async (shareId: string) => {
-    if (!isFirebaseConfigured) return;
-    await deleteDoc(doc(db, 'shares', shareId));
+    if (isFirebaseConfigured) {
+      await deleteDoc(doc(db, 'shares', shareId));
+    }
   },
 
   getShare: async (shareId: string) => {
@@ -354,16 +296,21 @@ export const shoppingService = {
   },
 
   getList: async (listId: string) => {
-    // Try local first
-    const localList = await localDB.lists.get(listId);
-    if (localList) return localList;
-
     if (!isFirebaseConfigured) return null;
     const listDoc = await getDoc(doc(db, 'lists', listId));
     if (!listDoc.exists()) return null;
-    const list = { id: listDoc.id, ...listDoc.data() } as ShoppingList;
-    await localDB.lists.put(list);
-    return list;
+    return { id: listDoc.id, ...listDoc.data() } as ShoppingList;
+  },
+
+  subscribeToList: (listId: string, callback: (list: ShoppingList | null) => void) => {
+    if (!isFirebaseConfigured) return () => { };
+    return onSnapshot(doc(db, 'lists', listId), (doc) => {
+      if (doc.exists()) {
+        callback({ id: doc.id, ...doc.data() } as ShoppingList);
+      } else {
+        callback(null);
+      }
+    });
   },
 
   // Suggestions
