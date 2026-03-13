@@ -2,10 +2,15 @@ import { AdMob, AdMobRewardItem, RewardAdOptions, RewardAdPluginEvents } from '@
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
 
-const REWARDED_AD_ID = 'ca-app-pub-3838820812386239/1441303359'; // Real Reward ID
+const TEST_REWARDED_AD_ID = 'ca-app-pub-3940256099942544/5224354917';
+const REAL_REWARDED_AD_ID = 'ca-app-pub-3838820812386239/1441303359';
+
+const REWARDED_AD_ID = import.meta.env.DEV ? TEST_REWARDED_AD_ID : REAL_REWARDED_AD_ID;
 
 export const adService = {
   initialize: async () => {
+    console.log(`AdMob: Initializing in ${import.meta.env.DEV ? 'DEVELOPMENT' : 'PRODUCTION'} mode`);
+    console.log(`AdMob: Using ${import.meta.env.DEV ? 'TEST' : 'REAL'} Ad Unit ID`);
     await AdMob.initialize();
   },
 
