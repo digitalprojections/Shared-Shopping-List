@@ -269,15 +269,16 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    if (user && isFirebaseConfigured) {
-      const params = new URLSearchParams(window.location.search);
+    const handleIncomingShare = async (search: string) => {
+      const params = new URLSearchParams(search);
       const shareId = params.get('share');
-      if (shareId) {
+      if (shareId && user && isFirebaseConfigured) {
         if (user.isAnonymous) {
           setError("You must sign in with a real account to join shared lists.");
           return;
         }
-        shoppingService.getShare(shareId).then(async (share) => {
+        try {
+          const share = await shoppingService.getShare(shareId);
           if (share && share.isActive) {
             if (share.type === 'collection') {
               await shoppingService.joinCollection(share.listId, user.uid);
@@ -290,11 +291,28 @@ export default function App() {
             }
             window.history.replaceState({}, '', window.location.pathname);
           }
-        }).catch(err => {
+        } catch (err) {
           console.error("Error joining share:", err);
           setError("Could not join shared list. Please check your configuration.");
+        }
+      }
+    };
+
+    if (user && isFirebaseConfigured) {
+      handleIncomingShare(window.location.search);
+
+      let urlOpenListener: any;
+      if (Capacitor.isNativePlatform()) {
+        urlOpenListener = CapApp.addListener('appUrlOpen', (data: any) => {
+          console.log('App opened with URL:', data.url);
+          const url = new URL(data.url);
+          handleIncomingShare(url.search);
         });
       }
+
+      return () => {
+        if (urlOpenListener) urlOpenListener.remove();
+      };
     }
   }, [user]);
 
@@ -1638,7 +1656,10 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
   };
 
   const copyShareLink = (shareId: string) => {
-    const url = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
+    const baseUrl = Capacitor.isNativePlatform() 
+      ? 'https://created.link/listshare/' 
+      : `${window.location.origin}${window.location.pathname}`;
+    const url = `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}?share=${shareId}`;
     navigator.clipboard.writeText(url);
     setCopiedId(shareId);
     setTimeout(() => setCopiedId(null), 2000);
