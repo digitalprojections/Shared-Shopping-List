@@ -1,7 +1,9 @@
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { db, isFirebaseConfigured, functions } from '../lib/firebase';
+import { doc, getDoc, setDoc, onSnapshot, query, collection, where, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { db, isFirebaseConfigured, functions, auth } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { AppUser } from '../types';
+import { User, signOut } from 'firebase/auth';
+import { shoppingService } from './shoppingService';
 
 export const userService = {
   ensureUserProfile: async (userId: string): Promise<void> => {
@@ -93,6 +95,46 @@ export const userService = {
       console.error("Error consuming coin via Cloud Function:", error);
       const message = error.message || 'Error consuming coin';
       return { success: false, error: message };
+    }
+  },
+
+  deleteUserAccount: async (userInstance: User): Promise<{ success: boolean; error?: string }> => {
+    if (!isFirebaseConfigured) return { success: false, error: 'Firebase not configured' };
+
+    try {
+      const userId = userInstance.uid;
+      console.log("Starting account deletion for:", userId);
+
+      // 1. Delete owned lists and their items
+      const listsQuery = query(collection(db, 'lists'), where('ownerId', '==', userId));
+      const listsSnapshot = await getDocs(listsQuery);
+      
+      for (const listDoc of listsSnapshot.docs) {
+        await shoppingService.deleteList(listDoc.id);
+      }
+
+      // 2. Delete followed collections
+      const followedQuery = query(collection(db, 'followed_collections'), where('followerId', '==', userId));
+      const followedSnapshot = await getDocs(followedQuery);
+      const batch = writeBatch(db);
+      followedSnapshot.docs.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+
+      // 3. Delete user profile
+      await deleteDoc(doc(db, 'users', userId));
+
+      // 4. Finally, delete the Firebase Auth account
+      await userInstance.delete();
+      
+      return { success: true };
+    } catch (error: any) {
+      console.error("Error in deleteUserAccount:", error);
+      return { 
+        success: false, 
+        error: error.code === 'auth/requires-recent-login' 
+          ? 'SEC_ERROR_RECENT_LOGIN' 
+          : error.message || 'Error deleting account' 
+      };
     }
   }
 };

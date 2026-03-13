@@ -11,7 +11,8 @@
     "continue_guest": "Continue as Guest",
     "sign_out": "Sign Out",
     "link_account": "Link Account",
-    "redeem": "Redeem"
+    "redeem": "Redeem",
+    "privacy_policy": "Privacy Policy"
   },
   "header": {
     "title": "ShopShare"
@@ -102,5 +103,19 @@
       "Fun": "Fun",
       "Pets": "Pets"
     }
+  },
+  "user_menu": {
+    "profile": "Profile",
+    "delete_account": "Delete Account & Data"
+  },
+  "delete_account_modal": {
+    "title": "Delete Account?",
+    "confirm": "This action is permanent. All your lists, items, and profile information will be deleted forever.",
+    "button": "Delete Everything",
+    "reauth_required": "For security, please sign out and sign back in before deleting your account.",
+    "deleting": "Deleting..."
+  },
+  "footer": {
+    "privacy_policy": "Privacy Policy"
   }
 }
