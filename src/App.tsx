@@ -28,6 +28,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics';
 import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
 import {
   signInAnonymously,
@@ -169,6 +170,12 @@ export default function App() {
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      FirebaseCrashlytics.setEnabled({ enabled: true }).catch(console.error);
+    }
   }, []);
 
   const handleInstallApp = async () => {
