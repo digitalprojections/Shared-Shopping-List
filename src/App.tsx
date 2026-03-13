@@ -1374,7 +1374,7 @@ function ListView({
               whileTap={{ scale: 0.95 }}
               onClick={handleSync}
               disabled={isSyncing}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all text-sm"
+              className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all"
             >
               <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
               {isSyncing ? t('list_view.syncing') : t('list_view.sync_changes')} (1 🪙)
@@ -1500,7 +1500,7 @@ function ListView({
         </motion.div>
       )}
 
-      <div className="grid grid-cols-1 gap-2">
+      <div className="grid grid-cols-1 gap-4">
         <AnimatePresence initial={false}>
           {localDraftItems.map((item) => (
             <motion.div
@@ -1510,9 +1510,9 @@ function ListView({
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.98 }}
               className={cn(
-                "group flex items-center justify-between px-4 py-2 rounded-lg border transition-all duration-300",
+                "group flex items-center justify-between p-3 rounded-xl border transition-all duration-300",
                 item.isBought
-                  ? "bg-stone-50/50 border-transparent opacity-60"
+                  ? "bg-stone-50 border-transparent opacity-60"
                   : "bg-white border-stone-100 shadow-sm hover:shadow-md hover:border-emerald-100",
                 item.id.startsWith('temp-') && "border-emerald-200 border-dashed"
               )}
