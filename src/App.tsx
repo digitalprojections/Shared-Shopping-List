@@ -51,6 +51,7 @@ import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } fro
 import { cn } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
 import { Onboarding } from './components/Onboarding';
+import { APP_CONFIG } from './config';
 
 // --- Components ---
 
@@ -544,7 +545,7 @@ export default function App() {
               >
                 {user?.photoURL ? (
                   <img
-                    src={user.photoURL.includes('googleusercontent.com') ? user.photoURL.split('=')[0] + '=s96-c' : user.photoURL}
+                    src={user.photoURL.includes('googleusercontent.com') ? user.photoURL.split('=')[0] + APP_CONFIG.USER.DEFAULT_AVATAR_SIZE : user.photoURL}
                     alt="avatar"
                     className="w-full h-full object-cover"
                     referrerPolicy="no-referrer"
@@ -552,7 +553,7 @@ export default function App() {
                   />
                 ) : (
                   <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'default'}`}
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || APP_CONFIG.USER.ANONYMOUS_AVATAR_SEED}`}
                     alt="avatar"
                     className="w-full h-full object-cover"
                     crossOrigin="anonymous"
@@ -1656,10 +1657,17 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
   };
 
   const copyShareLink = (shareId: string) => {
-    const baseUrl = Capacitor.isNativePlatform() 
-      ? 'https://created.link/listshare/' 
+    const platform = Capacitor.getPlatform();
+    
+    // In native apps, we use the hardcoded production URL.
+    // On web (PWA or development), we use the current browser URL.
+    const baseUrl = (platform === 'android' || platform === 'ios')
+      ? APP_CONFIG.PROD_URL 
       : `${window.location.origin}${window.location.pathname}`;
+      
     const url = `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}?share=${shareId}`;
+    console.log('Share Link: Generated URL for platform', platform, url);
+    
     navigator.clipboard.writeText(url);
     setCopiedId(shareId);
     setTimeout(() => setCopiedId(null), 2000);
@@ -1793,7 +1801,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
     return () => clearInterval(timer);
   }, []);
 
-  const cooldownMs = 10000;
+  const cooldownMs = APP_CONFIG.RATE_LIMITS.COUPON_REDEEM_COOLDOWN;
   const lastAction = appUser?.lastActionAt || 0;
   const remaining = Math.max(0, Math.ceil((cooldownMs - (now - lastAction)) / 1000));
   const isThrottled = remaining > 0;

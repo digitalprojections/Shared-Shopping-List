@@ -1,11 +1,11 @@
 import { AdMob, AdMobRewardItem, RewardAdOptions, RewardAdPluginEvents } from '@capacitor-community/admob';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
+import { APP_CONFIG, isDev } from '../config';
 
-const TEST_REWARDED_AD_ID = 'ca-app-pub-3940256099942544/5224354917';
-const REAL_REWARDED_AD_ID = 'ca-app-pub-3838820812386239/1441303359';
-
-const REWARDED_AD_ID = import.meta.env.DEV ? TEST_REWARDED_AD_ID : REAL_REWARDED_AD_ID;
+const REWARDED_AD_ID = isDev 
+  ? APP_CONFIG.ADMOB.REWARDED_ID_TEST 
+  : APP_CONFIG.ADMOB.REWARDED_ID_REAL;
 
 export const adService = {
   initialize: async () => {
