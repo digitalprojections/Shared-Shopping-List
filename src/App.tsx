@@ -49,6 +49,7 @@ import './i18n'; // Import i18n configuration
 import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
 import { cn } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
+import { Onboarding } from './components/Onboarding';
 
 // --- Components ---
 
@@ -95,6 +96,14 @@ export default function App() {
   const menuRef = useRef<HTMLDivElement>(null);
 
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('ss_onboarding_seen');
+  });
+
+  const handleOnboardingFinish = () => {
+    localStorage.setItem('ss_onboarding_seen', 'true');
+    setShowOnboarding(false);
+  };
 
   useEffect(() => {
     // 1. Handle PWA Install Prompt
@@ -459,6 +468,9 @@ export default function App() {
 
   return (
     <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100">
+      <AnimatePresence>
+        {showOnboarding && <Onboarding onFinish={handleOnboardingFinish} />}
+      </AnimatePresence>
       <header className="flex-none bg-white/70 backdrop-blur-xl border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <motion.div
