@@ -585,7 +585,7 @@ export default function App() {
 
       <footer className="mt-auto py-6 text-center">
         <a 
-          href="https://created.link/flashshare/privacy_policy.html" 
+          href={`${import.meta.env.BASE_URL}privacy_policy.html`} 
           target="_blank" 
           rel="noopener noreferrer"
           className="text-[10px] font-bold text-stone-400 hover:text-stone-600 transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5"
