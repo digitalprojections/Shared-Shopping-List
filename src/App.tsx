@@ -519,15 +519,18 @@ export default function App() {
               >
                 {user?.photoURL ? (
                   <img
-                    src={user.photoURL}
+                    src={user.photoURL.includes('googleusercontent.com') ? user.photoURL.split('=')[0] + '=s96-c' : user.photoURL}
                     alt="avatar"
                     className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
                   />
                 ) : (
                   <img
-                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid}`}
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'default'}`}
                     alt="avatar"
                     className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
                   />
                 )}
               </motion.button>
