@@ -1,5 +1,5 @@
 {
-  "name": "ShopShare",
+  "name": "ListShare",
   "description": "Collaborative shopping lists with real-time sharing, item suggestions, and permission-based access via Firebase.",
   "requestFramePermissions": []
 }

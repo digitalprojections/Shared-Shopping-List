@@ -1,6 +1,6 @@
 {
-  "name": "ShopShare",
-  "short_name": "ShopShare",
+  "name": "ListShare",
+  "short_name": "ListShare",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

@@ -1,7 +1,7 @@
 {
   "app": {
     "loading": "Loading your lists...",
-    "welcome": "Welcome to ShopShare",
+    "welcome": "Welcome to ListShare",
     "subtitle": "Collaborative shopping made beautiful. Sign in to start your lists.",
     "config_error": "Configuration",
     "config_fix": "Fixing the error:",
@@ -15,7 +15,7 @@
     "privacy_policy": "Privacy Policy"
   },
   "header": {
-    "title": "ShopShare"
+    "title": "ListShare"
   },
   "coins": {
     "history_title": "Coin History",

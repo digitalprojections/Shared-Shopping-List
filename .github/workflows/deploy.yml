@@ -35,6 +35,6 @@ jobs:
           protocol: ftp
           port: 21
           local-dir: ./dist/
-          server-dir: /public_html/flashshare/
+          server-dir: /public_html/listshare/
           security: loose
           dangerous-clean-slate: true

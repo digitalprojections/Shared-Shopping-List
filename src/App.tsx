@@ -128,7 +128,7 @@ export default function App() {
           window.history.pushState({ noBackExits: true }, '');
           return;
         }
-        
+
         // If we are on dashboard and press back
         setShowExitConfirm(true);
         window.history.pushState({ noBackExits: true }, '');
@@ -199,11 +199,25 @@ export default function App() {
       setLoading(false);
     });
 
+    // Handle IdToken changes for the plugin's internal state
+    let idTokenUnsubscribe: any;
+    if (Capacitor.isNativePlatform()) {
+      FirebaseAuthentication.addListener('idTokenChange', (result) => {
+        if (result.token) {
+          console.log("ID Token changed (token available)");
+        } else {
+          console.log("User signed out, no ID token available (caught by listener).");
+        }
+      }).then(listener => {
+        idTokenUnsubscribe = listener;
+      });
+    }
+
     getRedirectResult(auth).catch(async (error) => {
       if (error.code === 'auth/credential-already-in-use') {
         console.log("Account already exists. Logging out of anonymous session.");
         await signOut(auth);
-        setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
+        setError("That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
       } else {
         console.error("Redirect error:", error);
         if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
@@ -220,10 +234,11 @@ export default function App() {
         console.warn("Safety timeout: forcing loading to false");
         setLoading(false);
       }
-    }, user ? 8000 : 2000); 
+    }, user ? 8000 : 2000);
 
     return () => {
       unsubscribe();
+      if (idTokenUnsubscribe) idTokenUnsubscribe.remove();
       clearTimeout(safetyTimeout);
     };
   }, []);
@@ -317,7 +332,7 @@ export default function App() {
       if (err.code === 'auth/credential-already-in-use') {
         console.log("Account already exists. Logging out of anonymous session.");
         await signOut(auth);
-        setError("That Google account already has a ShopShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
+        setError("That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
       } else if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
         setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
       } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
@@ -361,7 +376,7 @@ export default function App() {
           }}
           transition={{ repeat: Infinity, duration: 2 }}
         >
-          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="ShopShare Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="ListShare Logo" className="w-16 h-16 rounded-2xl shadow-lg" />
         </motion.div>
         <motion.p
           initial={{ opacity: 0 }}
@@ -460,7 +475,7 @@ export default function App() {
               <img src={`${import.meta.env.BASE_URL}logo.png`} alt="L" className="w-full h-full object-cover" />
             </div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600 hidden xs:block">
-              ShopShare
+              ListShare
             </h1>
           </motion.div>
 
@@ -584,9 +599,9 @@ export default function App() {
       </main>
 
       <footer className="mt-auto py-6 text-center">
-        <a 
-          href={`${import.meta.env.BASE_URL}privacy_policy.html`} 
-          target="_blank" 
+        <a
+          href={`${import.meta.env.BASE_URL}privacy_policy.html`}
+          target="_blank"
           rel="noopener noreferrer"
           className="text-[10px] font-bold text-stone-400 hover:text-stone-600 transition-colors uppercase tracking-widest flex items-center justify-center gap-1.5"
         >
@@ -841,7 +856,7 @@ function InstallAppBanner({ onInstall, onClose }: { onInstall: () => void, onClo
             <ShoppingBag className="w-6 h-6" />
           </div>
           <div className="text-center sm:text-left">
-            <h3 className="font-bold text-lg">{t('pwa.install_title', 'Install ShopShare')}</h3>
+            <h3 className="font-bold text-lg">{t('pwa.install_title', 'Install ListShare')}</h3>
             <p className="text-emerald-50 text-sm opacity-90">
               {t('pwa.install_desc', 'Get the full app experience on your home screen')}
             </p>
@@ -867,17 +882,17 @@ function InstallAppBanner({ onInstall, onClose }: { onInstall: () => void, onClo
   );
 }
 
-function Dashboard({ 
-  userId, 
-  onSelectList, 
-  user, 
+function Dashboard({
+  userId,
+  onSelectList,
+  user,
   appUser,
   installPrompt,
   onInstall
-}: { 
-  userId: string, 
-  onSelectList: (id: string) => void, 
-  user: User, 
+}: {
+  userId: string,
+  onSelectList: (id: string) => void,
+  user: User,
   appUser: AppUser | null,
   installPrompt: any,
   onInstall: () => void
@@ -905,7 +920,7 @@ function Dashboard({
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newListName.trim() || isPending) return;
-    
+
     setIsPending(true);
     try {
       const color = COLORS[Math.floor(Math.random() * COLORS.length)];
@@ -947,9 +962,9 @@ function Dashboard({
     >
       <AnimatePresence>
         {installPrompt && showInstallBanner && (
-          <InstallAppBanner 
-            onInstall={onInstall} 
-            onClose={() => setShowInstallBanner(false)} 
+          <InstallAppBanner
+            onInstall={onInstall}
+            onClose={() => setShowInstallBanner(false)}
           />
         )}
       </AnimatePresence>
@@ -1255,7 +1270,7 @@ function ListView({
     try {
       // Compare localDraftItems with items (remote) to find changes
       const itemsToAdd = localDraftItems.filter(item => item.id.startsWith('temp-')).map(({ id, ...rest }) => rest);
-      
+
       const itemsToUpdate = localDraftItems.filter(local => {
         const remote = items.find(r => r.id === local.id);
         return remote && (remote.isBought !== local.isBought || remote.name !== local.name || remote.quantity !== local.quantity);
@@ -1352,8 +1367,8 @@ function ListView({
         </div>
 
         <div className="flex items-center gap-3 self-end md:self-auto">
-          {permission === 'edit' && (localDraftItems.length !== items.length || 
-           JSON.stringify(localDraftItems) !== JSON.stringify(items)) ? (
+          {permission === 'edit' && (localDraftItems.length !== items.length ||
+            JSON.stringify(localDraftItems) !== JSON.stringify(items)) ? (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -1507,7 +1522,7 @@ function ListView({
                   whileTap={{ scale: 0.8 }}
                   disabled={permission === 'read'}
                   onClick={() => {
-                    setLocalDraftItems(prev => prev.map(i => 
+                    setLocalDraftItems(prev => prev.map(i =>
                       i.id === item.id ? { ...i, isBought: !i.isBought } : i
                     ));
                   }}

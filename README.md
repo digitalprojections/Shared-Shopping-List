@@ -1,6 +1,6 @@
-# ShopShare 🛒
+# ListShare 🛒
 
-ShopShare is a premium, real-time shared shopping list application built with React, Vite, and Firebase. It allows users to create collections, manage items with quantities, and share access with others seamlessly.
+ListShare is a premium, real-time shared shopping list application built with React, Vite, and Firebase. It allows users to create collections, manage items with quantities, and share access with others seamlessly.
 
 ## Features
 
@@ -37,7 +37,7 @@ ShopShare is a premium, real-time shared shopping list application built with Re
    ```bash
    npm install
    ```
-   
+
 
 3. Configure Environment Variables:
    Create a `.env` file in the root directory and add your Firebase credentials:

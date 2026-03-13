@@ -6,19 +6,19 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  const base = mode === 'development' || mode === 'mobile' ? '/' : '/flashshare/';
-  
+  const base = mode === 'development' || mode === 'mobile' ? '/' : '/listshare/';
+
   return {
     base,
     plugins: [
-      react(), 
+      react(),
       tailwindcss(),
       VitePWA({
         registerType: 'prompt',
         injectRegister: 'auto',
         manifest: {
-          name: 'ShopShare',
-          short_name: 'ShopShare',
+          name: 'ListShare',
+          short_name: 'ListShare',
           description: 'Ultimate shared shopping list experience.',
           theme_color: '#10b981',
           background_color: '#ffffff',
@@ -107,4 +107,4 @@ export default defineConfig(({ mode }) => {
       }
     }
   };
-});
+});
