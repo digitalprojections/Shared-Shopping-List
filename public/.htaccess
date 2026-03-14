@@ -1,3 +1,19 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Do not rewrite for existing files or directories
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Explicitly allow app-ads.txt to be served directly (extra safety)
+    RewriteRule ^app-ads\.txt$ - [L]
+
+    # Rewrite all other paths to index.html for the React SPA
+    RewriteRule ^ index.html [L]
+</IfModule>
+
 <IfModule mod_headers.c>
     Header set Cross-Origin-Opener-Policy "unsafe-none"
     Header set Cross-Origin-Embedder-Policy "unsafe-none"
