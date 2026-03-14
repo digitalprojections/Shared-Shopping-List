@@ -24,9 +24,11 @@ export const adService = {
       
       return new Promise(async (resolve) => {
         let rewardReceived = false;
+        let rewardAmount = 1;
 
         const rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: AdMobRewardItem) => {
           rewardReceived = true;
+          rewardAmount = reward.amount || 1;
           console.log('Reward received:', reward);
         });
 
@@ -37,7 +39,7 @@ export const adService = {
           if (rewardReceived) {
             try {
               const grantRewardedCoin = httpsCallable(functions, 'grantRewardedCoin');
-              const result = await grantRewardedCoin();
+              const result = await grantRewardedCoin({ amount: rewardAmount });
               resolve(result.data as { success: boolean; error?: string });
             } catch (err: any) {
               resolve({ success: false, error: err.message || 'Failed to grant reward' });

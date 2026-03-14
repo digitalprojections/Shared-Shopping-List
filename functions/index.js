@@ -106,7 +106,9 @@ exports.grantRewardedCoin = onCall({
         throw new HttpsError('resource-exhausted', 'Daily ad limit reached.');
       }
 
-      const rewardAmount = 1;
+      const requestedAmount = (request.data && request.data.amount) ? Number(request.data.amount) : 1;
+      // Safety cap: allow up to 20 coins per reward to match user settings
+      const rewardAmount = Math.max(1, Math.min(requestedAmount, 20));
       const newBatch = {
         id: `reward_${now}`,
         createdAt: now,
