@@ -47,7 +47,9 @@
     "watch_ad": "Watch Video Ad",
     "reward_success": "Reward received! +1 Coin",
     "reward_fail": "Failed to get reward. Try again later.",
-    "ad_error": "Failed to load or show ad. Please try again later."
+    "ad_error": "Failed to load or show ad. Please try again later.",
+    "support_dev": "Support Developer",
+    "visit_apps": "Visit created.link (+1 🪙)"
   },
     "list_view": {
     "delete_collection": "Delete Collection",

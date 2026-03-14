@@ -32,7 +32,8 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics';
-import { auth, isFirebaseConfigured, googleProvider } from './lib/firebase';
+import { auth, isFirebaseConfigured, googleProvider, functions } from './lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import {
   signInAnonymously,
   onAuthStateChanged,
@@ -983,6 +984,27 @@ function Dashboard({
   const handleWatchAd = async () => {
     if (isAdLoading) return;
     setIsAdLoading(true);
+
+    // Alternative for Web
+    if (!Capacitor.isNativePlatform()) {
+      try {
+        window.open('https://created.link', '_blank');
+        const grantRewardedCoin = httpsCallable(functions, 'grantRewardedCoin');
+        const result = await grantRewardedCoin({ amount: 1 });
+        const data = result.data as { success: boolean; error?: string };
+        if (data.success) {
+          alert(t('dashboard.reward_success', 'Reward received! +1 Coin'));
+        } else {
+          alert(data.error || t('dashboard.reward_fail', 'Failed to get reward. Try again later.'));
+        }
+      } catch (error) {
+        console.error("Error rewarding dev visit:", error);
+      } finally {
+        setIsAdLoading(false);
+      }
+      return;
+    }
+
     try {
       const result = await adService.showRewardedAd();
       if (result.success) {
@@ -1205,14 +1227,22 @@ function Dashboard({
                 ) : (
                   <>
                     <div className="p-2 bg-emerald-100 rounded-2xl text-emerald-600 group-hover:scale-110 transition-transform">
-                      <PlayCircle className="w-7 h-7" />
+                      {Capacitor.isNativePlatform() ? (
+                        <PlayCircle className="w-7 h-7" />
+                      ) : (
+                        <ExternalLink className="w-7 h-7" />
+                      )}
                     </div>
                     <div>
                       <span className="block font-bold text-stone-900 leading-tight">
-                        {t('dashboard.get_free_coins')}
+                        {Capacitor.isNativePlatform() 
+                          ? t('dashboard.get_free_coins') 
+                          : t('dashboard.support_dev')}
                       </span>
                       <span className="text-xs text-stone-500">
-                        {t('dashboard.watch_ad')}
+                        {Capacitor.isNativePlatform() 
+                          ? t('dashboard.watch_ad') 
+                          : t('dashboard.visit_apps')}
                       </span>
                     </div>
                   </>
