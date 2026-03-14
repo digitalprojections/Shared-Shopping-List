@@ -21,7 +21,10 @@ import {
   PlayCircle,
   Shield,
   User as UserIcon,
-  ExternalLink
+  ExternalLink,
+  LayoutGrid,
+  List,
+  RotateCcw
 } from 'lucide-react';
 import { adService } from './services/adService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -946,6 +949,8 @@ function Dashboard({
   const [isPending, setIsPending] = useState(false);
   const [isAdLoading, setIsAdLoading] = useState(false);
   const [lists, setLists] = useState<ShoppingList[]>([]);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'yours' | 'shared'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     adService.initialize().catch(console.error);
@@ -993,6 +998,13 @@ function Dashboard({
     }
   };
 
+  const filteredLists = lists.filter(list => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'yours') return list.ownerId === userId;
+    if (activeFilter === 'shared') return list.ownerId !== userId;
+    return true;
+  });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -1039,50 +1051,138 @@ function Dashboard({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-2 p-1 bg-stone-100/50 rounded-2xl w-fit">
+          {(['all', 'yours', 'shared'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={cn(
+                "px-5 py-2 rounded-xl text-xs font-bold transition-all",
+                activeFilter === f 
+                  ? "bg-white shadow-sm text-emerald-600" 
+                  : "text-stone-500 hover:text-stone-700"
+              )}
+            >
+              {t(`dashboard.filter_${f}`)}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 p-1 bg-stone-100/50 rounded-2xl">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={cn(
+              "p-2 rounded-xl transition-all",
+              viewMode === 'grid' ? "bg-white shadow-sm text-stone-900" : "text-stone-400 hover:text-stone-600"
+            )}
+          >
+            <LayoutGrid className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={cn(
+              "p-2 rounded-xl transition-all",
+              viewMode === 'list' ? "bg-white shadow-sm text-stone-900" : "text-stone-400 hover:text-stone-600"
+            )}
+          >
+            <List className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {lists.map((list, index) => (
+          <div className={cn(
+            viewMode === 'grid' 
+              ? "grid grid-cols-2 md:grid-cols-3 gap-4" 
+              : "flex flex-col gap-3"
+          )}>
+            {filteredLists.map((list, index) => (
               <motion.div
                 key={list.id}
+                layout
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: index * 0.03 }}
-                whileHover={{ y: -2 }}
+                whileHover={{ y: viewMode === 'grid' ? -2 : 0, x: viewMode === 'list' ? 4 : 0 }}
                 className="group relative"
               >
                 <button
                   onClick={() => onSelectList(list.id)}
                   className={cn(
-                    "w-full aspect-[16/10] p-4 rounded-3xl border-2 flex flex-col justify-between text-left transition-all duration-300 hover:shadow-xl hover:shadow-stone-200/50",
+                    "w-full rounded-2xl border-2 transition-all duration-300 hover:shadow-lg hover:shadow-stone-200/50 flex",
+                    viewMode === 'grid' ? "flex-col aspect-[16/10] p-4 justify-between text-left" : "items-center p-3 gap-4 text-left",
                     list.color || COLORS[0]
                   )}
                 >
-                  <div className="space-y-1.5">
-                    <div
-                      className="w-9 h-9 bg-white/40 rounded-xl flex items-center justify-center backdrop-blur-sm hover:bg-white/60 transition-colors cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingListId(list.id);
-                      }}
-                    >
-                      {list.icon ? (
-                        <span className="text-xl">{list.icon}</span>
-                      ) : (
-                        <ShoppingBag className="w-5 h-5 opacity-80" />
+                  <div className={cn(
+                    "bg-white/40 rounded-xl flex items-center justify-center backdrop-blur-sm hover:bg-white/60 transition-colors cursor-pointer shrink-0",
+                    viewMode === 'grid' ? "w-9 h-9" : "w-11 h-11"
+                  )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingListId(list.id);
+                    }}
+                  >
+                    {list.icon ? (
+                      <span className={viewMode === 'grid' ? "text-xl" : "text-2xl"}>{list.icon}</span>
+                    ) : (
+                      <ShoppingBag className={cn(viewMode === 'grid' ? "w-5 h-5" : "w-6 h-6", "opacity-80")} />
+                    )}
+                  </div>
+
+                  <div className={cn("flex-1 min-w-0", viewMode === 'grid' ? "space-y-1" : "flex items-center justify-between")}>
+                    <div>
+                      <h3 className={cn(
+                        "font-bold leading-tight line-clamp-2",
+                        viewMode === 'grid' ? "text-lg" : "text-base"
+                      )}>
+                        {list.name}
+                      </h3>
+                      {viewMode === 'list' && (
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60 mt-0.5">
+                          {new Date(list.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
                       )}
                     </div>
-                    <h3 className="font-bold text-lg leading-tight line-clamp-2">
-                      {list.name}
-                    </h3>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-                      {new Date(list.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                    </span>
-                    <div className="p-1.5 bg-white/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                      <ChevronLeft className="w-4 h-4 rotate-180" />
-                    </div>
+                    
+                    {viewMode === 'grid' ? (
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex flex-col">
+                          <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">
+                            {new Date(list.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                          {list.totalItems !== undefined && (
+                            <span className="text-[10px] font-black tracking-tighter opacity-40 mt-0.5">
+                              {list.boughtItems || 0}/{list.totalItems}
+                            </span>
+                          )}
+                        </div>
+                        <div className="p-1.5 bg-white/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ChevronLeft className="w-4 h-4 rotate-180" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-4">
+                        {list.totalItems !== undefined && (
+                          <div className="flex flex-col items-end shrink-0">
+                            <span className="text-[10px] font-black tracking-widest opacity-40">
+                              {list.boughtItems || 0}/{list.totalItems}
+                            </span>
+                            <div className="w-12 h-1 bg-stone-900/10 rounded-full mt-1 overflow-hidden">
+                              <div 
+                                className="h-full bg-stone-900/30" 
+                                style={{ width: `${list.totalItems > 0 ? ((list.boughtItems || 0) / list.totalItems) * 100 : 0}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <div className="p-2 bg-white/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                          <ChevronLeft className="w-4 h-4 rotate-180" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </button>
               </motion.div>
@@ -1264,12 +1364,30 @@ function ListView({
   useEffect(() => {
     if (!listId) return;
     return shoppingService.subscribeToItems(listId, (remoteItems) => {
-      // When remote items update, we reset the local draft IF there are no unsynced changes
-      // Or we merge? For simplicity, we'll keep remote as the source of truth when not syncing.
       setItems(remoteItems);
-      setLocalDraftItems(remoteItems);
+      
+      // Load draft from localStorage if it exists
+      const savedDraft = localStorage.getItem(`list_draft_${listId}`);
+      if (savedDraft) {
+        try {
+          setLocalDraftItems(JSON.parse(savedDraft));
+        } catch (e) {
+          setLocalDraftItems(remoteItems);
+        }
+      } else {
+        setLocalDraftItems(remoteItems);
+      }
     });
   }, [listId]);
+
+  // Persist draft to localStorage whenever localDraftItems changes
+  useEffect(() => {
+    if (!listId || localDraftItems.length === 0) return;
+    
+    // Check if it's different from the remote items to avoid redundant saves
+    // However, for safety, we just save the current local state.
+    localStorage.setItem(`list_draft_${listId}`, JSON.stringify(localDraftItems));
+  }, [localDraftItems, listId]);
 
   useEffect(() => {
     if (isThrottled) {
@@ -1295,6 +1413,8 @@ function ListView({
     setNewItemQty('');
     inputRef.current?.focus();
   };
+
+  const hasChanges = localDraftItems.length !== items.length || JSON.stringify(localDraftItems) !== JSON.stringify(items);
 
   const handleSync = async () => {
     if (!user || !appUser || isSyncing) return;
@@ -1322,7 +1442,16 @@ function ListView({
         return;
       }
 
-      await shoppingService.syncListChanges(listId, user.uid, itemsToAdd, itemsToUpdate, itemsToDelete);
+      const totalDiff = itemsToAdd.length - itemsToDelete.length;
+      const boughtBefore = items.filter(i => i.isBought).length;
+      const boughtAfter = localDraftItems.filter(i => i.isBought).length;
+      const boughtDiff = boughtAfter - boughtBefore;
+
+      await shoppingService.syncListChanges(listId, user.uid, itemsToAdd, itemsToUpdate, itemsToDelete, totalDiff, boughtDiff);
+      
+      // Clear local draft from localStorage after successful sync
+      localStorage.removeItem(`list_draft_${listId}`);
+
       // Remote listener will update items and localDraftItems via useEffect
     } catch (error: any) {
       alert(error.message || t('list_view.sync_fail'));
@@ -1377,11 +1506,6 @@ function ListView({
                 )}
               </div>
               <h2 className="text-2xl font-bold text-stone-900 truncate">{list.name}</h2>
-              {isShared && (
-                <span className="text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg border border-emerald-100">
-                  {permission}
-                </span>
-              )}
             </div>
             <div className="flex items-center gap-4 mt-2">
               <div className="flex-1 h-2 w-32 bg-stone-200 rounded-full overflow-hidden">
@@ -1392,9 +1516,14 @@ function ListView({
                 />
               </div>
               <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                {t('list_view.items_count', { bought: boughtCount, total: items.length })}
-              </span>
+                 {t('list_view.items_count', { bought: boughtCount, total: items.length })}
+               </span>
             </div>
+            {isShared && (
+              <span className="text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 self-start sm:self-center mt-2 block w-fit">
+                {permission}
+              </span>
+            )}
           </div>
         </div>
 
@@ -1442,10 +1571,25 @@ function ListView({
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
                     className="absolute right-0 mt-3 w-56 bg-white rounded-[1.5rem] shadow-2xl border border-stone-100 z-50 overflow-hidden"
                   >
+                    {hasChanges && (
+                      <button
+                        onClick={() => {
+                          if (window.confirm(t('list_view.discard_confirm', 'Discard all unsynced changes?'))) {
+                            setLocalDraftItems(items);
+                            localStorage.removeItem(`list_draft_${listId}`);
+                            setShowOptions(false);
+                          }
+                        }}
+                        className="w-full px-5 py-4 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3 transition-colors border-b border-stone-50"
+                      >
+                        <RotateCcw className="w-5 h-5" />
+                        {t('list_view.discard_changes', 'Discard Changes')}
+                      </button>
+                    )}
                     {!isShared && (
                       <button
                         onClick={handleDeleteList}
-                        className="w-full px-5 py-4 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3 transition-colors"
+                        className="w-full px-5 py-4 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3 transition-colors border-b border-stone-50"
                       >
                         <Trash2 className="w-5 h-5" />
                         {t('list_view.delete_collection')}
@@ -1771,9 +1915,28 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
   const remaining = Math.max(0, Math.ceil((cooldownMs - (now - lastAction)) / 1000));
   const isThrottled = remaining > 0;
 
+  const handleCodeChange = (val: string) => {
+    // Remove invalid characters and normalize to uppercase
+    let cleaned = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    
+    // Limit to 12 alphanumeric characters (SHOP + 8 random)
+    cleaned = cleaned.slice(0, 12);
+    
+    // Auto-insert hyphens: XXXX-XXXX-XXXX
+    let formatted = '';
+    if (cleaned.length > 0) formatted += cleaned.slice(0, 4);
+    if (cleaned.length > 4) formatted += '-' + cleaned.slice(4, 8);
+    if (cleaned.length > 8) formatted += '-' + cleaned.slice(8, 12);
+    
+    setCode(formatted);
+    setMsg(null);
+  };
+
+  const isValidPattern = /^SHOP-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(code);
+
   const handleRedeem = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!code.trim()) return;
+    if (!code.trim() || !isValidPattern) return;
     setLoading(true);
     setMsg(null);
     const res = await couponService.redeemCoupon(userId, code);
@@ -1817,22 +1980,66 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
 
         <form onSubmit={handleRedeem} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-widest text-stone-400 ml-1">{t('redeem_modal.code_label')}</label>
-            <input
-              autoFocus
-              type="text"
-              placeholder={t('redeem_modal.code_placeholder')}
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              className="w-full px-6 py-4 rounded-2xl border-2 border-stone-100 bg-stone-50 focus:outline-none focus:border-amber-400 focus:bg-white transition-all font-mono text-lg"
-            />
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-xs font-bold uppercase tracking-widest text-stone-400">{t('redeem_modal.code_label')}</label>
+              {code.length > 0 && (
+                <button 
+                  type="button" 
+                  onClick={() => setCode('')}
+                  className="text-[10px] font-black uppercase tracking-tighter text-stone-300 hover:text-stone-500 transition-colors"
+                >
+                  {t('common.clear', 'Clear')}
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <input
+                autoFocus
+                type="text"
+                placeholder={t('redeem_modal.code_placeholder')}
+                value={code}
+                onChange={(e) => handleCodeChange(e.target.value)}
+                className={cn(
+                  "w-full px-6 py-5 rounded-2xl border-2 transition-all font-mono text-xl tracking-wider uppercase",
+                  isValidPattern 
+                    ? "border-emerald-200 bg-emerald-50/30 focus:border-emerald-400 focus:bg-white text-emerald-700" 
+                    : "border-stone-100 bg-stone-50 focus:border-amber-400 focus:bg-white text-stone-900"
+                )}
+              />
+              <AnimatePresence>
+                {isValidPattern && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.5, x: 10 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.5, x: 10 }}
+                    className="absolute right-5 top-1/2 -translate-y-1/2"
+                  >
+                    <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
           <button
             type="submit"
-            disabled={loading || !code.trim() || isThrottled}
-            className="w-full py-5 rounded-2xl bg-amber-600 text-white font-bold shadow-xl shadow-amber-600/20 hover:bg-amber-700 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
+            disabled={loading || !isValidPattern || isThrottled}
+            className={cn(
+              "w-full py-5 rounded-2xl font-bold shadow-xl transition-all flex items-center justify-center gap-3",
+              isValidPattern 
+                ? "bg-amber-600 text-white shadow-amber-600/20 hover:bg-amber-700 active:scale-[0.98]" 
+                : "bg-stone-100 text-stone-400 shadow-none cursor-not-allowed"
+            )}
           >
-            {loading ? t('redeem_modal.validating') : isThrottled ? t('redeem_modal.wait', { time: remaining }) : t('redeem_modal.claim')}
+            {loading ? (
+              <RefreshCw className="w-5 h-5 animate-spin" />
+            ) : isThrottled ? (
+              <>
+                <Clock className="w-5 h-5" />
+                {t('redeem_modal.wait', { time: remaining })}
+              </>
+            ) : (
+              t('redeem_modal.claim')
+            )}
           </button>
         </form>
 

@@ -123,7 +123,9 @@ export const shoppingService = {
         icon: '🛒',
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        sharedUsers: []
+        sharedUsers: [],
+        totalItems: 0,
+        boughtItems: 0
       };
 
       const docRef = await addDoc(collection(db, 'lists'), newList);
@@ -171,7 +173,15 @@ export const shoppingService = {
     });
   },
 
-  syncListChanges: async (listId: string, userId: string, itemsToAdd: Omit<ListItem, 'id'>[], itemsToUpdate: ListItem[], itemsToDelete: string[]) => {
+  syncListChanges: async (
+    listId: string, 
+    userId: string, 
+    itemsToAdd: Omit<ListItem, 'id'>[], 
+    itemsToUpdate: ListItem[], 
+    itemsToDelete: string[],
+    totalDiff: number = 0,
+    boughtDiff: number = 0
+  ) => {
     if (isFirebaseConfigured) {
       const consumption = await userService.consumeCoin(userId);
       if (!consumption.success) {
@@ -202,8 +212,12 @@ export const shoppingService = {
         batch.delete(itemRef);
       });
 
-      // 4. Update list timestamp
-      batch.update(listRef, { updatedAt: Date.now() });
+      // 4. Update list metadata
+      batch.update(listRef, { 
+        updatedAt: Date.now(),
+        totalItems: increment(totalDiff),
+        boughtItems: increment(boughtDiff)
+      });
 
       await batch.commit();
 

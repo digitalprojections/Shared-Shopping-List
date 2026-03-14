@@ -9,6 +9,8 @@ export interface ShoppingList {
   color: string;
   icon?: string;
   sharedUsers?: string[];
+  totalItems?: number;
+  boughtItems?: number;
 }
 
 export interface ListItem {
