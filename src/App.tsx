@@ -1656,6 +1656,7 @@ function ListView({
                 placeholder={t('list_view.add_item_placeholder')}
                 value={newItemName}
                 onChange={(e) => handleInputChange(e.target.value)}
+                className="w-full px-5 py-3 rounded-2xl border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm transition-all text-base font-medium"
               />
             </div>
             <div className="flex gap-3">
