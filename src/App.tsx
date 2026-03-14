@@ -262,7 +262,6 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      userService.ensureUserProfile(user.uid);
       return userService.subscribeToUserProfile(user.uid, setAppUser);
     } else {
       setAppUser(null);
@@ -1249,7 +1248,6 @@ function ListView({
   const [items, setItems] = useState<ListItem[]>([]);
   const [newItemName, setNewItemName] = useState('');
   const [newItemQty, setNewItemQty] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showShare, setShowShare] = useState(false);
   const [showOptions, setShowOptions] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -1295,7 +1293,6 @@ function ListView({
     setLocalDraftItems(prev => [...prev, newItem]);
     setNewItemName('');
     setNewItemQty('');
-    setSuggestions([]);
     inputRef.current?.focus();
   };
 
@@ -1334,14 +1331,8 @@ function ListView({
     }
   };
 
-  const handleInputChange = async (val: string) => {
+  const handleInputChange = (val: string) => {
     setNewItemName(val);
-    if (val.length >= 2) {
-      const sugs = await shoppingService.getSuggestions(val);
-      setSuggestions(sugs);
-    } else {
-      setSuggestions([]);
-    }
   };
 
   const handleDeleteList = async () => {
@@ -1491,33 +1482,7 @@ function ListView({
                 placeholder={t('list_view.add_item_placeholder')}
                 value={newItemName}
                 onChange={(e) => handleInputChange(e.target.value)}
-                className="w-full px-5 py-3 rounded-2xl border-2 border-stone-100 bg-white focus:outline-none focus:border-emerald-500 shadow-sm focus:shadow-emerald-500/10 transition-all text-base font-medium"
               />
-              <AnimatePresence>
-                {suggestions.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute top-full left-0 right-0 mt-2 bg-white border border-stone-100 rounded-2xl shadow-2xl z-50 overflow-hidden"
-                  >
-                    {suggestions.map((sug, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        onClick={() => {
-                          setNewItemName(sug);
-                          setSuggestions([]);
-                          inputRef.current?.focus();
-                        }}
-                        className="w-full px-5 py-3 text-left text-base font-medium hover:bg-emerald-50 hover:text-emerald-700 transition-colors border-b border-stone-50 last:border-0"
-                      >
-                        {sug}
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
             <div className="flex gap-3">
               <input

@@ -55,6 +55,52 @@ ListShare is a premium, real-time shared shopping list application built with Re
    npm run dev
    ```
 
+## Mobile Development (Capacitor)
+
+The project uses Capacitor to bundle the web app into native Android (and iOS) applications.
+
+### First-time Setup
+
+If Capacitor is not yet initialized in the project:
+
+1. Install Capacitor core and CLI:
+   ```bash
+   npm install @capacitor/core @capacitor/cli
+   ```
+
+2. Initialize Capacitor:
+   ```bash
+   npx cap init [app-name] [app-id] --web-dir dist
+   ```
+
+3. Add the Android platform:
+   ```bash
+   npm install @capacitor/android
+   npx cap add android
+   ```
+
+### Build and Sync
+
+1. Build the web project:
+   ```bash
+   npm run build
+   ```
+
+2. Sync changes to native projects:
+   ```bash
+   npx cap sync
+   ```
+
+3. Open Android Studio:
+   ```bash
+   npx cap open android
+   ```
+
+### Native Features
+- **AdMob**: Configured for rewarded video ads via `@capacitor-community/admob`.
+- **Authentication**: Native Google Sign-In and Anonymous auth via `@capacitor-firebase/authentication`.
+- **Crashlytics**: Native crash reporting via `@capacitor-firebase/crashlytics`.
+
 ## Deployment
 
 The project is configured for automated deployment via GitHub Actions to an FTP server. Ensure you have the following secrets configured in your GitHub repository:

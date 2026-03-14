@@ -16,8 +16,8 @@ import {
   arrayUnion
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../lib/firebase';
-import { ShoppingList, ListItem, ShareLink, Permission } from '../types';
 import { userService } from './userService';
+import { ShoppingList, ListItem, ShareLink, Permission } from '../types';
 
 export const shoppingService = {
   // Lists
@@ -207,16 +207,6 @@ export const shoppingService = {
 
       await batch.commit();
 
-      // Side effect: Suggestions (doing separately as they aren't critical to the list sync's atomicity)
-      itemsToAdd.forEach(item => {
-        const suggestionId = item.name.toLowerCase().trim();
-        const suggestionRef = doc(db, 'suggestions', suggestionId);
-        setDoc(suggestionRef, {
-          name: item.name.trim(),
-          count: increment(1)
-        }, { merge: true }).catch(err => console.error("Suggestion error:", err));
-      });
-
       return true;
     }
     return false;
@@ -311,19 +301,5 @@ export const shoppingService = {
         callback(null);
       }
     });
-  },
-
-  // Suggestions
-  getSuggestions: async (input: string) => {
-    if (!isFirebaseConfigured || !input || input.length < 2) return [];
-    const q = query(
-      collection(db, 'suggestions'),
-      where('name', '>=', input),
-      where('name', '<=', input + '\uf8ff'),
-      orderBy('name'),
-      orderBy('count', 'desc')
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data().name as string);
   }
 };

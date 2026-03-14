@@ -6,25 +6,26 @@ import { User, signOut } from 'firebase/auth';
 import { shoppingService } from './shoppingService';
 
 export const userService = {
-  ensureUserProfile: async (userId: string): Promise<void> => {
+  ensureUserProfile: async (userId: string, existingDoc?: any): Promise<void> => {
     if (!isFirebaseConfigured) return;
-    console.log("Ensuring User Profile for:", userId);
+    
     const userRef = doc(db, 'users', userId);
     try {
-      const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) {
-        console.log("Creating NEW User Profile for:", userId);
-        const newUser: AppUser = {
-          uid: userId,
-          coinBalance: 0,
-          coinBatches: [],
-          isAdmin: false,
-          lastActionAt: 0
-        };
-        await setDoc(userRef, newUser);
-      } else {
-        console.log("Existing user profile found for:", userId);
+      // If we already know it doesn't exist from a snapshot, skip the getDoc
+      if (!existingDoc) {
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) return;
       }
+      
+      console.log("Creating NEW User Profile for:", userId);
+      const newUser: AppUser = {
+        uid: userId,
+        coinBalance: 0,
+        coinBatches: [],
+        isAdmin: false,
+        lastActionAt: 0
+      };
+      await setDoc(userRef, newUser);
     } catch (error) {
       console.error("Error ensuring user profile:", error);
     }
@@ -58,9 +59,7 @@ export const userService = {
     return onSnapshot(userRef, (doc) => {
       if (doc.exists()) {
         const data = doc.data() as AppUser;
-        console.log("User Profile Update Received:", data.uid);
         const now = Date.now();
-        // Calculate effective balance based on non-expired batches
         const effectiveBalance = (data.coinBatches || [])
           .filter(b => b.expiresAt > now)
           .reduce((sum, b) => sum + b.remaining, 0);
@@ -70,7 +69,9 @@ export const userService = {
           coinBalance: effectiveBalance
         });
       } else {
-        console.warn("User Profile Doc does not exist for:", userId);
+        // If profile doesn't exist, trigger creation
+        console.log("Profile missing in snapshot, creating...");
+        userService.ensureUserProfile(userId, false); // pass false to skip another getDoc
       }
     }, (error) => {
       console.error("User profile subscription error:", error);
