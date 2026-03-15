@@ -76,8 +76,18 @@ console.log("App.tsx: Module loading", { motion, AnimatePresence });
 export default function App() {
   console.log("App: Component rendering");
   const { t, i18n } = useTranslation();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    const cached = localStorage.getItem('ss_cached_user');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(!localStorage.getItem('ss_cached_user'));
   const [error, setError] = useState<string | null>(null);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [sharedListId, setSharedListId] = useState<string | null>(null);
@@ -199,11 +209,25 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       console.log("Auth State Changed:", u ? "User logged in: " + u.uid : "No user");
+      if (u) {
+        const minimalUser = {
+          uid: u.uid,
+          displayName: u.displayName,
+          photoURL: u.photoURL,
+          isAnonymous: u.isAnonymous
+        };
+        localStorage.setItem('ss_cached_user', JSON.stringify(minimalUser));
+      } else {
+        localStorage.removeItem('ss_cached_user');
+      }
       setUser(u);
-      setLoading(false); // Ensure loading is false when state fires
+      setLoading(false);
     }, (err) => {
       console.error("Auth state change error:", err);
-      setError("Firebase connection failed. Check your API keys.");
+      // Only show error if we don't have a cached session or it's a hard failure
+      if (!localStorage.getItem('ss_cached_user')) {
+        setError("Firebase connection failed. Check your network.");
+      }
       setLoading(false);
     });
 
@@ -221,25 +245,32 @@ export default function App() {
       });
     }
 
-    getRedirectResult(auth).catch(async (error) => {
+    getRedirectResult(auth).then((result) => {
+      if (result?.user) {
+        console.log("Redirect login successful:", result.user.uid);
+        setUser(result.user);
+        setLoading(false);
+      }
+    }).catch(async (error) => {
       if (error.code === 'auth/credential-already-in-use') {
         console.log("Account already exists. Logging out of anonymous session.");
         await signOut(auth);
         setError("That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
-      } else {
+      } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
         console.error("Redirect error:", error);
-        if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-          setError(error.message);
-        }
+        setError(error.message);
       }
+      setLoading(false);
     });
 
     // For mobile: if we have a cached user but Firebase is taking its time,
     // we already showed the dashboard. If we DON'T have a user,
     // we wait a much shorter time before showing the welcome screen.
+    // Safety timeout: if neither listener nor redirect has resolved in 6s, 
+    // stop loading to show the current state (either cached user or welcome).
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, user ? 8000 : 3000);
+    }, 6000);
 
     return () => {
       unsubscribe();
