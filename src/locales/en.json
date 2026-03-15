@@ -127,5 +127,16 @@
   },
   "footer": {
     "privacy_policy": "Privacy Policy"
+  },
+  "store": {
+    "title": "Coin Store",
+    "subtitle": "Get more coins to sync your lists across devices.",
+    "packages": "Available Packages",
+    "buy_now": "Buy Now",
+    "purchasing": "Processing...",
+    "success": "Purchase successful! Coins added.",
+    "failed": "Purchase failed. Please try again.",
+    "mobile_only": "In-app purchases are only available in the mobile app.",
+    "no_packages": "No packages available at the moment."
   }
 }

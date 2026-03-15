@@ -10,6 +10,12 @@ export const APP_CONFIG = {
     REWARDED_ID_TEST: 'ca-app-pub-3940256099942544/5224354917',
   },
 
+  // RevenueCat / IAP Configuration
+  REVENUE_CAT: {
+    GOOGLE_API_KEY: 'goog_FjBsfIBUnQhNAtgCZilIWEZohrf', // REPLACE WITH REAL KEY
+    APPLE_API_KEY: 'appl_placeholder',  // REPLACE WITH REAL KEY
+  },
+
   // Metadata
   APP_NAME: 'ListShare',
   SUPPORT_EMAIL: 'support@created.link',

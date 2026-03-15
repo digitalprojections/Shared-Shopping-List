@@ -140,3 +140,158 @@ exports.grantRewardedCoin = onCall({
     throw new HttpsError('internal', 'An internal error occurred while granting reward.');
   }
 });
+
+exports.redeemCoupon = onCall({
+  enforceAppCheck: false,
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const { code } = request.data;
+  if (!code) {
+    throw new HttpsError('invalid-argument', 'Coupon code is required.');
+  }
+
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const couponRef = db.collection('coupons').doc(code.trim().toUpperCase());
+  const userRef = db.collection('users').doc(uid);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const couponDoc = await transaction.get(couponRef);
+      const userDoc = await transaction.get(userRef);
+
+      if (!couponDoc.exists) {
+        throw new HttpsError('not-found', 'Invalid coupon code.');
+      }
+
+      const couponData = couponDoc.data();
+      if (couponData.isConsumed) {
+        throw new HttpsError('failed-precondition', 'This coupon has already been used.');
+      }
+
+      const userData = userDoc.data();
+      const now = Date.now();
+
+      // Anti-abuse: 10-second cooldown
+      if (userData.lastActionAt && (now - userData.lastActionAt < 10000)) {
+        throw new HttpsError('resource-exhausted', 'Please wait 10 seconds between redemptions.');
+      }
+
+      const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
+      const newBatch = {
+        id: `coupon_${Math.random().toString(36).substring(7)}`,
+        amount: couponData.coinsAmount,
+        remaining: couponData.coinsAmount,
+        createdAt: now,
+        expiresAt: expiresAt,
+        type: 'coupon'
+      };
+
+      const updatedBatches = [...(userData.coinBatches || []), newBatch];
+      const totalBalance = updatedBatches
+        .filter(b => b.expiresAt > now)
+        .reduce((sum, b) => sum + b.remaining, 0);
+
+      transaction.update(couponRef, {
+        isConsumed: true,
+        consumedBy: uid,
+        consumedAt: now
+      });
+
+      transaction.update(userRef, {
+        coinBatches: updatedBatches,
+        coinBalance: totalBalance,
+        lastActionAt: now
+      });
+
+      return { coins: couponData.coinsAmount };
+    });
+
+    return { success: true, message: `Successfully redeemed ${result.coins} coins!`, coins: result.coins };
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error("Error in redeemCoupon:", error);
+    throw new HttpsError('internal', error.message || 'Error redeeming coupon.');
+  }
+});
+
+exports.grantPurchaseCoins = onCall({
+  enforceAppCheck: false,
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const { productId, purchaseToken } = request.data;
+  if (!productId) {
+    throw new HttpsError('invalid-argument', 'Product ID is required.');
+  }
+
+  // Backend source of truth for coin amounts
+  const COIN_MAP = {
+    'coins_50': 50,
+    'coins_200': 200,
+    'coins_500': 500,
+    'coins_1200': 1200,
+    'coins_50_test': 50 // For sandbox testing
+  };
+
+  const amount = COIN_MAP[productId];
+  if (!amount) {
+    throw new HttpsError('invalid-argument', `Unknown product identifier: ${productId}`);
+  }
+
+  // NOTE: In a production app, you MUST verify the purchaseToken with Google/Apple/RevenueCat API here.
+  // For now, we assume the frontend sent a valid purchase notification from RevenueCat.
+  
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const userRef = db.collection('users').doc(uid);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) {
+        throw new HttpsError('not-found', 'User profile not found.');
+      }
+
+      const userData = userDoc.data();
+      const now = Date.now();
+
+      // Purchases NEVER expire (set to 100 years for accounting simplicity)
+      const expiresAt = now + (100 * 365 * 24 * 60 * 60 * 1000); 
+      
+      const newBatch = {
+        id: `purchase_${productId}_${now}`,
+        amount: Number(amount),
+        remaining: Number(amount),
+        createdAt: now,
+        expiresAt: expiresAt,
+        type: 'purchase',
+        productId: productId
+      };
+
+      const updatedBatches = [...(userData.coinBatches || []), newBatch];
+      const totalBalance = updatedBatches
+        .filter(b => b.expiresAt > now)
+        .reduce((sum, b) => sum + b.remaining, 0);
+
+      transaction.update(userRef, {
+        coinBatches: updatedBatches,
+        coinBalance: totalBalance,
+        lastActionAt: now
+      });
+
+      logger.info(`Purchased coins (${amount}) granted to user ${uid}.`);
+    });
+
+    return { success: true };
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error("Error in grantPurchaseCoins:", error);
+    throw new HttpsError('internal', 'An internal error occurred while granting purchase.');
+  }
+});

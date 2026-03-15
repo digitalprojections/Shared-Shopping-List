@@ -36,68 +36,24 @@ export const couponService = {
   redeemCoupon: async (userId: string, code: string): Promise<{ success: boolean; message: string; coins?: number }> => {
     if (!isFirebaseConfigured) return { success: false, message: 'Firebase not configured' };
     
-    const couponRef = doc(db, 'coupons', code.trim().toUpperCase());
-    const userRef = doc(db, 'users', userId);
-    
     try {
-      const result = await runTransaction(db, async (transaction) => {
-        const couponDoc = await transaction.get(couponRef);
-        const userDoc = await transaction.get(userRef);
-        
-        if (!couponDoc.exists()) {
-          throw new Error('Invalid coupon code');
-        }
-        
-        const couponData = couponDoc.data() as Coupon;
-        if (couponData.isConsumed) {
-          throw new Error('This coupon has already been used');
-        }
-        
-        const userData = userDoc.data() as AppUser;
-        const now = Date.now();
-
-        // Anti-abuse: 10-second cooldown for coupon redemption
-        if (userData?.lastActionAt && (now - userData.lastActionAt < 10000)) {
-          throw new Error('Please wait 10 seconds between coupon redemptions');
-        }
-
-        const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
-        
-        const newBatch = {
-          id: Math.random().toString(36).substring(7),
-          amount: couponData.coinsAmount,
-          remaining: couponData.coinsAmount,
-          createdAt: now,
-          expiresAt: expiresAt
-        };
-
-        const currentBatches = userData?.coinBatches || [];
-        const updatedBatches = [...currentBatches, newBatch];
-        
-        // Recalculate total balance from valid batches
-        const validBatches = updatedBatches.filter(b => b.expiresAt > now);
-        const totalBalance = validBatches.reduce((sum, b) => sum + b.remaining, 0);
-
-        // Update coupon
-        transaction.update(couponRef, {
-          isConsumed: true,
-          consumedBy: userId,
-          consumedAt: now
-        });
-        
-        // Update user
-        transaction.update(userRef, {
-          coinBatches: updatedBatches,
-          coinBalance: totalBalance,
-          lastActionAt: now
-        });
-        
-        return couponData.coinsAmount;
-      });
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../lib/firebase');
       
-      return { success: true, message: `Successfully redeemed ${result} coins!`, coins: result };
+      const redeemCouponFn = httpsCallable<{ code: string }, { success: boolean; message: string; coins: number }>(functions, 'redeemCoupon');
+      const result = await redeemCouponFn({ code });
+      
+      return { 
+        success: result.data.success, 
+        message: result.data.message, 
+        coins: result.data.coins 
+      };
     } catch (error: any) {
-      return { success: false, message: error.message || 'Failed to redeem coupon' };
+      console.error("Error redeeming coupon:", error);
+      return { 
+        success: false, 
+        message: error.message || 'Failed to redeem coupon' 
+      };
     }
   }
 };

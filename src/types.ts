@@ -41,6 +41,7 @@ export interface CoinBatch {
   remaining: number;
   expiresAt: number;
   createdAt: number;
+  type: 'reward' | 'purchase' | 'coupon';
 }
 
 export interface AppUser {

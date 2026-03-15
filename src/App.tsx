@@ -55,6 +55,7 @@ import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } fro
 import { cn } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
 import { Onboarding } from './components/Onboarding';
+import { CoinStoreModal } from './components/CoinStoreModal';
 import { APP_CONFIG } from './config';
 
 // --- Components ---
@@ -98,8 +99,15 @@ export default function App() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showStoreModal, setShowStoreModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    import('./services/iapService').then(({ iapService }) => {
+      iapService.initialize();
+    });
+  }, []);
 
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -530,6 +538,16 @@ export default function App() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowStoreModal(true)}
+                  className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-colors shadow-sm"
+                  title="Buy Coins"
+                >
+                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('store.title')}</span>
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
                   onClick={() => setShowRedeemModal(true)}
                   className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm"
                   title="Redeem Coupon"
@@ -668,6 +686,13 @@ export default function App() {
           <CoinHistoryModal
             batches={appUser.coinBatches || []}
             onClose={() => setShowCoinHistoryModal(false)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showStoreModal && (
+          <CoinStoreModal
+            onClose={() => setShowStoreModal(false)}
           />
         )}
       </AnimatePresence>
