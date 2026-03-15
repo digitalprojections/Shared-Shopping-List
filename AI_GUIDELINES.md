@@ -63,4 +63,4 @@ Use `Capacitor.getPlatform()` and `Capacitor.isNativePlatform()` to handle envir
 ## 5. Deployment & CI/CD
 - **Vite Config**: Ensure the `base` path is correctly set if deploying to a subdirectory.
 - **Environment Variables**: Use `.env` files for project IDs and API keys; never hardcode these in source files.
-- **Security Headers**: For Firebase Hosting, always set `Cross-Origin-Opener-Policy: same-origin-allow-popups` in `firebase.json` to ensure `signInWithPopup` works correctly.
+- **Auth Flow**: On Web, preferred Google Login flow is `signInWithRedirect`. This avoids `Cross-Origin-Opener-Policy` (COOP) issues that block popups on modern browsers. Avoid setting restrictive COOP headers in `firebase.json` as they can interfere with the redirect callback.

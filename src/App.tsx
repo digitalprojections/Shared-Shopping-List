@@ -42,6 +42,8 @@ import {
   signOut,
   signInWithPopup,
   linkWithPopup,
+  signInWithRedirect,
+  linkWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
   signInWithCredential,
@@ -367,11 +369,21 @@ export default function App() {
           setLoading(false);
         }
       } else {
-        console.log("Detected web platform, using link/signInWithPopup");
-        if (user && user.isAnonymous) {
-          await linkWithPopup(user, googleProvider);
-        } else {
-          await signInWithPopup(auth, googleProvider);
+        console.log("Detected web platform, using redirect flow for COOP compatibility");
+        try {
+          if (user && user.isAnonymous) {
+            await linkWithRedirect(user, googleProvider);
+          } else {
+            await signInWithRedirect(auth, googleProvider);
+          }
+        } catch (redirectErr: any) {
+          console.error("Redirect initiation failed:", redirectErr);
+          // Fallback to popup if redirect is blocked or fails immediately
+          if (user && user.isAnonymous) {
+            await linkWithPopup(user, googleProvider);
+          } else {
+            await signInWithPopup(auth, googleProvider);
+          }
         }
       }
     } catch (err: any) {
