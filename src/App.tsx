@@ -388,24 +388,17 @@ export default function App() {
       } else {
         try {
           if (user && user.isAnonymous) {
-            console.log("Linking anonymous user with Google Popup...");
-            await linkWithPopup(user, googleProvider);
+            console.log("Linking anonymous user with Google Redirect...");
+            await linkWithRedirect(user, googleProvider);
           } else {
-            console.log("Signing in with Google Popup...");
-            await signInWithPopup(auth, googleProvider);
+            console.log("Signing in with Google Redirect...");
+            await signInWithRedirect(auth, googleProvider);
           }
+          // Note: The page will redirect, so code below here won't run on success
         } catch (authErr: any) {
-          clearTimeout(timeout);
-          // Special handling for popup blocked logic or common failures
-          if (authErr.code === 'auth/popup-blocked') {
-            throw new Error("Login popup was blocked by your browser. Please allow popups for this site and try again.");
-          }
-          if (authErr.message?.includes('Cross-Origin-Opener-Policy')) {
-             throw new Error("Security policy (COOP) blocked the login popup. We've updated the site settings, please try refreshing the page or clearing cache.");
-          }
+          console.error("Redirect trigger error:", authErr);
+          setLoading(false);
           throw authErr;
-        } finally {
-          clearTimeout(timeout);
         }
       }
     } catch (err: any) {
