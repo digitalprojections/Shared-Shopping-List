@@ -40,8 +40,8 @@ import {
   onAuthStateChanged,
   User,
   signOut,
-  signInWithPopup,
-  linkWithPopup,
+  signInWithRedirect,
+  linkWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
   signInWithCredential,
@@ -76,19 +76,8 @@ console.log("App.tsx: Module loading", { motion, AnimatePresence });
 export default function App() {
   console.log("App: Component rendering");
   const { t, i18n } = useTranslation();
-  const [user, setUser] = useState<User | null>(() => {
-    const cached = localStorage.getItem('ss_cached_user');
-    if (cached) {
-      try {
-        console.log("App: Initializing with cached user");
-        return JSON.parse(cached);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
-  const [loading, setLoading] = useState(!localStorage.getItem('ss_cached_user'));
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeListId, setActiveListId] = useState<string | null>(null);
   const [sharedListId, setSharedListId] = useState<string | null>(null);
@@ -210,19 +199,8 @@ export default function App() {
 
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
       console.log("Auth State Changed:", u ? "User logged in: " + u.uid : "No user");
-      if (u) {
-        const minimalUser = {
-          uid: u.uid,
-          displayName: u.displayName,
-          photoURL: u.photoURL,
-          isAnonymous: u.isAnonymous
-        };
-        localStorage.setItem('ss_cached_user', JSON.stringify(minimalUser));
-      } else {
-        localStorage.removeItem('ss_cached_user');
-      }
       setUser(u);
-      setLoading(false);
+      setLoading(false); // Ensure loading is false when state fires
     }, (err) => {
       console.error("Auth state change error:", err);
       setError("Firebase connection failed. Check your API keys.");
@@ -326,20 +304,26 @@ export default function App() {
     }
   }, [user]);
 
-  const handleAnonymously = () => {
-    setLoading(true);
-    const timeout = setTimeout(() => setLoading(false), 10000);
-    signInAnonymously(auth).catch(err => {
-      console.error("Auth error:", err);
+  const handleAnonymously = async () => {
+    try {
+      console.log("Starting Anonymous Login...");
+      setLoading(true);
+      const timeout = setTimeout(() => {
+        setLoading(false);
+      }, 10000);
+
+      await signInAnonymously(auth);
+      clearTimeout(timeout);
+      setLoading(false);
+    } catch (err: any) {
+      console.error("Anonymous login error:", err);
       if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
         setError("Firebase Auth is not enabled. Please enable 'Anonymous' sign-in in your Firebase Console.");
       } else {
         setError(err.message);
       }
       setLoading(false);
-    }).finally(() => {
-      clearTimeout(timeout);
-    });
+    }
   };
 
   const handleGoogleLogin = async () => {
@@ -369,17 +353,18 @@ export default function App() {
         }
         clearTimeout(timeout);
       } else {
-        console.log("Detected web platform, using link/signInWithPopup");
+        console.log("Detected web platform, using Redirect flow for stability...");
         try {
           if (user && user.isAnonymous) {
-            await linkWithPopup(user, googleProvider);
+            console.log("Linking anonymous user with Google Redirect...");
+            await linkWithRedirect(user, googleProvider);
           } else {
-            await signInWithPopup(auth, googleProvider);
+            console.log("Signing in with Google Redirect...");
+            await signInWithRedirect(auth, googleProvider);
           }
+        } catch (authErr: any) {
           clearTimeout(timeout);
-        } catch (popupErr: any) {
-          clearTimeout(timeout);
-          throw popupErr;
+          throw authErr;
         }
       }
     } catch (err: any) {
