@@ -40,8 +40,8 @@ import {
   onAuthStateChanged,
   User,
   signOut,
-  signInWithRedirect,
-  linkWithRedirect,
+  signInWithPopup,
+  linkWithPopup,
   getRedirectResult,
   GoogleAuthProvider,
   signInWithCredential,
@@ -384,22 +384,28 @@ export default function App() {
         }
         clearTimeout(timeout);
       } else {
-        console.log("Detected web platform, using Redirect flow for stability...");
         try {
           if (user && user.isAnonymous) {
-            console.log("Linking anonymous user with Google Redirect...");
-            await linkWithRedirect(user, googleProvider);
+            console.log("Linking anonymous user with Google Popup...");
+            await linkWithPopup(user, googleProvider);
           } else {
-            console.log("Signing in with Google Redirect...");
-            await signInWithRedirect(auth, googleProvider);
+            console.log("Signing in with Google Popup...");
+            await signInWithPopup(auth, googleProvider);
           }
         } catch (authErr: any) {
           clearTimeout(timeout);
+          // Special handling for popup blocked logic or common failures
+          if (authErr.code === 'auth/popup-blocked') {
+            throw new Error("Login popup was blocked by your browser. Please allow popups for this site and try again.");
+          }
           throw authErr;
+        } finally {
+          clearTimeout(timeout);
         }
       }
     } catch (err: any) {
       console.error("Google login error:", err);
+      setLoading(false); // Ensure loading is off on error
       if (err.code === 'auth/credential-already-in-use') {
         console.log("Account already exists. Logging out of anonymous session.");
         await signOut(auth);
