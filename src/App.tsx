@@ -42,8 +42,6 @@ import {
   signOut,
   signInWithPopup,
   linkWithPopup,
-  signInWithRedirect,
-  linkWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
   signInWithCredential,
@@ -262,11 +260,8 @@ export default function App() {
     // we already showed the dashboard. If we DON'T have a user,
     // we wait a much shorter time before showing the welcome screen.
     const safetyTimeout = setTimeout(() => {
-      if (loading) {
-        console.warn("Safety timeout: forcing loading to false");
-        setLoading(false);
-      }
-    }, user ? 8000 : 2000);
+      setLoading(false);
+    }, user ? 8000 : 3000);
 
     return () => {
       unsubscribe();
@@ -333,6 +328,7 @@ export default function App() {
 
   const handleAnonymously = () => {
     setLoading(true);
+    const timeout = setTimeout(() => setLoading(false), 10000);
     signInAnonymously(auth).catch(err => {
       console.error("Auth error:", err);
       if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
@@ -341,6 +337,8 @@ export default function App() {
         setError(err.message);
       }
       setLoading(false);
+    }).finally(() => {
+      clearTimeout(timeout);
     });
   };
 
@@ -348,6 +346,7 @@ export default function App() {
     try {
       console.log("Starting Google Login...");
       setLoading(true);
+      const timeout = setTimeout(() => setLoading(false), 15000);
 
       // Use native Capacitor authentication on mobile
       if (Capacitor.isNativePlatform()) {
@@ -368,22 +367,19 @@ export default function App() {
           console.warn("Native login succeeded but no ID token was returned.");
           setLoading(false);
         }
+        clearTimeout(timeout);
       } else {
-        console.log("Detected web platform, using redirect flow for COOP compatibility");
+        console.log("Detected web platform, using link/signInWithPopup");
         try {
-          if (user && user.isAnonymous) {
-            await linkWithRedirect(user, googleProvider);
-          } else {
-            await signInWithRedirect(auth, googleProvider);
-          }
-        } catch (redirectErr: any) {
-          console.error("Redirect initiation failed:", redirectErr);
-          // Fallback to popup if redirect is blocked or fails immediately
           if (user && user.isAnonymous) {
             await linkWithPopup(user, googleProvider);
           } else {
             await signInWithPopup(auth, googleProvider);
           }
+          clearTimeout(timeout);
+        } catch (popupErr: any) {
+          clearTimeout(timeout);
+          throw popupErr;
         }
       }
     } catch (err: any) {
@@ -394,7 +390,9 @@ export default function App() {
         setError("That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
       } else if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
         setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
-      } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+      } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+         // Do nothing, user just closed the window
+      } else {
         setError(err.message);
       }
       setLoading(false);
