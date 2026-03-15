@@ -25,6 +25,10 @@ Business logic must be extracted into services (e.g., `userService.ts`, `adServi
 - Use **Dexie.js** or a similar IndexedDB wrapper for local persistence.
 - Enable Firestore offline persistence in `firebase.ts`.
 
+### Cache Management & self-healing
+- Provide a `forceClearCache` utility to deeply clear `localStorage`, `sessionStorage`, `caches`, `serviceWorkers`, and `IndexedDB`.
+- Include a user-facing entry point (e.g., "Fix App") to resolve local state corruption or outdated asset issues.
+
 ## 3. Security & Integrity Rules (CRITICAL)
 
 ### Backend-Only Rewards
@@ -42,6 +46,9 @@ Maintain a `firestore.rules` file and enforce the following:
 - Implement client-side throttling (cooldowns) for UI feedback.
 - **Always** back this up with server-side time-checks in Cloud Functions.
 
+### Cloud Function CORS
+- Always set `cors: true` in Firebase `onCall` function options if the service needs to be accessed from external domains, landing pages, or cross-project links (e.g., `created.link`).
+
 ## 4. Native Integration (Capacitor)
 
 ### Plugin Standards
@@ -56,3 +63,4 @@ Use `Capacitor.getPlatform()` and `Capacitor.isNativePlatform()` to handle envir
 ## 5. Deployment & CI/CD
 - **Vite Config**: Ensure the `base` path is correctly set if deploying to a subdirectory.
 - **Environment Variables**: Use `.env` files for project IDs and API keys; never hardcode these in source files.
+- **Security Headers**: For Firebase Hosting, always set `Cross-Origin-Opener-Policy: same-origin-allow-popups` in `firebase.json` to ensure `signInWithPopup` works correctly.
