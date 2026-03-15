@@ -74,6 +74,7 @@ exports.consumeCoin = onCall({
 
 exports.grantRewardedCoin = onCall({
   enforceAppCheck: false,
+  cors: true,
 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
@@ -143,6 +144,7 @@ exports.grantRewardedCoin = onCall({
 
 exports.redeemCoupon = onCall({
   enforceAppCheck: false,
+  cors: true,
 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
@@ -220,6 +222,7 @@ exports.redeemCoupon = onCall({
 
 exports.claimFreeWebCoupon = onCall({
   enforceAppCheck: false,
+  cors: true,
 }, async (request) => {
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');

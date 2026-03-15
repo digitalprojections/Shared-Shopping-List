@@ -53,7 +53,7 @@ import { couponService } from './services/couponService';
 import { useTranslation, Trans } from 'react-i18next';
 import './i18n'; // Import i18n configuration
 import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
-import { cn } from './lib/utils';
+import { cn, forceClearCache } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
 import { Onboarding } from './components/Onboarding';
 import { CoinStoreModal } from './components/CoinStoreModal';
@@ -620,6 +620,20 @@ export default function App() {
                     >
                       <LogOut className="w-4 h-4" />
                       {t('app.sign_out')}
+                    </button>
+
+                    <button
+                      onClick={async () => {
+                        const confirmed = window.confirm(t('user_menu.clear_cache_confirm', 'This will log you out and refresh the app to fix any issues. Continue?'));
+                        if (confirmed) {
+                          setShowUserMenu(false);
+                          await forceClearCache();
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      {t('user_menu.clear_cache', 'Fix App / Clear Cache')}
                     </button>
 
                     {!user?.isAnonymous && (
