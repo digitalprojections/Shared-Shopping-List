@@ -536,6 +536,17 @@ export default function App() {
                   balance={appUser.coinBalance}
                   onClick={() => setShowCoinHistoryModal(true)}
                 />
+                {appUser && !appUser.freeCouponClaimed && (
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => setShowRedeemModal(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-200 animate-pulse"
+                    title={t('redeem_modal.free_title')}
+                  >
+                    <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </motion.button>
+                )}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -1300,7 +1311,7 @@ function Dashboard({
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 order-first lg:order-last">
           {appUser && <FreeGiftCard appUser={appUser} />}
           {appUser?.isAdmin && <CouponGenerator />}
         </div>
@@ -2119,9 +2130,15 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
           )}
         </AnimatePresence>
 
-        <p className="text-center text-xs text-stone-400 font-medium">
+        <p className="text-center text-xs text-stone-400 font-medium pb-2">
           {t('redeem_modal.info')}
         </p>
+
+        {appUser && !appUser.freeCouponClaimed && (
+          <div className="pt-4 border-t border-stone-100">
+            <FreeGiftCard appUser={appUser} />
+          </div>
+        )}
       </motion.div>
     </motion.div>
   );
@@ -2171,13 +2188,18 @@ function FreeGiftCard({ appUser }: { appUser: AppUser | null }) {
       </div>
 
       {isNative ? (
-        <div className="bg-white/10 p-4 rounded-2xl border border-white/10">
-           <p className="text-sm font-bold text-white/90 text-center">
+        <div className="bg-white/10 p-4 rounded-2xl border border-white/10 text-center">
+           <p className="text-sm font-bold text-white/90">
              {t('redeem_modal.mobile_invite')}
            </p>
-           <div className="mt-2 flex justify-center">
-             <code className="text-[10px] opacity-60 bg-black/20 px-2 py-1 rounded">created.link</code>
-           </div>
+           <motion.button
+             whileHover={{ scale: 1.05 }}
+             whileTap={{ scale: 0.95 }}
+             onClick={() => window.open('https://created.link', '_blank')}
+             className="mt-3 px-4 py-2 bg-white text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/40"
+           >
+             created.link
+           </motion.button>
         </div>
       ) : (
         <button
