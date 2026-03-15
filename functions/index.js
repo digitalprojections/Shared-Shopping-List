@@ -218,6 +218,79 @@ exports.redeemCoupon = onCall({
   }
 });
 
+exports.claimFreeWebCoupon = onCall({
+  enforceAppCheck: false,
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const userRef = db.collection('users').doc(uid);
+  
+  // We use a specific code prefix to make it identifiable in history
+  const couponCode = `FREE-WEB-${uid.substring(0, 8).toUpperCase()}`;
+  const couponRef = db.collection('coupons').doc(couponCode);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) {
+        throw new HttpsError('not-found', 'User profile not found.');
+      }
+
+      const userData = userDoc.data();
+      if (userData.freeCouponClaimed) {
+        throw new HttpsError('already-exists', 'You have already claimed your free gift.');
+      }
+
+      const now = Date.now();
+      const giftAmount = 50;
+      const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
+      
+      const newBatch = {
+        id: `free_${Math.random().toString(36).substring(7)}`,
+        amount: giftAmount,
+        remaining: giftAmount,
+        createdAt: now,
+        expiresAt: expiresAt,
+        type: 'coupon'
+      };
+
+      const updatedBatches = [...(userData.coinBatches || []), newBatch];
+      const totalBalance = updatedBatches
+        .filter(b => b.expiresAt > now)
+        .reduce((sum, b) => sum + b.remaining, 0);
+
+      // Create the coupon record as consumed
+      transaction.set(couponRef, {
+        code: couponCode,
+        coinsAmount: giftAmount,
+        isConsumed: true,
+        consumedBy: uid,
+        consumedAt: now,
+        createdAt: now
+      });
+
+      transaction.update(userRef, {
+        coinBatches: updatedBatches,
+        coinBalance: totalBalance,
+        freeCouponClaimed: true,
+        lastActionAt: now
+      });
+
+      return { coins: giftAmount };
+    });
+
+    return { success: true, message: `Successfully claimed ${result.coins} free coins!`, coins: result.coins };
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error("Error in claimFreeWebCoupon:", error);
+    throw new HttpsError('internal', error.message || 'Error claiming free gift.');
+  }
+});
+
 exports.grantPurchaseCoins = onCall({
   enforceAppCheck: false,
 }, async (request) => {

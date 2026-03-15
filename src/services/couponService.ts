@@ -55,5 +55,29 @@ export const couponService = {
         message: error.message || 'Failed to redeem coupon' 
       };
     }
+  },
+
+  claimFreeWebCoupon: async (): Promise<{ success: boolean; message: string; coins?: number }> => {
+    if (!isFirebaseConfigured) return { success: false, message: 'Firebase not configured' };
+    
+    try {
+      const { httpsCallable } = await import('firebase/functions');
+      const { functions } = await import('../lib/firebase');
+      
+      const claimFn = httpsCallable<void, { success: boolean; message: string; coins: number }>(functions, 'claimFreeWebCoupon');
+      const result = await claimFn();
+      
+      return { 
+        success: result.data.success, 
+        message: result.data.message, 
+        coins: result.data.coins 
+      };
+    } catch (error: any) {
+      console.error("Error claiming free gift:", error);
+      return { 
+        success: false, 
+        message: error.message || 'Failed to claim free gift' 
+      };
+    }
   }
 };

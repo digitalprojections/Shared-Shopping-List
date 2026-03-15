@@ -50,6 +50,7 @@ export interface AppUser {
   coinBatches?: CoinBatch[];
   isAdmin?: boolean;
   lastActionAt?: number;
+  freeCouponClaimed?: boolean;
 }
 
 export interface Coupon {

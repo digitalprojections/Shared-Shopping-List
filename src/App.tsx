@@ -24,7 +24,8 @@ import {
   ExternalLink,
   LayoutGrid,
   List,
-  RotateCcw
+  RotateCcw,
+  Gift
 } from 'lucide-react';
 import { adService } from './services/adService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -876,6 +877,9 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
                       <div>
                         <p className="font-bold text-stone-900">
                           {batch.remaining} / {batch.amount}
+                          <span className="ml-2 py-0.5 px-2 bg-stone-100 rounded-md text-[9px] uppercase tracking-tighter text-stone-500">
+                            {batch.type}
+                          </span>
                         </p>
                         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-0.5">
                           {isExpired ? t('coins.expired') : t('coins.expires')}: {new Date(batch.expiresAt).toLocaleDateString()}
@@ -1297,6 +1301,7 @@ function Dashboard({
         </div>
 
         <div className="space-y-6">
+          {appUser && <FreeGiftCard appUser={appUser} />}
           {appUser?.isAdmin && <CouponGenerator />}
         </div>
       </div>
@@ -2119,6 +2124,83 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
         </p>
       </motion.div>
     </motion.div>
+  );
+}
+
+function FreeGiftCard({ appUser }: { appUser: AppUser | null }) {
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(false);
+  const [claimed, setClaimed] = useState(appUser?.freeCouponClaimed || false);
+
+  useEffect(() => {
+    if (appUser?.freeCouponClaimed) {
+      setClaimed(true);
+    }
+  }, [appUser?.freeCouponClaimed]);
+
+  const handleClaim = async () => {
+    if (loading || claimed) return;
+    setLoading(true);
+    try {
+      const result = await couponService.claimFreeWebCoupon();
+      if (result.success) {
+        setClaimed(true);
+      } else {
+        alert(result.message);
+      }
+    } catch (error: any) {
+      alert(error.message || 'Error claiming gift');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isNative = Capacitor.isNativePlatform();
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200/50 space-y-4 relative overflow-hidden group">
+      <div className="absolute top-0 right-0 -m-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+      <div className="relative flex items-center gap-4">
+        <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+          <Gift className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h3 className="font-bold text-lg leading-tight">{t('redeem_modal.free_title')}</h3>
+          <p className="text-white/60 text-xs font-medium">{t('redeem_modal.free_desc')}</p>
+        </div>
+      </div>
+
+      {isNative ? (
+        <div className="bg-white/10 p-4 rounded-2xl border border-white/10">
+           <p className="text-sm font-bold text-white/90 text-center">
+             {t('redeem_modal.mobile_invite')}
+           </p>
+           <div className="mt-2 flex justify-center">
+             <code className="text-[10px] opacity-60 bg-black/20 px-2 py-1 rounded">created.link</code>
+           </div>
+        </div>
+      ) : (
+        <button
+          onClick={handleClaim}
+          disabled={loading || claimed}
+          className={cn(
+            "w-full py-4 rounded-2xl font-bold transition-all shadow-lg active:scale-95",
+            claimed 
+              ? "bg-emerald-500/20 text-emerald-300 cursor-default border border-emerald-500/30"
+              : "bg-white text-indigo-600 hover:bg-stone-50 shadow-indigo-900/20"
+          )}
+        >
+          {loading ? (
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-4 h-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <span>{t('redeem_modal.validating')}</span>
+            </div>
+          ) : (
+            claimed ? t('redeem_modal.free_claimed') : t('redeem_modal.free_claim')
+          )}
+        </button>
+      )}
+    </div>
   );
 }
 

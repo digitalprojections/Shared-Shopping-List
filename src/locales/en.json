@@ -95,7 +95,13 @@
     "validating": "Validating...",
     "wait": "Wait {{time}}s...",
     "claim": "Claim Coins",
-    "info": "Coins will be added to your balance instantly upon successful redemption."
+    "info": "Coins will be added to your balance instantly upon successful redemption.",
+    "free_title": "Free Welcome Gift",
+    "free_desc": "Get 50 coins for free to start your shopping lists!",
+    "free_claim": "Claim 50 Coins",
+    "free_claimed": "Gift Claimed ✓",
+    "free_success": "Congratulations! 50 free coins added to your account.",
+    "mobile_invite": "Claim your free 50-coin gift on our website!"
   },
   "admin": {
     "title": "Admin: Mint Coins",
