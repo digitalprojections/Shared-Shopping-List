@@ -49,7 +49,7 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow update: if request.auth != null && request.auth.uid == userId && 
                     isNotThrottled(2000) &&
-                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coinBalance', 'coinBatches']);
+                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coinBalance', 'coinBatches', 'isAdmin']);
       allow create: if request.auth != null && request.auth.uid == userId &&
                     request.resource.data.coinBalance == 0 &&
                     request.resource.data.coinBatches == [];

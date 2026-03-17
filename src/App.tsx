@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Plus,
   Share2,
@@ -33,6 +33,8 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Badge } from '@capawesome/capacitor-badge';
 import { auth, isFirebaseConfigured, googleProvider, functions } from './lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import {
@@ -95,6 +97,7 @@ export default function App() {
   const [sharedListId, setSharedListId] = useState<string | null>(null);
   const [sharedPermission, setSharedPermission] = useState<Permission>('read');
   const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [lists, setLists] = useState<ShoppingList[]>([]);
   const [showRedeemModal, setShowRedeemModal] = useState(false);
   const [showCoinHistoryModal, setShowCoinHistoryModal] = useState(false);
   const shareProcessed = useRef(false);
@@ -193,6 +196,83 @@ export default function App() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!user || !Capacitor.isNativePlatform()) return;
+
+    const setupNotifications = async () => {
+      try {
+        let permStatus = await PushNotifications.checkPermissions();
+        
+        if (permStatus.receive === 'prompt') {
+          permStatus = await PushNotifications.requestPermissions();
+        }
+
+        if (permStatus.receive !== 'granted') {
+          console.log("Push notifications permission not granted");
+          return;
+        }
+
+        await PushNotifications.register();
+
+        PushNotifications.addListener('registration', (token) => {
+          console.log('Push registration success, token: ' + token.value);
+          userService.updateFcmToken(user.uid, token.value);
+        });
+
+        PushNotifications.addListener('registrationError', (error: any) => {
+          console.error('Error on registration: ' + JSON.stringify(error));
+        });
+
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+          console.log('Push received: ' + JSON.stringify(notification));
+        });
+
+        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+          console.log('Push action performed: ' + JSON.stringify(action));
+          const listId = action.notification.data?.listId;
+          if (listId) {
+            setActiveListId(listId);
+            setSharedListId(listId);
+          }
+        });
+      } catch (e) {
+        console.error("Error setting up push notifications:", e);
+      }
+    };
+
+    setupNotifications();
+
+    return () => {
+      PushNotifications.removeAllListeners();
+    };
+  }, [user]);
+
+  // Update App Icon Badge
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    const unreadCount = lists.filter(l => l.updatedAt > shoppingService.getLastViewedAt(l.id)).length;
+    
+    const updateBadge = async () => {
+      try {
+        if (unreadCount > 0) {
+          await Badge.set({ count: unreadCount });
+        } else {
+          await Badge.clear();
+        }
+      } catch (e) {
+        console.error("Error updating badge:", e);
+      }
+    };
+
+    updateBadge();
+  }, [lists]);
+
+  const handleSelectList = (listId: string) => {
+    shoppingService.markListAsViewed(listId);
+    setActiveListId(listId);
+  };
+
   const handleInstallApp = async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
@@ -275,6 +355,12 @@ export default function App() {
       setAppUser(null);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (!user?.uid || !isFirebaseConfigured) return;
+    console.log("App: Subscribing to lists for user:", user.uid);
+    return shoppingService.subscribeToLists(user.uid, setLists);
+  }, [user?.uid]);
 
   useEffect(() => {
     const handleIncomingShare = async (search: string) => {
@@ -667,9 +753,10 @@ export default function App() {
             {!activeListId ? (
               <Dashboard
                 userId={user?.uid || ''}
-                onSelectList={setActiveListId}
+                onSelectList={handleSelectList}
                 user={user!}
                 appUser={appUser}
+                lists={lists}
                 installPrompt={installPrompt}
                 onInstall={handleInstallApp}
               />
@@ -990,6 +1077,7 @@ function Dashboard({
   onSelectList,
   user,
   appUser,
+  lists,
   installPrompt,
   onInstall
 }: {
@@ -997,6 +1085,7 @@ function Dashboard({
   onSelectList: (id: string) => void,
   user: User,
   appUser: AppUser | null,
+  lists: ShoppingList[],
   installPrompt: any,
   onInstall: () => void
 }) {
@@ -1008,19 +1097,12 @@ function Dashboard({
   const [showInstallBanner, setShowInstallBanner] = useState(true);
   const [isPending, setIsPending] = useState(false);
   const [isAdLoading, setIsAdLoading] = useState(false);
-  const [lists, setLists] = useState<ShoppingList[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'yours' | 'shared'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     adService.initialize().catch(console.error);
   }, []);
-
-  useEffect(() => {
-    if (!userId) return;
-    console.log("Dashboard: Subscribing to lists for user:", userId);
-    return shoppingService.subscribeToLists(userId, setLists);
-  }, [userId]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1265,6 +1347,11 @@ function Dashboard({
                       </div>
                     )}
                   </div>
+                  
+                  {/* Update Badge */}
+                  {list.updatedAt > shoppingService.getLastViewedAt(list.id) && (
+                    <div className="absolute top-2 right-2 w-3 h-3 bg-rose-500 rounded-full border-2 border-white shadow-sm z-10" />
+                  )}
                 </button>
               </motion.div>
             ))}
@@ -1446,6 +1533,24 @@ function ListView({
   const [localDraftItems, setLocalDraftItems] = useState<ListItem[]>([]);
   const [isSyncing, setIsSyncing] = useState(false);
 
+  const hasUnsyncedChanges = useMemo(() => {
+    if (localDraftItems.length !== items.length) return true;
+    
+    // Compare items by content, treating temp IDs as potentially matching new real IDs
+    return localDraftItems.some((local, idx) => {
+      const remote = items[idx];
+      if (!remote) return true;
+      
+      // If names or quantities differ, it's definitely unsynced
+      if (local.name !== remote.name || local.quantity !== remote.quantity || local.isBought !== remote.isBought) return true;
+      
+      // If both have real IDs and they differ, it's unsynced
+      if (!local.id.startsWith('temp-') && !remote.id.startsWith('temp-') && local.id !== remote.id) return true;
+      
+      return false;
+    });
+  }, [localDraftItems, items]);
+
   useEffect(() => {
     if (!listId) return;
     return shoppingService.subscribeToList(listId, setList);
@@ -1453,31 +1558,83 @@ function ListView({
 
   useEffect(() => {
     if (!listId) return;
+    
+    // Track if we've already done the initial load for this listId
+    let initialLoadDone = false;
+
     return shoppingService.subscribeToItems(listId, (remoteItems) => {
-      setItems(remoteItems);
-      
-      // Load draft from localStorage if it exists
-      const savedDraft = localStorage.getItem(`list_draft_${listId}`);
-      if (savedDraft) {
-        try {
-          setLocalDraftItems(JSON.parse(savedDraft));
-        } catch (e) {
-          setLocalDraftItems(remoteItems);
-        }
-      } else {
-        setLocalDraftItems(remoteItems);
-      }
+      setItems(prevItems => {
+        setLocalDraftItems(prevDraft => {
+          if (!initialLoadDone) {
+            const savedDraft = localStorage.getItem(`list_draft_${listId}`);
+            initialLoadDone = true;
+            if (savedDraft) {
+              try {
+                return JSON.parse(savedDraft);
+              } catch (e) {
+                return remoteItems;
+              }
+            }
+            return remoteItems;
+          }
+
+          // Merge Logic: Preserve user's pending changes while adopting remote updates
+          // 1. Identify which items the user has modified locally relative to prevItems
+          const localModifications = prevDraft.filter(l => {
+            if (l.id.startsWith('temp-')) return false; // Handled separately
+            const remoteBefore = prevItems.find(r => r.id === l.id);
+            return remoteBefore && (remoteBefore.name !== l.name || remoteBefore.quantity !== l.quantity || remoteBefore.isBought !== l.isBought);
+          });
+
+          const localDeletions = prevItems.filter(r => !prevDraft.find(l => l.id === r.id)).map(r => r.id);
+          const localAdditions = prevDraft.filter(l => l.id.startsWith('temp-'));
+
+          // 2. Build the new draft starting from the NEW remoteItems
+          let nextDraft = remoteItems.map(remote => {
+            // If the user was in the middle of editing THIS specific item, keep their version
+            const dirtyLocal = localModifications.find(l => l.id === remote.id);
+            if (dirtyLocal) return dirtyLocal;
+            
+            // Otherwise, adopt the remote version (gets updates from others)
+            return remote;
+          });
+
+          // 3. Keep local deletions (if the item still exists remotely, removing it stays pending)
+          nextDraft = nextDraft.filter(item => !localDeletions.includes(item.id));
+
+          // 4. Re-add local additions, but FILTER OUT ones that just got synced
+          // If a remote item matches a temp item's content exactly, we assume it's the same item.
+          const unsyncedAdditions = localAdditions.filter(local => {
+            const alreadySynced = remoteItems.find(remote => 
+              remote.name === local.name && 
+              remote.quantity === local.quantity &&
+              !remote.id.startsWith('temp-')
+            );
+            return !alreadySynced;
+          });
+
+          return [...nextDraft, ...unsyncedAdditions];
+        });
+
+        return remoteItems;
+      });
     });
   }, [listId]);
 
   // Persist draft to localStorage whenever localDraftItems changes
   useEffect(() => {
-    if (!listId || localDraftItems.length === 0) return;
+    if (!listId) return;
+
+    // If draft is identical to remote, clear localStorage
+    const isClean = localDraftItems.length === items.length && 
+                    JSON.stringify(localDraftItems) === JSON.stringify(items);
     
-    // Check if it's different from the remote items to avoid redundant saves
-    // However, for safety, we just save the current local state.
-    localStorage.setItem(`list_draft_${listId}`, JSON.stringify(localDraftItems));
-  }, [localDraftItems, listId]);
+    if (isClean || localDraftItems.length === 0) {
+      localStorage.removeItem(`list_draft_${listId}`);
+    } else {
+      localStorage.setItem(`list_draft_${listId}`, JSON.stringify(localDraftItems));
+    }
+  }, [localDraftItems, listId, items]);
 
   useEffect(() => {
     if (isThrottled) {
@@ -1539,8 +1696,15 @@ function ListView({
 
       await shoppingService.syncListChanges(listId, user.uid, itemsToAdd, itemsToUpdate, itemsToDelete, totalDiff, boughtDiff);
       
-      // Clear local draft from localStorage after successful sync
+      // Clear local draft and update local state immediately so Sync button disappears
       localStorage.removeItem(`list_draft_${listId}`);
+      // Optimistically update 'items' to match localDraftItems so the sync button hides immediately
+      const syncedItems = [...localDraftItems];
+      setItems(syncedItems);
+      setLocalDraftItems(syncedItems);
+      
+      // Show success feedback
+      alert(t('list_view.sync_success', 'Sync successful! Changes are saved.'));
 
       // Remote listener will update items and localDraftItems via useEffect
     } catch (error: any) {
@@ -1618,8 +1782,7 @@ function ListView({
         </div>
 
         <div className="flex items-center gap-3 self-end md:self-auto">
-          {permission === 'edit' && (localDraftItems.length !== items.length ||
-            JSON.stringify(localDraftItems) !== JSON.stringify(items)) ? (
+          {permission === 'edit' && hasUnsyncedChanges ? (
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}

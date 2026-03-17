@@ -215,6 +215,7 @@ export const shoppingService = {
       // 4. Update list metadata
       batch.update(listRef, { 
         updatedAt: Date.now(),
+        lastUpdatedBy: userId,
         totalItems: increment(totalDiff),
         boughtItems: increment(boughtDiff)
       });
@@ -315,5 +316,14 @@ export const shoppingService = {
         callback(null);
       }
     });
+  },
+
+  markListAsViewed: (listId: string) => {
+    localStorage.setItem(`list_last_viewed_${listId}`, Date.now().toString());
+  },
+
+  getLastViewedAt: (listId: string): number => {
+    const val = localStorage.getItem(`list_last_viewed_${listId}`);
+    return val ? parseInt(val, 10) : 0;
   }
 };

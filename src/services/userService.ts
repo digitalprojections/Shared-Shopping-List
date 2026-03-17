@@ -137,5 +137,22 @@ export const userService = {
           : error.message || 'Error deleting account' 
       };
     }
+  },
+
+  updateFcmToken: async (userId: string, token: string): Promise<void> => {
+    if (!isFirebaseConfigured) return;
+    const userRef = doc(db, 'users', userId);
+    try {
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data() as AppUser;
+        const tokens = data.fcmTokens || [];
+        if (!tokens.includes(token)) {
+          await setDoc(userRef, { fcmTokens: [...tokens, token] }, { merge: true });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating FCM token:", error);
+    }
   }
 };

@@ -1,5 +1,6 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { logger } = require("firebase-functions");
+const { firestore } = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -379,5 +380,78 @@ exports.grantPurchaseCoins = onCall({
     if (error instanceof HttpsError) throw error;
     logger.error("Error in grantPurchaseCoins:", error);
     throw new HttpsError('internal', 'An internal error occurred while granting purchase.');
+  }
+});
+
+exports.onListUpdateNotification = firestore.document("lists/{listId}").onUpdate(async (change, context) => {
+  const newValue = change.after.data();
+  const previousValue = change.before.data();
+
+  // Only notify if updatedAt changed
+  if (newValue.updatedAt === previousValue.updatedAt) return;
+
+  const db = admin.firestore();
+  const listId = context.params.listId;
+  const listName = newValue.name;
+  
+  // Get all users who should receive the notification: owner + sharedUsers
+  const recipientIds = new Set([newValue.ownerId, ...(newValue.sharedUsers || [])]);
+  
+  // Remove the person who made the change to avoid self-notification
+  if (newValue.lastUpdatedBy) {
+    recipientIds.delete(newValue.lastUpdatedBy);
+  }
+
+  if (recipientIds.size === 0) return;
+
+  const tokens = [];
+  const usersSnap = await db.collection('users')
+    .where(admin.firestore.FieldPath.documentId(), 'in', Array.from(recipientIds))
+    .get();
+
+  usersSnap.forEach(userDoc => {
+    const userData = userDoc.data();
+    if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
+      tokens.push(...userData.fcmTokens);
+    } else if (userData.fcmToken) {
+      tokens.push(userData.fcmToken);
+    }
+  });
+
+  if (tokens.length === 0) return;
+
+  const message = {
+    notification: {
+      title: 'List Updated',
+      body: `"${listName}" has been updated.`,
+    },
+    android: {
+      priority: 'high',
+      notification: {
+        sound: 'default',
+        click_action: 'FCM_PLUGIN_ACTIVITY',
+        icon: 'ic_launcher',
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1,
+          'content-available': 1,
+        },
+      },
+    },
+    data: {
+      listId: listId,
+    },
+    tokens: tokens,
+  };
+
+  try {
+    const response = await admin.messaging().sendEachForMulticast(message);
+    logger.info(`Notifications sent: ${response.successCount} success, ${response.failureCount} failure`);
+  } catch (error) {
+    logger.error("Error sending notifications:", error);
   }
 });

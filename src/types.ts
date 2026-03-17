@@ -51,6 +51,7 @@ export interface AppUser {
   isAdmin?: boolean;
   lastActionAt?: number;
   freeCouponClaimed?: boolean;
+  fcmTokens?: string[];
 }
 
 export interface Coupon {
