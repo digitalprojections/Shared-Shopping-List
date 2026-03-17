@@ -12,8 +12,8 @@ export const APP_CONFIG = {
 
   // RevenueCat / IAP Configuration
   REVENUE_CAT: {
-    GOOGLE_API_KEY: 'goog_FjBsfIBUnQhNAtgCZilIWEZohrf', // REPLACE WITH REAL KEY
-    APPLE_API_KEY: 'appl_placeholder',  // REPLACE WITH REAL KEY
+    GOOGLE_API_KEY: 'goog_FjBsfIBUnQhNAtgCZilIWEZohrf', 
+    APPLE_API_KEY: 'test_uBTacnjuHZqnHAGsjjloxsJhMCm',
   },
 
   // Metadata

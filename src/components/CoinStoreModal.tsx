@@ -94,12 +94,12 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-        className="bg-stone-50 w-full max-w-lg rounded-t-[2.5rem] sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-stone-50 w-full max-w-lg rounded-t-[2rem] sm:rounded-[3rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
       >
         {/* Header */}
-        <div className="p-8 pb-4 flex items-center justify-between sticky top-0 bg-stone-50/80 backdrop-blur-md z-10">
+        <div className="p-6 sm:p-8 pb-4 flex items-center justify-between sticky top-0 bg-stone-50/80 backdrop-blur-md z-10">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-stone-100">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-stone-100 shrink-0">
               <ShoppingBag className="w-6 h-6 text-emerald-600" />
             </div>
             <div>
@@ -115,12 +115,12 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-8 pb-10 pt-4 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto px-6 sm:px-8 pb-10 pt-4 custom-scrollbar">
           {error && (
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-sm font-bold flex items-center gap-3"
+              className="mb-6 p-3 sm:p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-[10px] sm:text-sm font-bold flex items-center gap-3"
             >
               <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               {error}
@@ -131,13 +131,13 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="mb-8 p-8 bg-emerald-500 rounded-[2rem] text-white text-center shadow-xl shadow-emerald-500/20"
+              className="mb-8 p-6 sm:p-8 bg-emerald-500 rounded-[2rem] text-white text-center shadow-xl shadow-emerald-500/20"
             >
-              <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShieldCheck className="w-8 h-8" />
+              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8" />
               </div>
-              <h3 className="text-xl font-bold mb-1">{t('store.success')}</h3>
-              <p className="text-emerald-50 text-sm opacity-80">Coins are now available in your balance.</p>
+              <h3 className="text-lg sm:text-xl font-bold mb-1">{t('store.success')}</h3>
+              <p className="text-emerald-50 text-[10px] sm:text-sm opacity-80">Coins are now available in your balance.</p>
             </motion.div>
           )}
 
@@ -169,42 +169,46 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
               {packages.map((pack) => (
                 <motion.button
                   key={pack.identifier}
-                  whileHover={{ scale: 1.02, y: -2 }}
+                  whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handlePurchase(pack)}
                   disabled={!!purchasingId || success}
                   className={cn(
-                    "w-full flex items-center justify-between p-5 rounded-[2rem] border-2 transition-all relative group overflow-hidden",
+                    "w-full flex items-center justify-between p-4 sm:p-5 rounded-3xl border-2 transition-all relative group overflow-hidden",
                     purchasingId === pack.product.identifier 
                       ? "bg-stone-100 border-stone-200" 
                       : "bg-white border-stone-100 hover:border-emerald-200 hover:shadow-xl hover:shadow-stone-200/50"
                   )}
                 >
-                  <div className="flex items-center gap-5">
+                  <div className="flex items-center gap-4 sm:gap-6 min-w-0 flex-1">
                     <div className={cn(
-                      "w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg rotate-3 group-hover:rotate-0 transition-transform bg-gradient-to-br",
+                      "w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0 transition-transform bg-gradient-to-br",
                       getPackageColor(pack.product.identifier)
                     )}>
-                      {getPackageIcon(pack.product.identifier)}
+                      {React.cloneElement(getPackageIcon(pack.product.identifier) as React.ReactElement, { 
+                        className: "w-6 h-6 sm:w-8 sm:h-8 shrink-0 aspect-square" 
+                      })}
                     </div>
-                    <div className="text-left">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xl font-black text-stone-900">
+                    <div className="text-left min-w-0 flex-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+                        <span className="text-lg sm:text-2xl font-black text-stone-900 leading-tight">
                           {iapService.getCoinsForProduct(pack.product.identifier)} 🪙
                         </span>
                         {pack.product.identifier.includes('1000') && (
-                          <span className="px-2 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-lg uppercase">Best Value</span>
+                          <span className="w-fit px-2 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-lg uppercase tracking-wider mt-1 sm:mt-0">Best Value</span>
                         )}
                       </div>
-                      <p className="text-sm font-bold text-stone-400 line-clamp-1">{pack.product.description || pack.product.title}</p>
+                      <p className="text-[11px] sm:text-sm font-bold text-stone-400 mt-0.5 line-clamp-1">{pack.product.description || pack.product.title}</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <div className="text-right mr-2">
-                      <span className="text-lg font-black text-emerald-600">{pack.product.priceString}</span>
+                  <div className="flex items-center gap-3 shrink-0 ml-4">
+                    <div className="text-right">
+                      <span className="text-base sm:text-xl font-black text-emerald-600 tabular-nums">
+                        {pack.product.priceString}
+                      </span>
                     </div>
-                    <div className="w-10 h-10 bg-stone-100 rounded-xl flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-stone-50 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                       {purchasingId === pack.product.identifier ? (
                         <motion.div 
                           animate={{ rotate: 360 }}
@@ -213,7 +217,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
                           <Zap className="w-5 h-5" />
                         </motion.div>
                       ) : (
-                        <ChevronRight className="w-5 h-5" />
+                        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
                       )}
                     </div>
                   </div>

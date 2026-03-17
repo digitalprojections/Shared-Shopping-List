@@ -311,11 +311,21 @@ exports.grantPurchaseCoins = onCall({
     'coins_50': 50,
     'coins_200': 200,
     'coins_500': 500,
+    'coins_1000': 1000,
     'coins_1200': 1200,
     'coins_50_test': 50 // For sandbox testing
   };
 
-  const amount = COIN_MAP[productId];
+  let amount = COIN_MAP[productId];
+  
+  // Dynamic parsing fallback if not in map
+  if (!amount) {
+    const match = productId.match(/coins_(\d+)/);
+    if (match && match[1]) {
+      amount = parseInt(match[1], 10);
+    }
+  }
+
   if (!amount) {
     throw new HttpsError('invalid-argument', `Unknown product identifier: ${productId}`);
   }

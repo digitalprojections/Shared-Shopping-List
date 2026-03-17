@@ -64,3 +64,26 @@ Use `Capacitor.getPlatform()` and `Capacitor.isNativePlatform()` to handle envir
 - **Vite Config**: Ensure the `base` path is correctly set if deploying to a subdirectory.
 - **Environment Variables**: Use `.env` files for project IDs and API keys; never hardcode these in source files.
 - **Auth Flow**: On Web, preferred Google Login flow is `signInWithRedirect`. This avoids `Cross-Origin-Opener-Policy` (COOP) issues that block popups on modern browsers. Avoid setting restrictive COOP headers in `firebase.json` as they can interfere with the redirect callback.
+67: 
+68: ## 6. In-App Purchases (RevenueCat)
+69: 
+70: ### Integration Standards
+71: - **Plugin**: Use `@revenuecat/purchases-capacitor` and `@revenuecat/purchases-capacitor-ui`.
+72: - **Initialization**: Always check `Capacitor.isNativePlatform()` before initializing.
+73: 
+74: ### Purchase Flow Implementation
+75: - **Offerings vs Products**: 
+76:   - Prefer checking `getOfferings()` first.
+77:   - Fallback to `getProducts()` for direct store items if no offerings are configured.
+78: - **API Deprecations**: Avoid using `offeringIdentifier` directly on the package object (deprecated). Instead, use `presentedOfferingContext.offeringIdentifier`.
+79: - **Dynamic Purchasing**: 
+80:   - Use `purchasePackage({ aPackage: pack })` for offering-based items.
+81:   - Use `purchaseStoreProduct({ product: pack.product })` for items fetched directly via `getProducts`.
+82: 
+83: ### Security & Verification
+84: - **Server-Side Granting**: Never grant items (e.g. coins) directly in the UI. Upon successful purchase, call a **Firebase Cloud Function** (e.g., `grantPurchaseCoins`) with the `customerInfo` data to verify the receipt and update the database.
+85: 
+86: ### UI/UX for Mobile
+87: - **Proportion Locking**: IAP modals must use locked aspect ratios (e.g., `aspect-square`) for product icons to prevent vertical stretching or "squeezing" on high-density mobile displays.
+88: - **Tabular Numbers**: Use `font-variant-numeric: tabular-nums` (Tailwind `tabular-nums`) for prices to ensure alignment across different currency string lengths.
+89: 

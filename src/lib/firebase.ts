@@ -44,6 +44,3 @@ export const db = dbInstance as Firestore;
 export const auth = authInstance as Auth;
 export const functions = functionsInstance as Functions;
 export const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});

@@ -237,33 +237,20 @@ export default function App() {
     let idTokenUnsubscribe: any;
     if (Capacitor.isNativePlatform()) {
       FirebaseAuthentication.addListener('idTokenChange', (result) => {
-        if (result.token) {
-          console.log("ID Token changed (token available)");
-        } else {
-          console.log("User signed out, no ID token available (caught by listener).");
+        try {
+          if (result && result.token) {
+            console.log("Auth: ID Token updated");
+          }
+        } catch (e) {
+          // Ignore - usually happens on logout
         }
       }).then(listener => {
         idTokenUnsubscribe = listener;
+      }).catch(() => {
+        // Ignore listener attachment failures
       });
     }
 
-    getRedirectResult(auth).then((result) => {
-      if (result?.user) {
-        console.log("Redirect login successful:", result.user.uid);
-        setUser(result.user);
-        setLoading(false);
-      }
-    }).catch(async (error) => {
-      if (error.code === 'auth/credential-already-in-use') {
-        console.log("Account already exists. Logging out of anonymous session.");
-        await signOut(auth);
-        setError("That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
-      } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
-        console.error("Redirect error:", error);
-        setError(error.message);
-      }
-      setLoading(false);
-    });
 
     // For mobile: if we have a cached user but Firebase is taking its time,
     // we already showed the dashboard. If we DON'T have a user,
@@ -363,58 +350,46 @@ export default function App() {
     try {
       console.log("Starting Google Login...");
       setLoading(true);
-      const timeout = setTimeout(() => setLoading(false), 15000);
 
-      // Use native Capacitor authentication on mobile
       if (Capacitor.isNativePlatform()) {
-        console.log("Detected native platform, using FirebaseAuthentication plugin");
+        console.log("Using Native Google Sign-In...");
         const result = await FirebaseAuthentication.signInWithGoogle();
-        console.log("Native Google Sign-In Result:", result);
-
-        if (result.credential?.idToken) {
-          const credential = GoogleAuthProvider.credential(result.credential.idToken);
+        
+        if (result.credential) {
+          const credential = GoogleAuthProvider.credential(
+            result.credential.idToken,
+            result.credential.accessToken
+          );
+          
           if (user && user.isAnonymous) {
-            console.log("Linking anonymous user with native Google credential");
+            console.log("Linking native credential to anonymous user...");
             await linkWithCredential(user, credential);
           } else {
-            console.log("Signing in with native Google credential");
+            console.log("Signing in with native credential...");
             await signInWithCredential(auth, credential);
           }
-        } else {
-          console.warn("Native login succeeded but no ID token was returned.");
-          setLoading(false);
         }
-        clearTimeout(timeout);
       } else {
-        try {
-          if (user && user.isAnonymous) {
-            console.log("Linking anonymous user with Google Redirect...");
-            await linkWithRedirect(user, googleProvider);
-          } else {
-            console.log("Signing in with Google Redirect...");
-            await signInWithRedirect(auth, googleProvider);
-          }
-          // Note: The page will redirect, so code below here won't run on success
-        } catch (authErr: any) {
-          console.error("Redirect trigger error:", authErr);
-          setLoading(false);
-          throw authErr;
+        // Web flow
+        if (user && user.isAnonymous) {
+          console.log("Linking anonymous user with Google (Web)...");
+          await linkWithPopup(user, googleProvider);
+        } else {
+          console.log("Signing in with Google (Web)...");
+          await signInWithPopup(auth, googleProvider);
         }
       }
     } catch (err: any) {
       console.error("Google login error:", err);
-      setLoading(false); // Ensure loading is off on error
       if (err.code === 'auth/credential-already-in-use') {
-        console.log("Account already exists. Logging out of anonymous session.");
         await signOut(auth);
         setError("That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
-      } else if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-        setError("Google Sign-In is not enabled. Please enable 'Google' provider in your Firebase Console.");
-      } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
-         // Do nothing, user just closed the window
+      } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled' || err.code === '12501') {
+        // Ignored (User cancelled)
       } else {
-        setError(err.message);
+        setError(err.message || "Login failed. Please try again.");
       }
+    } finally {
       setLoading(false);
     }
   };
