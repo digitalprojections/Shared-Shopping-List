@@ -149,10 +149,11 @@ export const shoppingService = {
     }
   },
 
-  updateListIcon: async (listId: string, icon: string) => {
+  updateListIcon: async (listId: string, icon: string, userId: string) => {
     if (isFirebaseConfigured) {
       await updateDoc(doc(db, 'lists', listId), { 
         icon, 
+        lastUpdatedBy: userId,
         updatedAt: Date.now() 
       });
     }

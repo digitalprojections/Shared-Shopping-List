@@ -25,7 +25,8 @@ import {
   LayoutGrid,
   List,
   RotateCcw,
-  Gift
+  Gift,
+  CreditCard
 } from 'lucide-react';
 import { adService } from './services/adService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -34,6 +35,7 @@ import { App as CapApp } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics';
 import { PushNotifications } from '@capacitor/push-notifications';
+import { SplashScreen } from '@capacitor/splash-screen';
 import { Badge } from '@capawesome/capacitor-badge';
 import { auth, isFirebaseConfigured, googleProvider, functions } from './lib/firebase';
 import { httpsCallable } from 'firebase/functions';
@@ -56,11 +58,13 @@ import { userService } from './services/userService';
 import { couponService } from './services/couponService';
 import { useTranslation, Trans } from 'react-i18next';
 import './i18n'; // Import i18n configuration
-import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch } from './types';
+import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch, LoyaltyCard } from './types';
 import { cn, forceClearCache } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
 import { Onboarding } from './components/Onboarding';
 import { CoinStoreModal } from './components/CoinStoreModal';
+import { LoyaltyCardsModal } from './components/LoyaltyCardsModal';
+import { LoyaltyCardsRow } from './components/LoyaltyCardsRow';
 import { APP_CONFIG } from './config';
 
 // --- Components ---
@@ -105,6 +109,8 @@ export default function App() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showStoreModal, setShowStoreModal] = useState(false);
+  const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+  const [selectedLoyaltyCard, setSelectedLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -193,6 +199,7 @@ export default function App() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       FirebaseCrashlytics.setEnabled({ enabled: true }).catch(console.error);
+      SplashScreen.hide().catch(() => {});
     }
   }, []);
 
@@ -596,11 +603,11 @@ export default function App() {
   }
 
   return (
-    <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100">
+    <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100 overflow-hidden relative">
       <AnimatePresence>
         {showOnboarding && <Onboarding onFinish={handleOnboardingFinish} />}
       </AnimatePresence>
-      <header className="flex-none bg-white/70 backdrop-blur-xl border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top">
+      <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -612,55 +619,58 @@ export default function App() {
               window.history.replaceState({}, '', window.location.pathname);
             }}
           >
-            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/10 overflow-hidden">
-              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="L" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/10 overflow-hidden shrink-0">
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="L" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600 hidden xs:block">
               ListShare
             </h1>
           </motion.div>
 
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 justify-end">
             {appUser && (
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 px-0.5">
                 <CoinDisplay
                   balance={appUser.coinBalance}
                   onClick={() => setShowCoinHistoryModal(true)}
                 />
-                {appUser && !appUser.freeCouponClaimed && (
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {appUser && !appUser.freeCouponClaimed && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setShowRedeemModal(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-200 animate-pulse shrink-0"
+                      title={t('redeem_modal.free_title')}
+                    >
+                      <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </motion.button>
+                  )}
+
                   <motion.button
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setShowRedeemModal(true)}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-200 animate-pulse"
-                    title={t('redeem_modal.free_title')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowStoreModal(true)}
+                    className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-colors shadow-sm shrink-0"
+                    title="Buy Coins"
                   >
-                    <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('store.title')}</span>
                   </motion.button>
-                )}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowStoreModal(true)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-colors shadow-sm"
-                  title="Buy Coins"
-                >
-                  <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('store.title')}</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowRedeemModal(true)}
-                  className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm"
-                  title="Redeem Coupon"
-                >
-                  <Ticket className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">Redeem</span>
-                </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowRedeemModal(true)}
+                    className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm shrink-0"
+                    title="Redeem Coupon"
+                  >
+                    <Ticket className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">Redeem</span>
+                  </motion.button>
+                </div>
               </div>
             )}
-            <div className="relative" ref={menuRef}>
+            <div className="relative shrink-0 ml-1" ref={menuRef}>
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
@@ -747,6 +757,20 @@ export default function App() {
         </div>
       </header>
 
+      {user && (
+        <LoyaltyCardsRow 
+          userId={user.uid} 
+          onCardClick={(card) => {
+            setSelectedLoyaltyCard(card);
+            setShowLoyaltyModal(true);
+          }}
+          onAddClick={() => {
+            setSelectedLoyaltyCard(null);
+            setShowLoyaltyModal(true);
+          }}
+        />
+      )}
+
       <main className="scroll-container px-4 pt-6 pb-8 md:px-8">
         <div className="max-w-5xl mx-auto">
           <AnimatePresence mode="wait">
@@ -796,6 +820,16 @@ export default function App() {
             userId={user.uid}
             appUser={appUser}
             onClose={() => setShowRedeemModal(false)}
+          />
+        )}
+        {showLoyaltyModal && user && (
+          <LoyaltyCardsModal
+            userId={user.uid}
+            initialCard={selectedLoyaltyCard}
+            onClose={() => {
+              setShowLoyaltyModal(false);
+              setSelectedLoyaltyCard(null);
+            }}
           />
         )}
       </AnimatePresence>
@@ -1349,7 +1383,7 @@ function Dashboard({
                   </div>
                   
                   {/* Update Badge */}
-                  {list.updatedAt > shoppingService.getLastViewedAt(list.id) && (
+                  {list.updatedAt > shoppingService.getLastViewedAt(list.id) && list.lastUpdatedBy !== userId && (
                     <div className="absolute top-2 right-2 w-3 h-3 bg-rose-500 rounded-full border-2 border-white shadow-sm z-10" />
                   )}
                 </button>
@@ -1418,7 +1452,6 @@ function Dashboard({
         </div>
 
         <div className="space-y-6 order-first lg:order-last">
-          {appUser && <FreeGiftCard appUser={appUser} />}
           {appUser?.isAdmin && <CouponGenerator />}
         </div>
       </div>
@@ -1488,7 +1521,7 @@ function Dashboard({
       </AnimatePresence>
       <AnimatePresence>
         {showShare && (
-          <ShareModal listId={userId} type="collection" onClose={() => setShowShare(false)} />
+          <ShareModal listId={user?.uid || ''} type="collection" onClose={() => setShowShare(false)} />
         )}
       </AnimatePresence>
 
@@ -1496,7 +1529,7 @@ function Dashboard({
         {editingListId && (
           <EmojiPicker
             currentEmoji={lists.find(l => l.id === editingListId)?.icon}
-            onSelect={(emoji) => shoppingService.updateListIcon(editingListId, emoji)}
+            onSelect={(emoji) => shoppingService.updateListIcon(editingListId, emoji, user?.uid || '')}
             onClose={() => setEditingListId(null)}
           />
         )}

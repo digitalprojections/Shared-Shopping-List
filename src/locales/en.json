@@ -144,5 +144,31 @@
     "failed": "Purchase failed. Please try again.",
     "mobile_only": "In-app purchases are only available in the mobile app.",
     "no_packages": "No packages available at the moment."
+  },
+  "loyalty": {
+    "title": "Point Cards",
+    "subtitle": "Digital Wallet",
+    "saved_cards": "Saved Cards",
+    "add_new": "Add New",
+    "no_cards": "No cards yet",
+    "no_cards_suggest": "Add your store point cards to keep them handy while shopping.",
+    "store_name": "Store Name",
+    "name_placeholder": "e.g. My Membership",
+    "provider_placeholder": "e.g. Tesco, IKEA",
+    "card_number_label": "Card Number / Barcode",
+    "card_number_placeholder": "Enter the number or scan",
+    "scan_help": "You can type the number manually or use the scanner.",
+    "card_color": "Card Color",
+    "save_card": "Save Card",
+    "back_to_all": "Back to All Cards",
+    "store_card": "Store Card",
+    "tap_to_enlarge": "Tap to enlarge",
+    "card_number": "Card Number",
+    "remove_confirm": "Are you sure you want to delete this card?",
+    "remove_card": "Remove Card",
+    "zoom_for_scan": "Zoom for Scan",
+    "edit_card": "Edit Card",
+    "pick_icon": "Pick Icon",
+    "pick_color": "Pick Color"
   }
 }

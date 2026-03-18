@@ -14,13 +14,13 @@ const config: CapacitorConfig = {
       androidAppId: 'ca-app-pub-3838820812386239~9298923713'
     },
     SplashScreen: {
-      launchShowDuration: 1500,
+      launchShowDuration: 1000,
       launchAutoHide: true,
-      backgroundColor: "#10b981",
-      androidScaleType: "FIT_CENTER",
+      backgroundColor: "#ffffff",
+      androidScaleType: "CENTER_CROP",
       showSpinner: false,
-      splashFullScreen: true,
-      splashImmersive: true,
+      splashFullScreen: false,
+      splashImmersive: false,
     },
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
