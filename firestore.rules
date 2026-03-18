@@ -65,5 +65,10 @@ service cloud.firestore {
         (request.resource.data.isConsumed == true && resource.data.isConsumed == false && isNotThrottled(10000))
       );
     }
+    // Loyalty Cards
+    match /loyalty_cards/{cardId} {
+      allow read, delete, update: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+    }
   }
 }

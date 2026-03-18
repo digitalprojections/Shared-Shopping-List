@@ -61,9 +61,8 @@ Use the following community-standard plugins:
 Use `Capacitor.getPlatform()` and `Capacitor.isNativePlatform()` to handle environment differences (e.g., deep linking behavior should differ between Web/PWA and Android).
 
 ## 5. Deployment & CI/CD
-- **Vite Config**: Ensure the `base` path is correctly set if deploying to a subdirectory.
-- **Environment Variables**: Use `.env` files for project IDs and API keys; never hardcode these in source files.
 - **Auth Flow**: On Web, preferred Google Login flow is `signInWithRedirect`. This avoids `Cross-Origin-Opener-Policy` (COOP) issues that block popups on modern browsers. Avoid setting restrictive COOP headers in `firebase.json` as they can interfere with the redirect callback.
+- **Deployment Guidance**: Always include simple, actionable "Next Steps" or a "Deployment Checklist" in walkthroughs for feature implementations, specifically highlighting necessary updates to Cloud Functions, Firestore rules, or environment variables.
 67: 
 68: ## 6. In-App Purchases (RevenueCat)
 69: 

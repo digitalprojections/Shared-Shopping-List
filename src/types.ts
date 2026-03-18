@@ -11,6 +11,7 @@ export interface ShoppingList {
   sharedUsers?: string[];
   totalItems?: number;
   boughtItems?: number;
+  lastUpdatedBy?: string;
 }
 
 export interface ListItem {
@@ -60,5 +61,17 @@ export interface Coupon {
   coinsAmount: number;
   isConsumed: boolean;
   consumedBy: string | null;
+  createdAt: number;
+}
+
+export interface LoyaltyCard {
+  id: string;
+  name: string;
+  provider: string;
+  cardNumber: string;
+  barcodeType: string; // MLKit BarcodeFormat (e.g. 'CODE_128', 'QR_CODE', 'EAN_13')
+  color: string;
+  icon?: string;
+  ownerId: string;
   createdAt: number;
 }

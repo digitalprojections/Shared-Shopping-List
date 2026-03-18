@@ -19,5 +19,5 @@ This document tracks upcoming features to enhance the Shared Shopping List app's
 
 ## 📱 Native Enhancements (Capacitor)
 - [ ] **Location-Based Reminders**: Ping users when they are near a grocery store.
-- [ ] **Loyalty Card Wallet**: Store and display barcodes for membership cards.
+- [x] **Loyalty Card Wallet**: Store and display barcodes for membership cards.
 - [ ] **Native App Shortcuts**: "Quick Add" from the home screen icon.

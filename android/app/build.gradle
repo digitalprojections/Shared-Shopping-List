@@ -88,3 +88,16 @@ try {
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
 }
+
+configurations.all {
+    resolutionStrategy {
+        def measurement_version = '21.5.0'
+        force "com.google.android.gms:play-services-measurement:$measurement_version"
+        force "com.google.android.gms:play-services-measurement-api:$measurement_version"
+        force "com.google.android.gms:play-services-measurement-sdk:$measurement_version"
+        force "com.google.android.gms:play-services-measurement-impl:$measurement_version"
+        force "com.google.android.gms:play-services-measurement-base:$measurement_version"
+        force 'com.google.android.gms:play-services-ads-identifier:18.0.1'
+        force 'com.google.android.gms:play-services-basement:18.3.0'
+    }
+}
