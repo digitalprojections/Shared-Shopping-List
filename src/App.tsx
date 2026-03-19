@@ -128,6 +128,17 @@ export default function App() {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('ss_onboarding_v2_seen');
   });
+  const [initialOnboardingSlide, setInitialOnboardingSlide] = useState(0);
+
+  useEffect(() => {
+    if (appUser && (!appUser.preferences || appUser.preferences.length < 3)) {
+      if (localStorage.getItem('ss_onboarding_v2_seen')) {
+        // If they already saw onboarding but have no preferences, jump to selection
+        setInitialOnboardingSlide(5); // The "Your Interests" slide index
+      }
+      setShowOnboarding(true);
+    }
+  }, [appUser]);
 
   const handleOnboardingFinish = () => {
     localStorage.setItem('ss_onboarding_v2_seen', 'true');
@@ -609,7 +620,14 @@ export default function App() {
   return (
     <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100 overflow-hidden relative">
       <AnimatePresence>
-        {showOnboarding && user && <Onboarding userId={user.uid} onFinish={handleOnboardingFinish} />}
+        {showOnboarding && user && (
+          <Onboarding 
+            userId={user.uid} 
+            onFinish={handleOnboardingFinish} 
+            initialSlide={initialOnboardingSlide}
+            currentPreferences={appUser?.preferences || []}
+          />
+        )}
       </AnimatePresence>
       <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
         <div className="max-w-5xl mx-auto flex items-center justify-between">

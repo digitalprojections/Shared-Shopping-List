@@ -14,6 +14,8 @@ import {
 interface OnboardingProps {
   userId: string;
   onFinish: () => void;
+  initialSlide?: number;
+  currentPreferences?: string[];
 }
 
 import { userService } from '../services/userService';
@@ -22,6 +24,8 @@ import { cn } from '../lib/utils';
 const INTEREST_CATEGORIES = [
   'Grocery', 'Halaal', 'Organic', 'Electronics', 'Home', 'Pets', 'Pharma', 'Fashion', 'Beauty', 'Sports'
 ];
+
+const MIN_REQUIRED_INTERESTS = 3;
 
 const slides = [
   {
@@ -69,17 +73,20 @@ const slides = [
   }
 ];
 
-export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish }) => {
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initialSlide = 0, currentPreferences = [] }) => {
+  const [currentSlide, setCurrentSlide] = useState(initialSlide);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>(currentPreferences);
+
+  const isSelectionSlide = (slides[currentSlide] as any).isSelection;
+  const isLastSlide = currentSlide === slides.length - 1;
+  const canProceed = !isSelectionSlide || selectedInterests.length >= MIN_REQUIRED_INTERESTS;
 
   const next = async () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(s => s + 1);
     } else {
-      if (selectedInterests.length > 0) {
-        await userService.updatePreferences(userId, selectedInterests);
-      }
+      if (selectedInterests.length < MIN_REQUIRED_INTERESTS) return;
+      await userService.updatePreferences(userId, selectedInterests);
       onFinish();
     }
   };
@@ -97,13 +104,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish }) => {
       <div className={`absolute inset-0 bg-gradient-to-b ${slides[currentSlide].color} transition-colors duration-700 opacity-50`} />
       
       {/* Top Section - Skip */}
-      <div className="w-full p-6 flex justify-end relative z-10">
-        <button 
-          onClick={onFinish}
-          className="text-gray-500 font-medium text-sm hover:text-gray-800 transition-colors"
-        >
-          Skip
-        </button>
+      <div className="w-full p-6 flex justify-end relative z-10 min-h-[5rem]">
+        {!isSelectionSlide && (
+          <button 
+            onClick={onFinish}
+            className="text-gray-500 font-medium text-sm hover:text-gray-800 transition-colors"
+          >
+            Skip
+          </button>
+        )}
       </div>
 
       {/* Slide Content */}
@@ -125,7 +134,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish }) => {
               <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
                 {slides[currentSlide].title}
               </h2>
-              { (slides[currentSlide] as any).isSelection ? (
+              { isSelectionSlide ? (
                 <div className="grid grid-cols-2 gap-2 pt-4 px-2">
                   {INTEREST_CATEGORIES.map(category => (
                     <button
@@ -169,10 +178,21 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish }) => {
         {/* Action Button */}
         <button
           onClick={next}
-          className={`w-full max-w-xs py-4 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95 ${slides[currentSlide].accent}`}
+          disabled={!canProceed}
+          className={cn(
+            "w-full max-w-xs py-4 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95",
+            slides[currentSlide].accent,
+            !canProceed && "opacity-50 cursor-not-allowed"
+          )}
         >
-          <span>{currentSlide === slides.length - 1 ? "Get Started" : "Next"}</span>
-          {currentSlide === slides.length - 1 ? (
+          <span>
+            {isLastSlide 
+              ? (selectedInterests.length < MIN_REQUIRED_INTERESTS 
+                  ? `Select ${MIN_REQUIRED_INTERESTS - selectedInterests.length} more` 
+                  : "Get Started") 
+              : "Next"}
+          </span>
+          {isLastSlide ? (
             <CheckCircle2 className="w-5 h-5" />
           ) : (
             <ArrowRight className="w-5 h-5" />
