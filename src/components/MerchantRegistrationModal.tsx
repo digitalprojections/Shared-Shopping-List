@@ -133,13 +133,13 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
 
               <button
                 type="submit"
-                disabled={status === 'submitting'}
-                className="w-full py-4 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-200 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                disabled={status === 'submitting' || !name.trim()}
+                className="w-full group flex items-center justify-center gap-3 px-8 py-5 bg-emerald-600 text-white font-black rounded-3xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:bg-stone-200"
               >
                 {status === 'submitting' ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
-                  <Send className="w-5 h-5" />
+                  <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 )}
                 <span>{t('merchant.apply_button', 'Submit Application')}</span>
               </button>

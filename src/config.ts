@@ -29,7 +29,10 @@ export const APP_CONFIG = {
   USER: {
     DEFAULT_AVATAR_SIZE: '=s96-c',
     ANONYMOUS_AVATAR_SEED: 'ListShare-Guest',
-  }
+  },
+
+  // Versioning
+  VERSION: '1.0.1',
 };
 
 export const isDev = import.meta.env.DEV;

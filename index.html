@@ -17,6 +17,29 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="apple-touch-startup-image" href="splash-icon.png" />
+  
+  <script>
+    // Critical: Listen for chunk loading errors and force refresh
+    window.addEventListener('error', function(e) {
+      if (e.message && (e.message.indexOf('chunk') > -1 || e.message.indexOf('Loading chunk') > -1)) {
+        console.error('Critical: Chunk load error detected. Attempting recovery...');
+        if (!window.location.search.includes('v=')) {
+          // Perform soft reset (clear cache + SW only, keep localStorage)
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) caches.delete(name);
+            });
+          }
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(regs) {
+              for (let reg of regs) reg.unregister();
+            });
+          }
+          window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+        }
+      }
+    }, true);
+  </script>
 </head>
 
 <body>

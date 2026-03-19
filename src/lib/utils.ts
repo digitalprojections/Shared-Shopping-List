@@ -6,14 +6,21 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Force clears all application cache, local storage, session storage,
- * service workers, and IndexedDB data, then reloads the page.
+ * Force clears application cache and reloads.
+ * @param options - Configure what to clear
  */
-export async function forceClearCache() {
+export async function forceClearCache(options: {
+  clearStorage?: boolean;
+  reload?: boolean;
+} = { clearStorage: true, reload: true }) {
   try {
-    // 1. Clear Storage
-    localStorage.clear();
-    sessionStorage.clear();
+    console.log("forceClearCache: Starting clean up...", options);
+
+    // 1. Clear Storage (Optional)
+    if (options.clearStorage) {
+      localStorage.clear();
+      sessionStorage.clear();
+    }
 
     // 2. Clear Caches
     if ('caches' in window) {
@@ -27,21 +34,34 @@ export async function forceClearCache() {
       await Promise.all(registrations.map(r => r.unregister()));
     }
 
-    // 4. Clear IndexedDB (using Dexie if available)
-    // You might want to import your db instance here if you want to wipe it too
-    // For a generic approach, we can try to find all IDs and delete them
+    // 4. Clear IndexedDB
     if ('indexedDB' in window) {
       const dbs = await window.indexedDB.databases();
-      dbs.forEach(db => {
-        if (db.name) window.indexedDB.deleteDatabase(db.name);
-      });
+      for (const db of dbs) {
+        if (db.name) {
+          try {
+            window.indexedDB.deleteDatabase(db.name);
+          } catch (e) {
+            console.warn(`Failed to delete DB ${db.name}`);
+          }
+        }
+      }
     }
 
-    // 5. Hard reload to fetch fresh assets
-    window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+    // 5. Reload if requested
+    if (options.reload) {
+      // Use cache-busting query param
+      const url = new URL(window.location.href);
+      url.searchParams.set('v', Date.now().toString());
+      window.location.replace(url.toString());
+    }
+
+    return true;
   } catch (err) {
     console.error("Failed to clear cache:", err);
-    // Fallback reload
-    window.location.reload();
+    if (options.reload) {
+      window.location.reload();
+    }
+    return false;
   }
 }

@@ -118,6 +118,24 @@ export default function App() {
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  // --- Version Control & Auto-Update Logic ---
+  useEffect(() => {
+    const checkVersion = async () => {
+      const lastVersion = localStorage.getItem('app_version');
+      const currentVersion = APP_CONFIG.VERSION;
+      
+      if (lastVersion && lastVersion !== currentVersion) {
+        console.log(`[VersionControl] Update detected: ${lastVersion} -> ${currentVersion}`);
+        // Perform soft reset (clear caches/SW, reload, but keep localStorage data)
+        await forceClearCache({ clearStorage: false, reload: true });
+        localStorage.setItem('app_version', currentVersion);
+      } else if (!lastVersion) {
+        localStorage.setItem('app_version', currentVersion);
+      }
+    };
+    checkVersion();
+  }, []);
+
   useEffect(() => {
     import('./services/iapService').then(({ iapService }) => {
       iapService.initialize();
