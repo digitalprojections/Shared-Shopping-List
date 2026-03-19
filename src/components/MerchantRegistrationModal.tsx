@@ -15,28 +15,44 @@ const CATEGORIES = ['Grocery', 'Halaal', 'Organic', 'Electronics', 'Home', 'Pets
 export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps> = ({ userId, onClose, onSuccess }) => {
   const { t } = useTranslation();
   const [name, setName] = useState('');
+  const [address, setAddress] = useState('');
   const [category, setCategory] = useState('Grocery');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [error, setError] = useState<string | null>(null);
+  const [shake, setShake] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !address.trim()) {
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      return;
+    }
 
     setStatus('submitting');
+    setError(null);
     try {
+      console.log("[MerchantRegistration] Submitting application for user:", userId);
       await storeService.applyForMerchant(userId, {
         name: name.trim(),
+        location: {
+          lat: 0,
+          lng: 0,
+          address: address.trim()
+        },
         category,
         description: description.trim()
       });
+      console.log("[MerchantRegistration] Success!");
       setStatus('success');
       setTimeout(() => {
         onSuccess();
         onClose();
       }, 2000);
-    } catch (error) {
-      console.error("Error applying for merchant:", error);
+    } catch (err: any) {
+      console.error("[MerchantRegistration] Error:", err);
+      setError(err?.message || t('merchant.error_submitting', 'Failed to submit application. Please try again.'));
       setStatus('idle');
     }
   };
@@ -84,6 +100,19 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3"
+                >
+                  <div className="w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+                    <X className="w-3 h-3 text-white" />
+                  </div>
+                  <p className="text-sm font-medium text-rose-600">{error}</p>
+                </motion.div>
+              )}
+
               <p className="text-stone-500 text-sm leading-relaxed">
                 {t('merchant.apply_desc', 'Join our ecosystem! Once approved, your store will be visible to all users nearby.')}
               </p>
@@ -94,12 +123,28 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     {t('merchant.store_name', 'Store Name')}
                   </label>
                   <input
-                    required
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
-                    placeholder="e.g. Sunny Supermarket"
+                    className={`w-full px-5 py-4 bg-stone-50 border-2 rounded-2xl outline-none transition-all font-medium ${
+                      shake && !name.trim() ? 'border-rose-300 animate-shake' : 'border-transparent focus:border-emerald-500 focus:bg-white'
+                    }`}
+                    placeholder={t('merchant.store_name_placeholder', 'e.g. Sunny Supermarket')}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
+                    {t('merchant.store_address', 'Store Address')}
+                  </label>
+                  <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    className={`w-full px-5 py-4 bg-stone-50 border-2 rounded-2xl outline-none transition-all font-medium ${
+                      shake && !address.trim() ? 'border-rose-300 animate-shake' : 'border-transparent focus:border-emerald-500 focus:bg-white'
+                    }`}
+                    placeholder={t('merchant.store_address_placeholder', 'Street, City, Country')}
                   />
                 </div>
 
@@ -131,10 +176,12 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                 </div>
               </div>
 
-              <button
+              <motion.button
+                animate={shake ? { x: [-5, 5, -5, 5, 0] } : {}}
+                transition={{ duration: 0.4 }}
                 type="submit"
-                disabled={status === 'submitting' || !name.trim()}
-                className="w-full group flex items-center justify-center gap-3 px-8 py-5 bg-emerald-600 text-white font-black rounded-3xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 disabled:bg-stone-200"
+                disabled={status === 'submitting'}
+                className="w-full group flex items-center justify-center gap-3 px-8 py-5 bg-emerald-600 text-white font-black rounded-3xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
               >
                 {status === 'submitting' ? (
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -142,7 +189,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                   <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 )}
                 <span>{t('merchant.apply_button', 'Submit Application')}</span>
-              </button>
+              </motion.button>
             </form>
           )}
         </div>
