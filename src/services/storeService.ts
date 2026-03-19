@@ -39,11 +39,14 @@ export const storeService = {
     };
 
     try {
-      console.log("[StoreService] Attempting to create store application:", store);
-      const docRef = await addDoc(collection(db, 'stores'), store);
-      console.log("[StoreService] Store application created with ID:", docRef.id);
+      console.log("[StoreService] Validating collection reference...");
+      const colRef = collection(db, 'stores');
+      console.log("[StoreService] Attempting to create store application document...");
+      
+      const docRef = await addDoc(colRef, store);
+      console.log("[StoreService] Store application created successfully with ID:", docRef.id);
       return docRef;
-    } catch (error: any) {
+    } catch (error) {
       console.error("[StoreService] Failed to create store document:", error);
       throw error;
     }

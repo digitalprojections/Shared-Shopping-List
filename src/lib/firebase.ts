@@ -21,10 +21,15 @@ let functionsInstance: Functions | null = null;
 
 if (isFirebaseConfigured) {
   try {
+    console.log("[Firebase] Initializing with Project ID:", firebaseConfig.projectId);
     app = initializeApp(firebaseConfig);
     dbInstance = getFirestore(app);
     authInstance = getAuth(app);
     functionsInstance = getFunctions(app);
+
+    if (!firebaseConfig.projectId) {
+      console.error("[Firebase] CRITICAL: Project ID is missing from environment variables!");
+    }
 
     // Enable offline persistence
     enableIndexedDbPersistence(dbInstance).catch((err) => {
