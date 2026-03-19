@@ -12,7 +12,7 @@ export const APP_CONFIG = {
 
   // RevenueCat / IAP Configuration
   REVENUE_CAT: {
-    GOOGLE_API_KEY: 'goog_FjBsfIBUnQhNAtgCZilIWEZohrf', 
+    GOOGLE_API_KEY: 'goog_FjBsfIBUnQhNAtgCZilIWEZohrf',
     APPLE_API_KEY: 'test_uBTacnjuHZqnHAGsjjloxsJhMCm',
   },
 
@@ -32,7 +32,7 @@ export const APP_CONFIG = {
   },
 
   // Versioning
-  VERSION: '1.0.1',
+  VERSION: '1.0.2',
 };
 
 export const isDev = import.meta.env.DEV;
