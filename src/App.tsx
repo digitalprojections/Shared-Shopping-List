@@ -877,6 +877,7 @@ export default function App() {
                 lists={lists}
                 installPrompt={installPrompt}
                 onInstall={handleInstallApp}
+                onShowDiscoverStores={() => setShowDiscoverStores(true)}
               />
             ) : (
               <ListView
@@ -959,6 +960,22 @@ export default function App() {
         {showAdminManager && (
           <AdminStoreManager
             onClose={() => setShowAdminManager(false)}
+          />
+        )}
+        {showDiscoverStores && (
+          <DiscoverStores
+            onClose={() => setShowDiscoverStores(false)}
+            onSelectStore={(id) => {
+              setSelectedStoreId(id);
+              setShowDiscoverStores(false);
+            }}
+          />
+        )}
+        {selectedStoreId && (
+          <StorePage
+            storeId={selectedStoreId}
+            onClose={() => setSelectedStoreId(null)}
+            onAddProductToList={handleAddProductToList}
           />
         )}
       </AnimatePresence>
@@ -1227,7 +1244,8 @@ function Dashboard({
   appUser,
   lists,
   installPrompt,
-  onInstall
+  onInstall,
+  onShowDiscoverStores
 }: {
   userId: string,
   onSelectList: (id: string) => void,
@@ -1235,7 +1253,8 @@ function Dashboard({
   appUser: AppUser | null,
   lists: ShoppingList[],
   installPrompt: any,
-  onInstall: () => void
+  onInstall: () => void,
+  onShowDiscoverStores: () => void
 }) {
   const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
@@ -1513,7 +1532,7 @@ function Dashboard({
               className="group"
             >
               <button
-                onClick={() => setShowDiscoverStores(true)}
+                onClick={onShowDiscoverStores}
                 className="w-full aspect-[16/10] p-4 rounded-3xl border-2 border-indigo-100 bg-indigo-50/20 flex flex-col items-center justify-center text-center gap-2 transition-all hover:bg-indigo-50 hover:border-indigo-200"
               >
                 <div className="p-2 bg-indigo-100 rounded-2xl text-indigo-600 group-hover:scale-110 transition-transform">
@@ -1655,35 +1674,10 @@ function Dashboard({
           </motion.div>
         )}
       </AnimatePresence>
+
       <AnimatePresence>
         {showShare && (
           <ShareModal listId={user?.uid || ''} type="collection" onClose={() => setShowShare(false)} />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {selectedLoyaltyCard && (
-          <LoyaltyCardsModal
-            userId={user!.uid}
-            initialId={selectedLoyaltyCard}
-            onClose={() => setSelectedLoyaltyCard(null)}
-          />
-        )}
-        {showDiscoverStores && (
-          <DiscoverStores
-            onClose={() => setShowDiscoverStores(false)}
-            onSelectStore={(id) => {
-              setSelectedStoreId(id);
-              setShowDiscoverStores(false);
-            }}
-          />
-        )}
-        {selectedStoreId && (
-          <StorePage
-            storeId={selectedStoreId}
-            onClose={() => setSelectedStoreId(null)}
-            onAddProductToList={handleAddProductToList}
-          />
         )}
       </AnimatePresence>
     </motion.div>
