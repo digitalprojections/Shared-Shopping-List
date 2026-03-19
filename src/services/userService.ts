@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, onSnapshot, query, collection, where, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot, query, collection, where, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, isFirebaseConfigured, functions, auth } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { AppUser } from '../types';
@@ -153,6 +153,16 @@ export const userService = {
       }
     } catch (error) {
       console.error("Error updating FCM token:", error);
+    }
+  },
+
+  updatePreferences: async (userId: string, preferences: string[]): Promise<void> => {
+    if (!isFirebaseConfigured) return;
+    const userRef = doc(db, 'users', userId);
+    try {
+      await updateDoc(userRef, { preferences });
+    } catch (error) {
+      console.error("Error updating preferences:", error);
     }
   }
 };

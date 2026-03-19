@@ -46,15 +46,38 @@ service cloud.firestore {
 
     // User Profiles
     match /users/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId && 
-                    isNotThrottled(2000) &&
-                    !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coinBalance', 'coinBatches', 'isAdmin']);
+      allow read: if request.auth != null;
+      allow update: if request.auth != null && (
+        (request.auth.uid == userId && 
+         isNotThrottled(2000) &&
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coinBalance', 'coinBatches', 'isAdmin', 'isMerchant'])) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
       allow create: if request.auth != null && request.auth.uid == userId &&
                     request.resource.data.coinBalance == 0 &&
                     request.resource.data.coinBatches == [];
     }
     
+    // Stores
+    match /stores/{storeId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        resource.data.ownerId == request.auth.uid || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
+    }
+    
+    // Store Products
+    match /store_products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null && (
+        (request.resource != null && get(/databases/$(database)/documents/stores/$(request.resource.data.storeId)).data.ownerId == request.auth.uid) ||
+        (resource != null && get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid) ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
+      );
+    }
+
     // Coupons
     match /coupons/{couponId} {
       allow read: if request.auth != null;

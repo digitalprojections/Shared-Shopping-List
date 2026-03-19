@@ -21,3 +21,12 @@ This document tracks upcoming features to enhance the Shared Shopping List app's
 - [ ] **Location-Based Reminders**: Ping users when they are near a grocery store.
 - [x] **Loyalty Card Wallet**: Store and display barcodes for membership cards.
 - [ ] **Native App Shortcuts**: "Quick Add" from the home screen icon.
+
+## 🏪 Store Ecosystem (Phase 4)
+- [ ] **Store Pages**: Verified merchants can create their own page and list products in stock.
+- [ ] **Inventory & Sales Tracking**: Stores can update availability and set start/ending dates for sales.
+- [ ] **Product "Likes"**: Users can mark products as favorites to find them easily during their next visit.
+- [ ] **Smart Store Discovery**:
+    - **Geolocation Suggestions**: Use Capacitor Geolocation to suggest neighboring stores as users move.
+    - **Map Data Integration**: Query open-source map data (like OpenStreetMap) to identify nearby stores and match them against the items on your shopping lists. Add a map view to show nearby stores. Allow users to select a store to view its products and sales. try to get a list of store products by querying the store's website or API.
+- [ ] **User Preference Seeding**: Implement an initial category selection step to learn about user's interests and provide more relevant store/product suggestions. Include Halaal as a category to choose when learning user preferences.

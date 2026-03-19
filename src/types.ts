@@ -50,6 +50,8 @@ export interface AppUser {
   coinBalance: number;
   coinBatches?: CoinBatch[];
   isAdmin?: boolean;
+  isMerchant?: boolean;
+  preferences?: string[];
   lastActionAt?: number;
   freeCouponClaimed?: boolean;
   fcmTokens?: string[];
@@ -74,4 +76,38 @@ export interface LoyaltyCard {
   icon?: string;
   ownerId: string;
   createdAt: number;
+}
+
+export interface Store {
+  id: string;
+  ownerId: string;
+  name: string;
+  description: string;
+  category: string;
+  location?: {
+    lat: number;
+    lng: number;
+    address?: string;
+  };
+  isVerified: boolean;
+  status: 'pending' | 'active' | 'rejected';
+  createdAt: number;
+  updatedAt: number;
+  followersCount?: number;
+}
+
+export interface StoreProduct {
+  id: string;
+  storeId: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  inStock: boolean;
+  category: string;
+  saleStart?: number;
+  saleEnd?: number;
+  likesCount: number;
+  createdAt: number;
+  updatedAt: number;
 }

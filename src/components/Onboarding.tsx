@@ -7,12 +7,21 @@ import {
   ShoppingBag, 
   ArrowRight, 
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Ticket
 } from 'lucide-react';
 
 interface OnboardingProps {
+  userId: string;
   onFinish: () => void;
 }
+
+import { userService } from '../services/userService';
+import { cn } from '../lib/utils';
+
+const INTEREST_CATEGORIES = [
+  'Grocery', 'Halaal', 'Organic', 'Electronics', 'Home', 'Pets', 'Pharma', 'Fashion', 'Beauty', 'Sports'
+];
 
 const slides = [
   {
@@ -42,18 +51,45 @@ const slides = [
     icon: <Sparkles className="w-16 h-16 text-fuchsia-500" />,
     color: "from-fuchsia-50 to-pink-50",
     accent: "bg-fuchsia-500"
+  },
+  {
+    title: "Loyalty Cards",
+    description: "Keep all your point cards in one place. Instant barcode access at checkout keeps your wallet light and organized.",
+    icon: <Ticket className="w-16 h-16 text-rose-500" />,
+    color: "from-rose-50 to-orange-50",
+    accent: "bg-rose-500"
+  },
+  {
+    title: "Your Interests",
+    description: "Select categories you're interested in to get personalized store suggestions.",
+    icon: <Sparkles className="w-16 h-16 text-amber-500" />,
+    color: "from-amber-50 to-orange-50",
+    accent: "bg-amber-500",
+    isSelection: true
   }
 ];
 
-export const Onboarding: React.FC<OnboardingProps> = ({ onFinish }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
 
-  const next = () => {
+  const next = async () => {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(s => s + 1);
     } else {
+      if (selectedInterests.length > 0) {
+        await userService.updatePreferences(userId, selectedInterests);
+      }
       onFinish();
     }
+  };
+
+  const toggleInterest = (interest: string) => {
+    setSelectedInterests(prev => 
+      prev.includes(interest) 
+        ? prev.filter(i => i !== interest) 
+        : [...prev, interest]
+    );
   };
 
   return (
@@ -89,9 +125,28 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onFinish }) => {
               <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
                 {slides[currentSlide].title}
               </h2>
-              <p className="text-lg text-gray-600 leading-relaxed px-4">
-                {slides[currentSlide].description}
-              </p>
+              { (slides[currentSlide] as any).isSelection ? (
+                <div className="grid grid-cols-2 gap-2 pt-4 px-2">
+                  {INTEREST_CATEGORIES.map(category => (
+                    <button
+                      key={category}
+                      onClick={() => toggleInterest(category)}
+                      className={cn(
+                        "px-4 py-3 rounded-xl text-sm font-bold transition-all border-2",
+                        selectedInterests.includes(category)
+                          ? "bg-amber-500 border-amber-500 text-white shadow-md scale-105"
+                          : "bg-white border-stone-100 text-stone-600 hover:border-amber-200"
+                      )}
+                    >
+                      {category}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-lg text-gray-600 leading-relaxed px-4">
+                  {slides[currentSlide].description}
+                </p>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>

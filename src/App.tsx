@@ -62,6 +62,8 @@ import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch, Loya
 import { cn, forceClearCache } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
 import { Onboarding } from './components/Onboarding';
+import { MerchantRegistrationModal } from './components/MerchantRegistrationModal';
+import { AdminStoreManager } from './components/AdminStoreManager';
 import { CoinStoreModal } from './components/CoinStoreModal';
 import { LoyaltyCardsModal } from './components/LoyaltyCardsModal';
 import { LoyaltyCardsRow } from './components/LoyaltyCardsRow';
@@ -110,6 +112,8 @@ export default function App() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showStoreModal, setShowStoreModal] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
+  const [showMerchantModal, setShowMerchantModal] = useState(false);
+  const [showAdminManager, setShowAdminManager] = useState(false);
   const [selectedLoyaltyCard, setSelectedLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -122,11 +126,11 @@ export default function App() {
 
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem('ss_onboarding_seen');
+    return !localStorage.getItem('ss_onboarding_v2_seen');
   });
 
   const handleOnboardingFinish = () => {
-    localStorage.setItem('ss_onboarding_seen', 'true');
+    localStorage.setItem('ss_onboarding_v2_seen', 'true');
     setShowOnboarding(false);
   };
 
@@ -605,7 +609,7 @@ export default function App() {
   return (
     <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100 overflow-hidden relative">
       <AnimatePresence>
-        {showOnboarding && <Onboarding onFinish={handleOnboardingFinish} />}
+        {showOnboarding && user && <Onboarding userId={user.uid} onFinish={handleOnboardingFinish} />}
       </AnimatePresence>
       <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -722,6 +726,32 @@ export default function App() {
                       <LogOut className="w-4 h-4" />
                       {t('app.sign_out')}
                     </button>
+
+                    {!user?.isAnonymous && !appUser?.isMerchant && (
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowMerchantModal(true);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors text-left font-bold"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                        {t('user_menu.register_store', 'Register as Store')}
+                      </button>
+                    )}
+
+                    {appUser?.isAdmin && (
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowAdminManager(true);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors text-left font-bold"
+                      >
+                        <Shield className="w-4 h-4" />
+                        {t('user_menu.manage_submissions', 'Manage Submissions')}
+                      </button>
+                    )}
 
                     <button
                       onClick={async () => {
@@ -845,6 +875,20 @@ export default function App() {
         {showStoreModal && (
           <CoinStoreModal
             onClose={() => setShowStoreModal(false)}
+          />
+        )}
+        {showMerchantModal && user && (
+          <MerchantRegistrationModal
+            userId={user.uid}
+            onClose={() => setShowMerchantModal(false)}
+            onSuccess={() => {
+              // We could show a notification here
+            }}
+          />
+        )}
+        {showAdminManager && (
+          <AdminStoreManager
+            onClose={() => setShowAdminManager(false)}
           />
         )}
       </AnimatePresence>
@@ -1127,6 +1171,7 @@ function Dashboard({
   const [isCreating, setIsCreating] = useState(false);
   const [newListName, setNewListName] = useState('');
   const [showShare, setShowShare] = useState(false);
+  const [showMerchantModal, setShowMerchantModal] = useState(false);
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(true);
   const [isPending, setIsPending] = useState(false);
@@ -2019,7 +2064,7 @@ function ListView({
           <EmojiPicker
             currentEmoji={list.icon}
             onSelect={(emoji) => {
-              shoppingService.updateListIcon(listId, emoji);
+              shoppingService.updateListIcon(listId, emoji, user?.uid || '');
             }}
             onClose={() => setShowEmojiPicker(false)}
           />
