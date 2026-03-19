@@ -21,7 +21,11 @@ let functionsInstance: Functions | null = null;
 
 if (isFirebaseConfigured) {
   try {
-    console.log("[Firebase] Initializing with Project ID:", firebaseConfig.projectId);
+    const debugInfo = `Project ID: ${firebaseConfig.projectId || 'MISSING'}`;
+    console.log("[Firebase] Initializing with", debugInfo);
+    // TEMPORARY: Alert for hard debugging to bypass any console filtering
+    alert("Firebase Initializing! " + debugInfo);
+    
     app = initializeApp(firebaseConfig);
     dbInstance = getFirestore(app);
     authInstance = getAuth(app);

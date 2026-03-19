@@ -32,7 +32,7 @@ export const APP_CONFIG = {
   },
 
   // Versioning
-  VERSION: '1.0.2',
+  VERSION: '1.0.3',
 };
 
 export const isDev = import.meta.env.DEV;
