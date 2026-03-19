@@ -1,5 +1,5 @@
 import { initializeApp, FirebaseApp } from "firebase/app";
-import { getFirestore, Firestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore, Firestore } from "firebase/firestore";
 import { getAuth, Auth, GoogleAuthProvider } from "firebase/auth";
 import { getFunctions, Functions } from "firebase/functions";
 
@@ -23,8 +23,6 @@ if (isFirebaseConfigured) {
   try {
     const debugInfo = `Project ID: ${firebaseConfig.projectId || 'MISSING'}`;
     console.log("[Firebase] Initializing with", debugInfo);
-    // TEMPORARY: Alert for hard debugging to bypass any console filtering
-    alert("Firebase Initializing! " + debugInfo);
     
     app = initializeApp(firebaseConfig);
     dbInstance = getFirestore(app);
@@ -34,15 +32,6 @@ if (isFirebaseConfigured) {
     if (!firebaseConfig.projectId) {
       console.error("[Firebase] CRITICAL: Project ID is missing from environment variables!");
     }
-
-    // Enable offline persistence
-    enableIndexedDbPersistence(dbInstance).catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn("Firestore: Multiple tabs open, persistence can only be enabled in one tab at a time.");
-      } else if (err.code === 'unimplemented') {
-        console.warn("Firestore: The current browser does not support all of the features required to enable persistence.");
-      }
-    });
   } catch (error) {
     console.error("Firebase initialization error:", error);
   }
