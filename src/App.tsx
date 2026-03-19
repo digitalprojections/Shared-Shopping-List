@@ -926,7 +926,7 @@ export default function App() {
         )}
         {showMerchantDashboard && user && (
           <MerchantDashboard
-            user={user}
+            userId={user.uid}
             onClose={() => setShowMerchantDashboard(false)}
           />
         )}
