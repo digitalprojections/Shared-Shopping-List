@@ -32,18 +32,30 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
 
     setStatus('submitting');
     setError(null);
+
+    // Timeout logic: if the promise doesn't resolve in 15 seconds, we assume it's hanging
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error(t('merchant.timeout_error', 'The request is taking longer than expected. Please check your connection.'))), 15000)
+    );
+
     try {
       console.log("[MerchantRegistration] Submitting application for user:", userId);
-      await storeService.applyForMerchant(userId, {
-        name: name.trim(),
-        location: {
-          lat: 0,
-          lng: 0,
-          address: address.trim()
-        },
-        category,
-        description: description.trim()
-      });
+      
+      // Race the actual submission against the timeout for better UX
+      await Promise.race([
+        storeService.applyForMerchant(userId, {
+          name: name.trim(),
+          location: {
+            lat: 0,
+            lng: 0,
+            address: address.trim()
+          },
+          category,
+          description: description.trim()
+        }),
+        timeoutPromise
+      ]);
+
       console.log("[MerchantRegistration] Success!");
       setStatus('success');
       setTimeout(() => {
@@ -51,9 +63,10 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
         onClose();
       }, 2000);
     } catch (err: any) {
-      console.error("[MerchantRegistration] Error:", err);
-      setError(err?.message || t('merchant.error_submitting', 'Failed to submit application. Please try again.'));
+      console.error("[MerchantRegistration] Submission Failed:", err);
+      // Ensure we revert to idle state so the button becomes clickable again
       setStatus('idle');
+      setError(err?.message || t('merchant.error_submitting', 'Failed to submit application. Please try again.'));
     }
   };
 

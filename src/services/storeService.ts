@@ -20,7 +20,10 @@ import { Store, StoreProduct } from '../types';
 export const storeService = {
   // Store Management
   applyForMerchant: async (ownerId: string, storeData: Partial<Store>) => {
-    if (!isFirebaseConfigured) return;
+    if (!isFirebaseConfigured || !db) {
+      console.error("[StoreService] Firebase not configured correctly.");
+      throw new Error("Unable to connect to registration service. Please check your internet connection and try again.");
+    }
     
     const store: Omit<Store, 'id'> = {
       ownerId,
@@ -35,7 +38,15 @@ export const storeService = {
       followersCount: 0
     };
 
-    return await addDoc(collection(db, 'stores'), store);
+    try {
+      console.log("[StoreService] Attempting to create store application:", store);
+      const docRef = await addDoc(collection(db, 'stores'), store);
+      console.log("[StoreService] Store application created with ID:", docRef.id);
+      return docRef;
+    } catch (error: any) {
+      console.error("[StoreService] Failed to create store document:", error);
+      throw error;
+    }
   },
 
   getStoreByOwner: async (ownerId: string): Promise<Store | null> => {
