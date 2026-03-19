@@ -10,13 +10,15 @@ import {
   AlertCircle,
   Clock,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Package
 } from 'lucide-react';
 import { Store } from '../types';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { MerchantRegistrationModal } from './MerchantRegistrationModal';
+import { ProductManager } from './ProductManager';
 
 interface MerchantDashboardProps {
   userId: string;
@@ -29,6 +31,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
+  const [managingInventoryStore, setManagingInventoryStore] = useState<Store | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -165,8 +168,18 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                       className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-stone-50 text-stone-600 font-bold hover:bg-stone-100 rounded-2xl transition-all"
                     >
                       <Settings className="w-5 h-5" />
-                      <span>{store.status === 'active' ? 'Store Settings' : 'Edit Application'}</span>
+                      <span>{store.status === 'active' ? 'Settings' : 'Edit Application'}</span>
                     </button>
+                    
+                    {store.status === 'active' && (
+                      <button
+                        onClick={() => setManagingInventoryStore(store)}
+                        className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-2xl transition-all shadow-lg shadow-indigo-100"
+                      >
+                        <Package className="w-5 h-5" />
+                        <span>Inventory</span>
+                      </button>
+                    )}
                     
                     <button
                       disabled={!!processingId}
@@ -214,6 +227,12 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             initialStore={editingStore}
             onClose={() => setEditingStore(null)} 
             onSuccess={() => {}} 
+          />
+        )}
+        {managingInventoryStore && (
+          <ProductManager
+            store={managingInventoryStore}
+            onClose={() => setManagingInventoryStore(null)}
           />
         )}
       </AnimatePresence>

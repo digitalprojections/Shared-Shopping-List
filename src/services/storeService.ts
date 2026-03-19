@@ -32,6 +32,12 @@ export const storeService = {
       description: storeData.description || '',
       category: storeData.category || 'Grocery',
       location: storeData.location,
+      workingHours: storeData.workingHours || '',
+      contactPhone: storeData.contactPhone || '',
+      website: storeData.website || '',
+      themeColor: storeData.themeColor || '',
+      bannerUrl: storeData.bannerUrl || '',
+      logoUrl: storeData.logoUrl || '',
       isVerified: false,
       status: 'pending',
       createdAt: Date.now(),
@@ -69,7 +75,7 @@ export const storeService = {
   },
 
   getStoreByOwner: async (ownerId: string): Promise<Store | null> => {
-    if (!isFirebaseConfigured) return null;
+    if (!isFirebaseConfigured || !ownerId) return null;
     const q = query(collection(db, 'stores'), where('ownerId', '==', ownerId), limit(1));
     const snapshot = await getDocs(q);
     if (snapshot.empty) return null;
@@ -120,7 +126,7 @@ export const storeService = {
   },
 
   subscribeToStoreProducts: (storeId: string, callback: (products: StoreProduct[]) => void) => {
-    if (!isFirebaseConfigured) return () => {};
+    if (!isFirebaseConfigured || !storeId) return () => {};
     const q = query(
       collection(db, 'store_products'), 
       where('storeId', '==', storeId),
@@ -145,7 +151,7 @@ export const storeService = {
   },
 
   subscribeToMyStores: (ownerId: string, callback: (stores: Store[]) => void) => {
-    if (!isFirebaseConfigured) return () => {};
+    if (!isFirebaseConfigured || !ownerId) return () => {};
     const q = query(
       collection(db, 'stores'), 
       where('ownerId', '==', ownerId),
@@ -214,3 +220,5 @@ export const storeService = {
     await deleteDoc(doc(db, 'stores', storeId));
   }
 };
+
+

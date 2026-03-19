@@ -22,7 +22,7 @@ import { ShoppingList, ListItem, ShareLink, Permission } from '../types';
 export const shoppingService = {
   // Lists
   subscribeToLists: (userId: string, callback: (lists: ShoppingList[]) => void) => {
-    if (!isFirebaseConfigured) return () => { };
+    if (!isFirebaseConfigured || !userId) return () => { };
 
     const ownedSource = new Map<string, ShoppingList>();
     const sharedSource = new Map<string, ShoppingList>();
@@ -161,7 +161,7 @@ export const shoppingService = {
 
   // Items
   subscribeToItems: (listId: string, callback: (items: ListItem[]) => void) => {
-    if (!isFirebaseConfigured) return () => { };
+    if (!isFirebaseConfigured || !listId) return () => { };
 
     const q = query(
       collection(db, 'lists', listId, 'items'),
@@ -183,7 +183,7 @@ export const shoppingService = {
     totalDiff: number = 0,
     boughtDiff: number = 0
   ) => {
-    if (isFirebaseConfigured) {
+    if (isFirebaseConfigured && listId && userId) {
       const consumption = await userService.consumeCoin(userId);
       if (!consumption.success) {
         throw new Error(consumption.error || 'Failed to consume coin');

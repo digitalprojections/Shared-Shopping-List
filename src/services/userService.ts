@@ -7,7 +7,7 @@ import { shoppingService } from './shoppingService';
 
 export const userService = {
   ensureUserProfile: async (userId: string, existingDoc?: any): Promise<void> => {
-    if (!isFirebaseConfigured) return;
+    if (!isFirebaseConfigured || !userId) return;
     
     const userRef = doc(db, 'users', userId);
     try {
@@ -32,7 +32,7 @@ export const userService = {
   },
 
   getUserProfile: async (userId: string): Promise<AppUser | null> => {
-    if (!isFirebaseConfigured) return null;
+    if (!isFirebaseConfigured || !userId) return null;
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
     
@@ -52,7 +52,7 @@ export const userService = {
   },
 
   subscribeToUserProfile: (userId: string, callback: (user: AppUser) => void) => {
-    if (!isFirebaseConfigured) return () => {};
+    if (!isFirebaseConfigured || !userId) return () => {};
     console.log("Subscribing to User Profile:", userId);
     const userRef = doc(db, 'users', userId);
     
@@ -140,7 +140,7 @@ export const userService = {
   },
 
   updateFcmToken: async (userId: string, token: string): Promise<void> => {
-    if (!isFirebaseConfigured) return;
+    if (!isFirebaseConfigured || !userId) return;
     const userRef = doc(db, 'users', userId);
     try {
       const userDoc = await getDoc(userRef);
@@ -157,7 +157,7 @@ export const userService = {
   },
 
   updatePreferences: async (userId: string, preferences: string[]): Promise<void> => {
-    if (!isFirebaseConfigured) return;
+    if (!isFirebaseConfigured || !userId) return;
     const userRef = doc(db, 'users', userId);
     try {
       await updateDoc(userRef, { preferences });

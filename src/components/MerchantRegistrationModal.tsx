@@ -27,6 +27,10 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
   const [address, setAddress] = useState(initialStore?.location?.address || '');
   const [category, setCategory] = useState(initialStore?.category || 'Grocery');
   const [description, setDescription] = useState(initialStore?.description || '');
+  const [workingHours, setWorkingHours] = useState(initialStore?.workingHours || 'Mon-Sat: 08:00 - 21:00');
+  const [contactPhone, setContactPhone] = useState(initialStore?.contactPhone || '');
+  const [website, setWebsite] = useState(initialStore?.website || '');
+  const [themeColor, setThemeColor] = useState(initialStore?.themeColor || 'Emerald');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
@@ -50,7 +54,11 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
         address: address.trim()
       },
       category,
-      description: description.trim()
+      description: description.trim(),
+      workingHours: workingHours.trim(),
+      contactPhone: contactPhone.trim(),
+      website: website.trim(),
+      themeColor
     };
 
     try {
@@ -197,6 +205,69 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium resize-none h-24"
                     placeholder="Tell users what you sell..."
                   />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
+                      Working Hours
+                    </label>
+                    <input
+                      type="text"
+                      value={workingHours}
+                      onChange={(e) => setWorkingHours(e.target.value)}
+                      className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
+                      placeholder="Mon-Sat: 08:00 - 21:00"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
+                      Contact Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={contactPhone}
+                      onChange={(e) => setContactPhone(e.target.value)}
+                      className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
+                      placeholder="+27 12 345 6789"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
+                    Website (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
+                    placeholder="https://www.yourstore.com"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
+                    Store Theme
+                  </label>
+                  <div className="flex flex-wrap gap-3">
+                    {['Emerald', 'Indigo', 'Rose', 'Amber', 'Stone'].map(color => (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => setThemeColor(color)}
+                          className={cn(
+                            "px-4 py-2 rounded-xl text-xs font-bold transition-all border-2",
+                            themeColor === color 
+                              ? "bg-stone-900 text-white border-stone-900 shadow-lg shadow-stone-200" 
+                              : "bg-white text-stone-500 border-stone-100 hover:border-stone-200"
+                          )}
+                        >
+                          {color}
+                        </button>
+                      ))}
+                    </div>
                 </div>
               </div>
 

@@ -28,5 +28,6 @@ This document tracks upcoming features to enhance the Shared Shopping List app's
 - [ ] **Product "Likes"**: Users can mark products as favorites to find them easily during their next visit.
 - [ ] **Smart Store Discovery**:
     - **Geolocation Suggestions**: Use Capacitor Geolocation to suggest neighboring stores as users move.
-    - **Map Data Integration**: Query open-source map data (like OpenStreetMap) to identify nearby stores and match them against the items on your shopping lists. Add a map view to show nearby stores. Allow users to select a store to view its products and sales. try to get a list of store products by querying the store's website or API.
+    - **Map Data Integration**: Query open-source map data (like OpenStreetMap) to identify nearby stores and match them against the items on your shopping lists. Add a map view to show nearby stores. If the store is not listed in the app, send the information to the backend to be added to the app, inform the admin. On the admin side, allow the admin to review the map location, leave a automatically generated comment on the store's google maps page suggesting them to add the store to the app.
+
 - [ ] **User Preference Seeding**: Implement an initial category selection step to learn about user's interests and provide more relevant store/product suggestions. Include Halaal as a category to choose when learning user preferences.

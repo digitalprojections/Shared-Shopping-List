@@ -68,6 +68,9 @@ import { AdminStoreManager } from './components/AdminStoreManager';
 import { CoinStoreModal } from './components/CoinStoreModal';
 import { LoyaltyCardsModal } from './components/LoyaltyCardsModal';
 import { LoyaltyCardsRow } from './components/LoyaltyCardsRow';
+import { DiscoverStores } from './components/DiscoverStores';
+import { StorePage } from './components/StorePage';
+import { StoreProduct } from './types';
 import { APP_CONFIG } from './config';
 
 // --- Components ---
@@ -116,6 +119,8 @@ export default function App() {
   const [showMerchantModal, setShowMerchantModal] = useState(false);
   const [showMerchantDashboard, setShowMerchantDashboard] = useState(false);
   const [showAdminManager, setShowAdminManager] = useState(false);
+  const [showDiscoverStores, setShowDiscoverStores] = useState(false);
+  const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [selectedLoyaltyCard, setSelectedLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -125,7 +130,7 @@ export default function App() {
     const checkVersion = async () => {
       const lastVersion = localStorage.getItem('app_version');
       const currentVersion = APP_CONFIG.VERSION;
-      
+
       if (lastVersion && lastVersion !== currentVersion) {
         console.log(`[VersionControl] Update detected: ${lastVersion} -> ${currentVersion}`);
         // Perform soft reset (clear caches/SW, reload, but keep localStorage data)
@@ -234,7 +239,7 @@ export default function App() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       FirebaseCrashlytics.setEnabled({ enabled: true }).catch(console.error);
-      SplashScreen.hide().catch(() => {});
+      SplashScreen.hide().catch(() => { });
     }
   }, []);
 
@@ -244,7 +249,7 @@ export default function App() {
     const setupNotifications = async () => {
       try {
         let permStatus = await PushNotifications.checkPermissions();
-        
+
         if (permStatus.receive === 'prompt') {
           permStatus = await PushNotifications.requestPermissions();
         }
@@ -294,7 +299,7 @@ export default function App() {
     if (!Capacitor.isNativePlatform()) return;
 
     const unreadCount = lists.filter(l => l.updatedAt > shoppingService.getLastViewedAt(l.id)).length;
-    
+
     const updateBadge = async () => {
       try {
         if (unreadCount > 0) {
@@ -482,13 +487,13 @@ export default function App() {
       if (Capacitor.isNativePlatform()) {
         console.log("Using Native Google Sign-In...");
         const result = await FirebaseAuthentication.signInWithGoogle();
-        
+
         if (result.credential) {
           const credential = GoogleAuthProvider.credential(
             result.credential.idToken,
             result.credential.accessToken
           );
-          
+
           if (user && user.isAnonymous) {
             console.log("Linking native credential to anonymous user...");
             await linkWithCredential(user, credential);
@@ -637,13 +642,34 @@ export default function App() {
     );
   }
 
+  const handleAddProductToList = async (product: StoreProduct) => {
+    if (!activeListId) {
+      alert("Please select a shopping list first!");
+      return;
+    }
+    try {
+      await shoppingService.syncListChanges(activeListId, user!.uid, [{
+        name: product.name,
+        emoji: '🛒',
+        quantity: "1",
+        unit: 'pcs',
+        isBought: false,
+        price: product.price,
+        category: product.category || 'Store Item',
+        createdAt: Date.now()
+      }], [], [], 1, 0);
+    } catch (error) {
+      console.error("Error adding store product to list:", error);
+    }
+  };
+
   return (
     <div className="h-full bg-stone-50 flex flex-col font-sans selection:bg-emerald-100 overflow-hidden relative">
       <AnimatePresence>
         {showOnboarding && user && (
-          <Onboarding 
-            userId={user.uid} 
-            onFinish={handleOnboardingFinish} 
+          <Onboarding
+            userId={user.uid}
+            onFinish={handleOnboardingFinish}
             initialSlide={initialOnboardingSlide}
             currentPreferences={appUser?.preferences || []}
           />
@@ -826,8 +852,8 @@ export default function App() {
       </header>
 
       {user && (
-        <LoyaltyCardsRow 
-          userId={user.uid} 
+        <LoyaltyCardsRow
+          userId={user.uid}
           onCardClick={(card) => {
             setSelectedLoyaltyCard(card);
             setShowLoyaltyModal(true);
@@ -1345,8 +1371,8 @@ function Dashboard({
               onClick={() => setActiveFilter(f)}
               className={cn(
                 "px-5 py-2 rounded-xl text-xs font-bold transition-all",
-                activeFilter === f 
-                  ? "bg-white shadow-sm text-emerald-600" 
+                activeFilter === f
+                  ? "bg-white shadow-sm text-emerald-600"
                   : "text-stone-500 hover:text-stone-700"
               )}
             >
@@ -1380,8 +1406,8 @@ function Dashboard({
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3">
           <div className={cn(
-            viewMode === 'grid' 
-              ? "grid grid-cols-2 md:grid-cols-3 gap-4" 
+            viewMode === 'grid'
+              ? "grid grid-cols-2 md:grid-cols-3 gap-4"
               : "flex flex-col gap-3"
           )}>
             {filteredLists.map((list, index) => (
@@ -1432,7 +1458,7 @@ function Dashboard({
                         </p>
                       )}
                     </div>
-                    
+
                     {viewMode === 'grid' ? (
                       <div className="flex items-center justify-between mt-4">
                         <div className="flex flex-col">
@@ -1457,8 +1483,8 @@ function Dashboard({
                               {list.boughtItems || 0}/{list.totalItems}
                             </span>
                             <div className="w-12 h-1 bg-stone-900/10 rounded-full mt-1 overflow-hidden">
-                              <div 
-                                className="h-full bg-stone-900/30" 
+                              <div
+                                className="h-full bg-stone-900/30"
                                 style={{ width: `${list.totalItems > 0 ? ((list.boughtItems || 0) / list.totalItems) * 100 : 0}%` }}
                               />
                             </div>
@@ -1470,7 +1496,7 @@ function Dashboard({
                       </div>
                     )}
                   </div>
-                  
+
                   {/* Update Badge */}
                   {list.updatedAt > shoppingService.getLastViewedAt(list.id) && list.lastUpdatedBy !== userId && (
                     <div className="absolute top-2 right-2 w-3 h-3 bg-rose-500 rounded-full border-2 border-white shadow-sm z-10" />
@@ -1478,6 +1504,27 @@ function Dashboard({
                 </button>
               </motion.div>
             ))}
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: lists.length * 0.03 }}
+              whileHover={{ y: -2 }}
+              className="group"
+            >
+              <button
+                onClick={() => setShowDiscoverStores(true)}
+                className="w-full aspect-[16/10] p-4 rounded-3xl border-2 border-indigo-100 bg-indigo-50/20 flex flex-col items-center justify-center text-center gap-2 transition-all hover:bg-indigo-50 hover:border-indigo-200"
+              >
+                <div className="p-2 bg-indigo-100 rounded-2xl text-indigo-600 group-hover:scale-110 transition-transform">
+                  <ShoppingBag className="w-7 h-7" />
+                </div>
+                <div>
+                  <span className="block font-bold text-stone-900 leading-tight">Nearby Stores</span>
+                  <span className="text-xs text-stone-500">Discover local products</span>
+                </div>
+              </button>
+            </motion.div>
 
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
@@ -1504,13 +1551,13 @@ function Dashboard({
                     </div>
                     <div>
                       <span className="block font-bold text-stone-900 leading-tight">
-                        {Capacitor.isNativePlatform() 
-                          ? t('dashboard.get_free_coins') 
+                        {Capacitor.isNativePlatform()
+                          ? t('dashboard.get_free_coins')
                           : t('dashboard.support_dev')}
                       </span>
                       <span className="text-xs text-stone-500">
-                        {Capacitor.isNativePlatform() 
-                          ? t('dashboard.watch_ad') 
+                        {Capacitor.isNativePlatform()
+                          ? t('dashboard.watch_ad')
                           : t('dashboard.visit_apps')}
                       </span>
                     </div>
@@ -1615,11 +1662,27 @@ function Dashboard({
       </AnimatePresence>
 
       <AnimatePresence>
-        {editingListId && (
-          <EmojiPicker
-            currentEmoji={lists.find(l => l.id === editingListId)?.icon}
-            onSelect={(emoji) => shoppingService.updateListIcon(editingListId, emoji, user?.uid || '')}
-            onClose={() => setEditingListId(null)}
+        {selectedLoyaltyCard && (
+          <LoyaltyCardsModal
+            userId={user!.uid}
+            initialId={selectedLoyaltyCard}
+            onClose={() => setSelectedLoyaltyCard(null)}
+          />
+        )}
+        {showDiscoverStores && (
+          <DiscoverStores
+            onClose={() => setShowDiscoverStores(false)}
+            onSelectStore={(id) => {
+              setSelectedStoreId(id);
+              setShowDiscoverStores(false);
+            }}
+          />
+        )}
+        {selectedStoreId && (
+          <StorePage
+            storeId={selectedStoreId}
+            onClose={() => setSelectedStoreId(null)}
+            onAddProductToList={handleAddProductToList}
           />
         )}
       </AnimatePresence>
@@ -1657,18 +1720,18 @@ function ListView({
 
   const hasUnsyncedChanges = useMemo(() => {
     if (localDraftItems.length !== items.length) return true;
-    
+
     // Compare items by content, treating temp IDs as potentially matching new real IDs
     return localDraftItems.some((local, idx) => {
       const remote = items[idx];
       if (!remote) return true;
-      
+
       // If names or quantities differ, it's definitely unsynced
       if (local.name !== remote.name || local.quantity !== remote.quantity || local.isBought !== remote.isBought) return true;
-      
+
       // If both have real IDs and they differ, it's unsynced
       if (!local.id.startsWith('temp-') && !remote.id.startsWith('temp-') && local.id !== remote.id) return true;
-      
+
       return false;
     });
   }, [localDraftItems, items]);
@@ -1680,7 +1743,7 @@ function ListView({
 
   useEffect(() => {
     if (!listId) return;
-    
+
     // Track if we've already done the initial load for this listId
     let initialLoadDone = false;
 
@@ -1716,7 +1779,7 @@ function ListView({
             // If the user was in the middle of editing THIS specific item, keep their version
             const dirtyLocal = localModifications.find(l => l.id === remote.id);
             if (dirtyLocal) return dirtyLocal;
-            
+
             // Otherwise, adopt the remote version (gets updates from others)
             return remote;
           });
@@ -1727,8 +1790,8 @@ function ListView({
           // 4. Re-add local additions, but FILTER OUT ones that just got synced
           // If a remote item matches a temp item's content exactly, we assume it's the same item.
           const unsyncedAdditions = localAdditions.filter(local => {
-            const alreadySynced = remoteItems.find(remote => 
-              remote.name === local.name && 
+            const alreadySynced = remoteItems.find(remote =>
+              remote.name === local.name &&
               remote.quantity === local.quantity &&
               !remote.id.startsWith('temp-')
             );
@@ -1748,9 +1811,9 @@ function ListView({
     if (!listId) return;
 
     // If draft is identical to remote, clear localStorage
-    const isClean = localDraftItems.length === items.length && 
-                    JSON.stringify(localDraftItems) === JSON.stringify(items);
-    
+    const isClean = localDraftItems.length === items.length &&
+      JSON.stringify(localDraftItems) === JSON.stringify(items);
+
     if (isClean || localDraftItems.length === 0) {
       localStorage.removeItem(`list_draft_${listId}`);
     } else {
@@ -1817,14 +1880,14 @@ function ListView({
       const boughtDiff = boughtAfter - boughtBefore;
 
       await shoppingService.syncListChanges(listId, user.uid, itemsToAdd, itemsToUpdate, itemsToDelete, totalDiff, boughtDiff);
-      
+
       // Clear local draft and update local state immediately so Sync button disappears
       localStorage.removeItem(`list_draft_${listId}`);
       // Optimistically update 'items' to match localDraftItems so the sync button hides immediately
       const syncedItems = [...localDraftItems];
       setItems(syncedItems);
       setLocalDraftItems(syncedItems);
-      
+
       // Show success feedback
       alert(t('list_view.sync_success', 'Sync successful! Changes are saved.'));
 
@@ -1892,8 +1955,8 @@ function ListView({
                 />
               </div>
               <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                 {t('list_view.items_count', { bought: boughtCount, total: items.length })}
-               </span>
+                {t('list_view.items_count', { bought: boughtCount, total: items.length })}
+              </span>
             </div>
             {isShared && (
               <span className="text-[10px] uppercase tracking-widest font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100 self-start sm:self-center mt-2 block w-fit">
@@ -2143,16 +2206,16 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
 
   const copyShareLink = (shareId: string) => {
     const platform = Capacitor.getPlatform();
-    
+
     // In native apps, we use the hardcoded production URL.
     // On web (PWA or development), we use the current browser URL.
     const baseUrl = (platform === 'android' || platform === 'ios')
-      ? APP_CONFIG.PROD_URL 
+      ? APP_CONFIG.PROD_URL
       : `${window.location.origin}${window.location.pathname}`;
-      
+
     const url = `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}?share=${shareId}`;
     console.log('Share Link: Generated URL for platform', platform, url);
-    
+
     navigator.clipboard.writeText(url);
     setCopiedId(shareId);
     setTimeout(() => setCopiedId(null), 2000);
@@ -2294,16 +2357,16 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
   const handleCodeChange = (val: string) => {
     // Remove invalid characters and normalize to uppercase
     let cleaned = val.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    
+
     // Limit to 12 alphanumeric characters (SHOP + 8 random)
     cleaned = cleaned.slice(0, 12);
-    
+
     // Auto-insert hyphens: XXXX-XXXX-XXXX
     let formatted = '';
     if (cleaned.length > 0) formatted += cleaned.slice(0, 4);
     if (cleaned.length > 4) formatted += '-' + cleaned.slice(4, 8);
     if (cleaned.length > 8) formatted += '-' + cleaned.slice(8, 12);
-    
+
     setCode(formatted);
     setMsg(null);
   };
@@ -2359,8 +2422,8 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
             <div className="flex justify-between items-center ml-1">
               <label className="text-xs font-bold uppercase tracking-widest text-stone-400">{t('redeem_modal.code_label')}</label>
               {code.length > 0 && (
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setCode('')}
                   className="text-[10px] font-black uppercase tracking-tighter text-stone-300 hover:text-stone-500 transition-colors"
                 >
@@ -2377,8 +2440,8 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
                 onChange={(e) => handleCodeChange(e.target.value)}
                 className={cn(
                   "w-full px-6 py-5 rounded-2xl border-2 transition-all font-mono text-xl tracking-wider uppercase",
-                  isValidPattern 
-                    ? "border-emerald-200 bg-emerald-50/30 focus:border-emerald-400 focus:bg-white text-emerald-700" 
+                  isValidPattern
+                    ? "border-emerald-200 bg-emerald-50/30 focus:border-emerald-400 focus:bg-white text-emerald-700"
                     : "border-stone-100 bg-stone-50 focus:border-amber-400 focus:bg-white text-stone-900"
                 )}
               />
@@ -2401,8 +2464,8 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
             disabled={loading || !isValidPattern || isThrottled}
             className={cn(
               "w-full py-5 rounded-2xl font-bold shadow-xl transition-all flex items-center justify-center gap-3",
-              isValidPattern 
-                ? "bg-amber-600 text-white shadow-amber-600/20 hover:bg-amber-700 active:scale-[0.98]" 
+              isValidPattern
+                ? "bg-amber-600 text-white shadow-amber-600/20 hover:bg-amber-700 active:scale-[0.98]"
                 : "bg-stone-100 text-stone-400 shadow-none cursor-not-allowed"
             )}
           >
@@ -2493,17 +2556,17 @@ function FreeGiftCard({ appUser }: { appUser: AppUser | null }) {
 
       {isNative ? (
         <div className="bg-white/10 p-4 rounded-2xl border border-white/10 text-center">
-           <p className="text-sm font-bold text-white/90">
-             {t('redeem_modal.mobile_invite')}
-           </p>
-           <motion.button
-             whileHover={{ scale: 1.05 }}
-             whileTap={{ scale: 0.95 }}
-             onClick={() => window.open('https://created.link', '_blank')}
-             className="mt-3 px-4 py-2 bg-white text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/40"
-           >
-             created.link
-           </motion.button>
+          <p className="text-sm font-bold text-white/90">
+            {t('redeem_modal.mobile_invite')}
+          </p>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => window.open('https://created.link', '_blank')}
+            className="mt-3 px-4 py-2 bg-white text-indigo-600 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-900/40"
+          >
+            created.link
+          </motion.button>
         </div>
       ) : (
         <button
@@ -2511,7 +2574,7 @@ function FreeGiftCard({ appUser }: { appUser: AppUser | null }) {
           disabled={loading || claimed}
           className={cn(
             "w-full py-4 rounded-2xl font-bold transition-all shadow-lg active:scale-95",
-            claimed 
+            claimed
               ? "bg-emerald-500/20 text-emerald-300 cursor-default border border-emerald-500/30"
               : "bg-white text-indigo-600 hover:bg-stone-50 shadow-indigo-900/20"
           )}

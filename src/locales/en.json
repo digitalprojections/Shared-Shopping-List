@@ -132,7 +132,17 @@
     "update_success_desc": "Your changes have been saved successfully.",
     "error_submitting": "Failed to submit application. Please try again.",
     "error_updating": "Failed to update store. Please try again.",
-    "timeout_error": "The request is taking longer than expected. Please check your connection."
+    "timeout_error": "The request is taking longer than expected. Please check your connection.",
+    "add_product": "Add Product",
+    "manage_products": "Manage Products",
+    "no_products": "No products listed yet.",
+    "product_name": "Product Name",
+    "price": "Price",
+    "in_stock": "In Stock",
+    "out_of_stock": "Out of Stock",
+    "product_added": "Product added successfully",
+    "product_updated": "Product updated successfully",
+    "product_deleted": "Product deleted successfully"
   },
   "emoji_picker": {
     "title": "Select Icon",
@@ -194,5 +204,16 @@
     "edit_card": "Edit Card",
     "pick_icon": "Pick Icon",
     "pick_color": "Pick Color"
+  },
+  "store_front": {
+    "back": "Back to Lists",
+    "followers": "Followers",
+    "follow": "Follow",
+    "unfollow": "Unfollow",
+    "contact": "Contact Store",
+    "products": "Products",
+    "add_to_list": "Add to List",
+    "item_added": "Item added to your shopping list!",
+    "verified_badge": "Verified Merchant"
   }
 }

@@ -20,6 +20,10 @@ export interface ListItem {
   isBought: boolean;
   quantity: string;
   createdAt: number;
+  emoji?: string;
+  unit?: string;
+  price?: number;
+  category?: string;
 }
 
 export interface ShareLink {
@@ -94,6 +98,12 @@ export interface Store {
   createdAt: number;
   updatedAt: number;
   followersCount?: number;
+  workingHours?: string;
+  contactPhone?: string;
+  website?: string;
+  themeColor?: string;
+  bannerUrl?: string;
+  logoUrl?: string;
 }
 
 export interface StoreProduct {
