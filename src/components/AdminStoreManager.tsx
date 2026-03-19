@@ -8,11 +8,16 @@ import {
   MapPin, 
   User as UserIcon,
   Search,
-  AlertCircle
+  AlertCircle,
+  Shield,
+  Trash2,
+  Settings
 } from 'lucide-react';
 import { Store } from '../types';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
+import { cn } from '../lib/utils';
+import { MerchantRegistrationModal } from './MerchantRegistrationModal';
 
 interface AdminStoreManagerProps {
   onClose: () => void;
@@ -20,17 +25,30 @@ interface AdminStoreManagerProps {
 
 export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose }) => {
   const { t } = useTranslation();
-  const [pendingStores, setPendingStores] = useState<Store[]>([]);
+  const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = storeService.subscribeToPendingStores((stores) => {
-      setPendingStores(stores);
-      setLoading(false);
-    });
+    setLoading(true);
+    let unsubscribe: () => void;
+    
+    if (activeTab === 'pending') {
+      unsubscribe = storeService.subscribeToPendingStores((data) => {
+        setStores(data);
+        setLoading(false);
+      });
+    } else {
+      unsubscribe = storeService.subscribeToAllStores((data) => {
+        setStores(data);
+        setLoading(false);
+      });
+    }
+    
     return () => unsubscribe();
-  }, []);
+  }, [activeTab]);
 
   const handleApprove = async (store: Store) => {
     setProcessingId(store.id);
@@ -54,6 +72,18 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
     }
   };
 
+  const handleDelete = async (storeId: string) => {
+    if (!window.confirm("Are you sure you want to permanently delete this store? This cannot be undone.")) return;
+    setProcessingId(storeId);
+    try {
+      await storeService.deleteStore(storeId);
+    } catch (error) {
+      console.error("Error deleting store:", error);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -71,13 +101,13 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
         <div className="p-8 border-b border-stone-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
-              <StoreIcon className="w-6 h-6 text-amber-600" />
+              <Shield className="w-6 h-6 text-amber-600" />
             </div>
             <div>
               <h2 className="text-2xl font-black text-stone-900 tracking-tight">
-                {t('admin.manage_submissions', 'Manage Submissions')}
+                {t('admin.manage_stores', 'Store Management')}
               </h2>
-              <p className="text-stone-400 text-sm font-medium">Review and verify new store requests</p>
+              <p className="text-stone-400 text-sm font-medium">Verify and moderate store applications</p>
             </div>
           </div>
           <button
@@ -88,26 +118,54 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
           </button>
         </div>
 
+        {/* Tabs */}
+        <div className="px-8 pt-4 flex gap-8 border-b border-stone-100 shrink-0">
+          <button
+            onClick={() => setActiveTab('pending')}
+            className={cn(
+              "pb-4 text-sm font-bold transition-all relative",
+              activeTab === 'pending' ? "text-amber-600" : "text-stone-400 hover:text-stone-600"
+            )}
+          >
+            Pending Applications
+            {activeTab === 'pending' && (
+              <motion.div layoutId="admintab" className="absolute bottom-0 left-0 right-0 h-1 bg-amber-600 rounded-full" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('all')}
+            className={cn(
+              "pb-4 text-sm font-bold transition-all relative",
+              activeTab === 'all' ? "text-stone-900" : "text-stone-400 hover:text-stone-600"
+            )}
+          >
+            All Stores
+            {activeTab === 'all' && (
+              <motion.div layoutId="admintab" className="absolute bottom-0 left-0 right-0 h-1 bg-stone-900 rounded-full" />
+            )}
+          </button>
+        </div>
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <div className="w-10 h-10 border-4 border-stone-100 border-t-amber-500 rounded-full animate-spin" />
-              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Loading Applications...</p>
+              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Syncing data...</p>
             </div>
-          ) : pendingStores.length === 0 ? (
+          ) : stores.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-stone-50 rounded-[2rem] border-2 border-dashed border-stone-100">
               <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
                 <Check className="w-8 h-8 text-emerald-500" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-stone-900">All caught up!</h3>
-                <p className="text-stone-400 text-sm">No pending store applications at the moment.</p>
+                <h3 className="text-lg font-bold text-stone-900">Nothing here!</h3>
+                <p className="text-stone-400 text-sm">No stores found in this category.</p>
               </div>
             </div>
           ) : (
             <div className="grid gap-4">
-              {pendingStores.map(store => (
+              {stores.map(store => (
                 <motion.div
                   key={store.id}
                   layout
@@ -115,7 +173,15 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                 >
                   <div className="space-y-3 flex-1">
                     <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-amber-50 text-amber-600 text-[10px] font-black uppercase tracking-widest rounded-full">
+                      <span className={cn(
+                        "px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full",
+                        store.status === 'active' ? "bg-emerald-50 text-emerald-600" :
+                        store.status === 'pending' ? "bg-amber-50 text-amber-600" :
+                        "bg-rose-50 text-rose-600"
+                      )}>
+                        {store.status}
+                      </span>
+                      <span className="px-3 py-1 bg-stone-50 text-stone-600 text-[10px] font-black uppercase tracking-widest rounded-full">
                         {store.category}
                       </span>
                       <span className="text-[10px] text-stone-300 font-mono">ID: {store.id}</span>
@@ -123,7 +189,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                     
                     <div>
                       <h4 className="text-lg font-bold text-stone-900">{store.name}</h4>
-                      <p className="text-stone-500 text-sm leading-relaxed">{store.description || 'No description provided.'}</p>
+                      <p className="text-stone-500 text-sm leading-relaxed truncate max-w-md">{store.description || 'No description provided.'}</p>
                     </div>
 
                     <div className="flex flex-wrap gap-4 pt-1">
@@ -139,26 +205,59 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      disabled={!!processingId}
-                      onClick={() => handleReject(store.id)}
-                      className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-rose-600 font-bold hover:bg-rose-50 rounded-2xl transition-all disabled:opacity-50"
-                    >
-                      <XCircle className="w-5 h-5" />
-                      <span>Reject</span>
-                    </button>
-                    <button
-                      disabled={!!processingId}
-                      onClick={() => handleApprove(store)}
-                      className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-bold rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
-                    >
-                      {processingId === store.id ? (
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      ) : (
-                        <Check className="w-5 h-5" />
-                      )}
-                      <span>Approve Store</span>
-                    </button>
+                    {store.status === 'pending' && (
+                      <>
+                        <button
+                          disabled={!!processingId}
+                          onClick={() => setEditingStore(store)}
+                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-stone-600 font-bold hover:bg-stone-50 rounded-2xl transition-all disabled:opacity-50"
+                        >
+                          <Settings className="w-5 h-5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          disabled={!!processingId}
+                          onClick={() => handleReject(store.id)}
+                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-rose-600 font-bold hover:bg-rose-50 rounded-2xl transition-all disabled:opacity-50"
+                        >
+                          <XCircle className="w-5 h-5" />
+                          <span>Reject</span>
+                        </button>
+                        <button
+                          disabled={!!processingId}
+                          onClick={() => handleApprove(store)}
+                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-3 bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                          {processingId === store.id ? (
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          ) : (
+                            <Check className="w-5 h-5" />
+                          )}
+                          <span>Approve</span>
+                        </button>
+                      </>
+                    )}
+                    
+                    {store.status !== 'pending' && (
+                      <>
+                        <button
+                          disabled={!!processingId}
+                          onClick={() => setEditingStore(store)}
+                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-stone-50 text-stone-600 font-bold hover:bg-stone-100 rounded-2xl transition-all disabled:opacity-50"
+                        >
+                          <Settings className="w-5 h-5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          disabled={!!processingId}
+                          onClick={() => handleDelete(store.id)}
+                          className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-rose-600 font-bold hover:bg-rose-50 rounded-2xl transition-all disabled:opacity-50"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    )}
                   </div>
                 </motion.div>
               ))}
@@ -170,10 +269,21 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
         <div className="p-6 bg-stone-50 border-t border-stone-100 flex items-center gap-3 px-8 shrink-0">
           <AlertCircle className="w-4 h-4 text-stone-400" />
           <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
-            Approving a store will grant the user Merchant status and notify them.
+            Admins can moderate all stores. Owners can only manage their own verified stores.
           </p>
         </div>
       </motion.div>
+
+      <AnimatePresence>
+        {editingStore && (
+          <MerchantRegistrationModal 
+            userId={editingStore.ownerId}
+            initialStore={editingStore}
+            onClose={() => setEditingStore(null)}
+            onSuccess={() => {}}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

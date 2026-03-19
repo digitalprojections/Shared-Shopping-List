@@ -63,6 +63,7 @@ import { cn, forceClearCache } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
 import { Onboarding } from './components/Onboarding';
 import { MerchantRegistrationModal } from './components/MerchantRegistrationModal';
+import { MerchantDashboard } from './components/MerchantDashboard';
 import { AdminStoreManager } from './components/AdminStoreManager';
 import { CoinStoreModal } from './components/CoinStoreModal';
 import { LoyaltyCardsModal } from './components/LoyaltyCardsModal';
@@ -113,6 +114,7 @@ export default function App() {
   const [showStoreModal, setShowStoreModal] = useState(false);
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showMerchantModal, setShowMerchantModal] = useState(false);
+  const [showMerchantDashboard, setShowMerchantDashboard] = useState(false);
   const [showAdminManager, setShowAdminManager] = useState(false);
   const [selectedLoyaltyCard, setSelectedLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -763,16 +765,16 @@ export default function App() {
                       {t('app.sign_out')}
                     </button>
 
-                    {!user?.isAnonymous && !appUser?.isMerchant && (
+                    {!user?.isAnonymous && (
                       <button
                         onClick={() => {
                           setShowUserMenu(false);
-                          setShowMerchantModal(true);
+                          setShowMerchantDashboard(true);
                         }}
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors text-left font-bold"
                       >
                         <ShoppingBag className="w-4 h-4" />
-                        {t('user_menu.register_store', 'Register as Store')}
+                        {appUser?.isMerchant ? t('user_menu.manage_stores', 'Manage My Stores') : t('user_menu.register_store', 'Register as Store')}
                       </button>
                     )}
 
@@ -920,6 +922,12 @@ export default function App() {
             onSuccess={() => {
               // We could show a notification here
             }}
+          />
+        )}
+        {showMerchantDashboard && user && (
+          <MerchantDashboard
+            user={user}
+            onClose={() => setShowMerchantDashboard(false)}
           />
         )}
         {showAdminManager && (

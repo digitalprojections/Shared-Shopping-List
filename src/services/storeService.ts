@@ -12,9 +12,10 @@ import {
   getDocs,
   limit,
   Timestamp,
-  writeBatch
+  writeBatch,
+  setDoc
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../lib/firebase';
+import { db, isFirebaseConfigured, auth } from '../lib/firebase';
 import { Store, StoreProduct } from '../types';
 
 export const storeService = {
@@ -39,13 +40,28 @@ export const storeService = {
     };
 
     try {
+      // Diagnostic: Check Auth status immediately before write
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error("You must be logged in to submit an application. Please try signing in again.");
+      }
+      
       console.log("[StoreService] Validating collection reference...");
       const colRef = collection(db, 'stores');
-      console.log("[StoreService] Attempting to create store application document...");
       
-      const docRef = await addDoc(colRef, store);
-      console.log("[StoreService] Store application created successfully with ID:", docRef.id);
-      return docRef;
+      console.log("[StoreService] Writing as user:", currentUser.uid);
+      
+      // Use setDoc with a manually generated ID to see if it bypasses the hang
+      const newDocRef = doc(colRef);
+      console.log("[StoreService] Prepared ID:", newDocRef.id);
+      
+      await setDoc(newDocRef, {
+        ...store,
+        ownerId: ownerId // Ensure we don't lose the ownerId
+      });
+      
+      console.log("[StoreService] Store application created successfully with ID:", newDocRef.id);
+      return newDocRef;
     } catch (error) {
       console.error("[StoreService] Failed to create store document:", error);
       throw error;
@@ -128,6 +144,31 @@ export const storeService = {
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store));
   },
 
+  subscribeToMyStores: (ownerId: string, callback: (stores: Store[]) => void) => {
+    if (!isFirebaseConfigured) return () => {};
+    const q = query(
+      collection(db, 'stores'), 
+      where('ownerId', '==', ownerId),
+      orderBy('createdAt', 'desc')
+    );
+    return onSnapshot(q, (snapshot) => {
+      const stores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store));
+      callback(stores);
+    });
+  },
+
+  subscribeToAllStores: (callback: (stores: Store[]) => void) => {
+    if (!isFirebaseConfigured) return () => {};
+    const q = query(
+      collection(db, 'stores'), 
+      orderBy('createdAt', 'desc')
+    );
+    return onSnapshot(q, (snapshot) => {
+      const stores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Store));
+      callback(stores);
+    });
+  },
+
   // Admin Methods
   subscribeToPendingStores: (callback: (stores: Store[]) => void) => {
     if (!isFirebaseConfigured) return () => {};
@@ -166,5 +207,10 @@ export const storeService = {
       status: 'rejected',
       updatedAt: Date.now()
     });
+  },
+
+  deleteStore: async (storeId: string) => {
+    if (!isFirebaseConfigured) return;
+    await deleteDoc(doc(db, 'stores', storeId));
   }
 };

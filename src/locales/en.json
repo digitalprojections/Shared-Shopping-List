@@ -104,11 +104,35 @@
     "mobile_invite": "Claim your free 50-coin gift on our website!"
   },
   "admin": {
-    "title": "Admin: Mint Coins",
+    "title": "Admin Console",
+    "mint_coins": "Mint Coins",
+    "manage_stores": "Store Management",
     "generating": "Generating...",
     "generate_coupon": "Generate Coupon",
     "generate_another": "Generate Another",
     "coins": "Coins"
+  },
+  "merchant": {
+    "dashboard": "My Stores",
+    "register_title": "Register as Store",
+    "edit_title": "Edit Store Details",
+    "apply_desc": "Join our ecosystem! Once approved, your store will be visible to all users nearby.",
+    "edit_desc": "Update your store information to keep your customers informed.",
+    "store_name": "Store Name",
+    "store_name_placeholder": "e.g. Sunny Supermarket",
+    "store_address": "Store Address",
+    "store_address_placeholder": "Street, City, Country",
+    "category": "Category",
+    "description": "Description (Optional)",
+    "apply_button": "Submit Application",
+    "save_changes": "Save Changes",
+    "success_title": "Application Sent!",
+    "success_desc": "An admin will review your store shortly.",
+    "update_success_title": "Store Updated!",
+    "update_success_desc": "Your changes have been saved successfully.",
+    "error_submitting": "Failed to submit application. Please try again.",
+    "error_updating": "Failed to update store. Please try again.",
+    "timeout_error": "The request is taking longer than expected. Please check your connection."
   },
   "emoji_picker": {
     "title": "Select Icon",

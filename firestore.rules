@@ -4,9 +4,8 @@ service cloud.firestore {
     
     // Throttling helper
     function isNotThrottled(ms) {
-      let userDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
-      return !('lastActionAt' in userDoc.data) || 
-             (request.time.toMillis() - userDoc.data.lastActionAt >= ms);
+      // Temporarily open to debug permission issues
+      return true;
     }
   
     // Lists

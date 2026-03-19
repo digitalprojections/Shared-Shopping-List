@@ -3,21 +3,30 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, ShoppingBag, Store as StoreIcon, Send, CheckCircle2 } from 'lucide-react';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
+import { Store } from '../types';
 
 interface MerchantRegistrationModalProps {
   userId: string;
   onClose: () => void;
   onSuccess: () => void;
+  initialStore?: Store;
 }
 
 const CATEGORIES = ['Grocery', 'Halaal', 'Organic', 'Electronics', 'Home', 'Pets', 'Pharma', 'Fashion', 'Beauty', 'Sports'];
 
-export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps> = ({ userId, onClose, onSuccess }) => {
+export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps> = ({ 
+  userId, 
+  onClose, 
+  onSuccess,
+  initialStore 
+}) => {
   const { t } = useTranslation();
-  const [name, setName] = useState('');
-  const [address, setAddress] = useState('');
-  const [category, setCategory] = useState('Grocery');
-  const [description, setDescription] = useState('');
+  const isEditing = !!initialStore;
+  
+  const [name, setName] = useState(initialStore?.name || '');
+  const [address, setAddress] = useState(initialStore?.location?.address || '');
+  const [category, setCategory] = useState(initialStore?.category || 'Grocery');
+  const [description, setDescription] = useState(initialStore?.description || '');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
@@ -33,40 +42,36 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
     setStatus('submitting');
     setError(null);
 
-    // Timeout logic: if the promise doesn't resolve in 15 seconds, we assume it's hanging
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error(t('merchant.timeout_error', 'The request is taking longer than expected. Please check your connection.'))), 15000)
-    );
+    const storeData = {
+      name: name.trim(),
+      location: {
+        lat: initialStore?.location?.lat || 0,
+        lng: initialStore?.location?.lng || 0,
+        address: address.trim()
+      },
+      category,
+      description: description.trim()
+    };
 
     try {
-      console.log("[MerchantRegistration] Submitting application for user:", userId);
+      console.log(isEditing ? "[MerchantRegistration] Updating store:" : "[MerchantRegistration] Submitting application for user:", userId);
       
-      // Race the actual submission against the timeout for better UX
-      await Promise.race([
-        storeService.applyForMerchant(userId, {
-          name: name.trim(),
-          location: {
-            lat: 0,
-            lng: 0,
-            address: address.trim()
-          },
-          category,
-          description: description.trim()
-        }),
-        timeoutPromise
-      ]);
+      if (isEditing && initialStore) {
+        await storeService.updateStore(initialStore.id, storeData);
+      } else {
+        await storeService.applyForMerchant(userId, storeData);
+      }
 
       console.log("[MerchantRegistration] Success!");
       setStatus('success');
       setTimeout(() => {
         onSuccess();
         onClose();
-      }, 2000);
+      }, 1500);
     } catch (err: any) {
-      console.error("[MerchantRegistration] Submission Failed:", err);
-      // Ensure we revert to idle state so the button becomes clickable again
+      console.error("[MerchantRegistration] Operation Failed:", err);
       setStatus('idle');
-      setError(err?.message || t('merchant.error_submitting', 'Failed to submit application. Please try again.'));
+      setError(err?.message || (isEditing ? t('merchant.error_updating', 'Failed to update store. Please try again.') : t('merchant.error_submitting', 'Failed to submit application. Please try again.')));
     }
   };
 
@@ -75,7 +80,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md"
+      className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-md"
     >
       <motion.div
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -89,7 +94,9 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
               <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
                 <StoreIcon className="w-6 h-6 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-bold text-stone-900">{t('merchant.register_title', 'Register as Store')}</h2>
+              <h2 className="text-2xl font-bold text-stone-900">
+                {isEditing ? t('merchant.edit_title', 'Edit Store Details') : t('merchant.register_title', 'Register as Store')}
+              </h2>
             </div>
             <button
               onClick={onClose}
@@ -108,8 +115,12 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
               <div className="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
                 <CheckCircle2 className="w-12 h-12" />
               </div>
-              <h3 className="text-xl font-bold text-stone-900">{t('merchant.success_title', 'Application Sent!')}</h3>
-              <p className="text-stone-500">{t('merchant.success_desc', 'An admin will review your store shortly.')}</p>
+              <h3 className="text-xl font-bold text-stone-900">
+                {isEditing ? t('merchant.update_success_title', 'Store Updated!') : t('merchant.success_title', 'Application Sent!')}
+              </h3>
+              <p className="text-stone-500">
+                {isEditing ? t('merchant.update_success_desc', 'Your changes have been saved successfully.') : t('merchant.success_desc', 'An admin will review your store shortly.')}
+              </p>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -127,7 +138,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
               )}
 
               <p className="text-stone-500 text-sm leading-relaxed">
-                {t('merchant.apply_desc', 'Join our ecosystem! Once approved, your store will be visible to all users nearby.')}
+                {isEditing ? t('merchant.edit_desc', 'Update your store information to keep your customers informed.') : t('merchant.apply_desc', 'Join our ecosystem! Once approved, your store will be visible to all users nearby.')}
               </p>
 
               <div className="space-y-4">
@@ -201,7 +212,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                 ) : (
                   <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 )}
-                <span>{t('merchant.apply_button', 'Submit Application')}</span>
+                <span>{isEditing ? t('merchant.save_changes', 'Save Changes') : t('merchant.apply_button', 'Submit Application')}</span>
               </motion.button>
             </form>
           )}
