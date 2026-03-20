@@ -3,30 +3,25 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Plus, 
-  Trash2, 
-  Edit2, 
+  Search, 
   Package, 
-  DollarSign, 
-  Tag as TagIcon, 
+  ArrowLeft, 
+  ShoppingBag, 
+  Edit2, 
+  Trash2, 
   Check, 
-  AlertCircle,
-  Save,
-  Loader2,
-  ArrowLeft,
-  Search,
-  Box,
-  ShoppingBag,
-  MoreVertical,
-  ChevronRight,
-  Filter,
-  BarChart2,
-  Globe,
-  Settings
+  CircleDollarSign as DollarSign, 
+  Loader2, 
+  Save, 
+  Box, 
+  AlertCircle 
 } from 'lucide-react';
 import { Store, StoreProduct } from '../types';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
+import { STORE_CATEGORIES, PRODUCT_CATEGORIES } from '../constants/categories';
+
 
 interface ProductManagerProps {
   store: Store;
@@ -92,7 +87,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
   };
 
   const handleDelete = async (productId: string) => {
-    if (!window.confirm("Are you sure you want to delete this product?")) return;
+    if (!window.confirm(t('product_manager.delete_confirm'))) return;
     try {
       await storeService.deleteProduct(productId);
     } catch (error) {
@@ -119,7 +114,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
     return matchesSearch && matchesCategory;
   });
 
-  const categories = ['All', ...new Set(products.map(p => p.category || 'General'))];
+  const categories: string[] = ['All', ...Array.from(new Set<string>(products.map(p => p.category || 'General')))];
 
   return (
     <motion.div
@@ -135,7 +130,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
             <button
               onClick={onClose}
               className="p-3 hover:bg-white/10 rounded-2xl transition-all group active:scale-90"
-              title="Back to Dashboard"
+              title={t('merchant.dashboard')}
             >
               <ArrowLeft className="w-6 h-6 text-stone-400 group-hover:text-white transition-colors" />
             </button>
@@ -145,7 +140,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
               </div>
               <div>
                 <h2 className="text-2xl font-black text-white tracking-tight leading-none">
-                  {t('merchant.manage_products', 'Product Inventory')}
+                  {t('product_manager.inventory_title')}
                 </h2>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -162,7 +157,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products..."
+                placeholder={t('product_manager.search_placeholder')}
                 className="w-full h-full pl-11 pr-4 bg-white/5 border border-white/10 rounded-2xl text-white placeholder:text-stone-600 outline-none focus:border-emerald-500/50 focus:bg-white/10 transition-all text-sm font-bold"
               />
             </div>
@@ -171,7 +166,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
               className="h-full flex items-center gap-2 px-6 bg-emerald-500 text-stone-900 font-black rounded-2xl hover:bg-emerald-400 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 text-sm uppercase tracking-wider"
             >
               <Plus className="w-5 h-5 stroke-[3px]" />
-              <span className="hidden sm:inline">Add Product</span>
+              <span className="hidden sm:inline">{t('product_manager.add_product')}</span>
             </button>
           </div>
         </div>
@@ -190,7 +185,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     : 'text-stone-500 border-transparent hover:text-stone-300'
                 )}
               >
-                {cat}
+                {cat === 'All' ? t('merchant.categories.all') : t(`merchant.categories.${cat.toLowerCase()}`)}
                 {activeCategory === cat && (
                   <motion.div 
                     layoutId="activeTab"
@@ -209,7 +204,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
           {loading ? (
             <div className="flex flex-col items-center justify-center py-40 gap-4">
               <div className="w-16 h-16 border-4 border-stone-200 border-t-emerald-500 rounded-full animate-spin" />
-              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Syncing Catalog...</p>
+              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('product_manager.loading')}</p>
             </div>
           ) : filteredProducts.length === 0 ? (
             <motion.div
@@ -220,13 +215,13 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
               <div className="w-24 h-24 bg-white rounded-[2.5rem] shadow-sm border border-stone-100 flex items-center justify-center mb-8">
                 <Box className="w-10 h-10 text-stone-200" />
               </div>
-              <h3 className="text-2xl font-black text-stone-900">Catalogue is Empty</h3>
-              <p className="text-stone-400 mt-2 font-medium">No results found for your current filters.</p>
+              <h3 className="text-2xl font-black text-stone-900">{t('product_manager.empty_catalog')}</h3>
+              <p className="text-stone-400 mt-2 font-medium">{t('product_manager.no_results')}</p>
               <button
                 onClick={() => { setSearchQuery(''); setActiveCategory('All'); setShowAddForm(true); }}
                 className="mt-8 px-8 py-4 bg-white text-emerald-600 font-black rounded-2xl border-2 border-emerald-100 hover:bg-emerald-50 transition-all shadow-sm"
               >
-                Add Your First Product
+                {t('product_manager.first_product_btn')}
               </button>
             </motion.div>
           ) : (
@@ -253,7 +248,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                       ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
                       : "bg-rose-50 text-rose-500 border-rose-100"
                   )}>
-                    {product.inStock ? 'In Stock' : 'Out of Stock'}
+                    {product.inStock ? t('merchant.in_stock') : t('merchant.out_of_stock')}
                   </div>
                   
                   <div className="flex items-start justify-between">
@@ -287,20 +282,20 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                       {product.name}
                     </h4>
                     <p className="text-stone-400 text-sm font-medium line-clamp-2 leading-relaxed min-h-[2.5rem]">
-                      {product.description || 'No description provided.'}
+                      {product.description || t('product_manager.no_description')}
                     </p>
                     <div className="flex items-center gap-2 pt-1">
                       <span className="px-2 py-0.5 bg-stone-100 text-stone-500 text-[9px] font-black uppercase tracking-widest rounded-md">
-                        {product.category || 'General'}
+                        {product.category || t('merchant.categories.general')}
                       </span>
                     </div>
                   </div>
 
                   <div className="mt-auto pt-6 border-t border-stone-50 flex items-center justify-between">
                     <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest leading-none mb-1">Price</span>
+                      <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest leading-none mb-1">{t('product_manager.price')}</span>
                       <span className="text-2xl font-black text-stone-900 tracking-tight">
-                        <span className="text-sm font-bold text-emerald-500 mr-0.5">$</span>
+                        <span className="text-sm font-bold text-emerald-500 mr-0.5">{t('common.currency_symbol')}</span>
                         {product.price.toFixed(2)}
                       </span>
                     </div>
@@ -349,9 +344,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                   </div>
                   <div>
                     <h3 className="text-2xl font-black text-stone-900 leading-none">
-                      {editingProduct ? 'Edit Product' : 'New Listing'}
+                      {editingProduct ? t('product_manager.edit_title') : t('product_manager.new_title')}
                     </h3>
-                    <p className="text-stone-400 text-sm font-medium mt-1.5 uppercase tracking-widest">Store Inventory</p>
+                    <p className="text-stone-400 text-sm font-medium mt-1.5 uppercase tracking-widest">{t('product_manager.inventory_subtitle')}</p>
                   </div>
                 </div>
                 <button
@@ -365,20 +360,20 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
               <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar">
                 <div className="p-8 space-y-8">
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">Product Title</label>
+                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.title_label')}</label>
                     <input
                       required
                       type="text"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="Enter a descriptive title..."
+                      placeholder={t('product_manager.title_placeholder')}
                       className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900 text-lg placeholder:text-stone-300"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">Price</label>
+                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.price')}</label>
                       <div className="relative">
                         <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
                         <input
@@ -392,38 +387,35 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">Category</label>
+                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.category_label')}</label>
                       <select
                         value={formData.category}
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900 h-[72px] appearance-none cursor-pointer"
                       >
-                        <option value="General">General</option>
-                        <option value="Grocery">Grocery</option>
-                        <option value="Bakery">Bakery</option>
-                        <option value="Butchery">Butchery</option>
-                        <option value="Dairy">Dairy</option>
-                        <option value="Electronics">Electronics</option>
-                        <option value="Home">Home</option>
-                        <option value="Pharma">Pharmacy</option>
+                        {PRODUCT_CATEGORIES.map(cat => (
+                          <option key={cat.key} value={cat.value}>
+                            {t(`merchant.categories.${cat.key}`)}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">Description</label>
+                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.desc_label')}</label>
                     <textarea
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="What makes this product special?"
+                      placeholder={t('product_manager.desc_placeholder')}
                       className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-medium text-stone-800 resize-none h-40 leading-relaxed placeholder:text-stone-300"
                     />
                   </div>
 
                   <div className="flex items-center justify-between p-6 bg-stone-50 rounded-[2rem] border border-stone-100">
                     <div>
-                      <h4 className="font-black text-stone-900 text-sm uppercase tracking-widest">Available in Stock</h4>
-                      <p className="text-xs text-stone-400 font-medium mt-1">Visible to customers immediately</p>
+                      <h4 className="font-black text-stone-900 text-sm uppercase tracking-widest">{t('product_manager.available_stock')}</h4>
+                      <p className="text-xs text-stone-400 font-medium mt-1">{t('product_manager.visible_desc')}</p>
                     </div>
                     <button
                       type="button"
@@ -448,7 +440,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     className="flex-1 py-7 bg-emerald-600 text-white font-black rounded-[2.5rem] shadow-2xl shadow-emerald-200 hover:bg-emerald-700 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
                   >
                     {isSubmitting ? <Loader2 className="w-7 h-7 animate-spin" /> : <Save className="w-7 h-7" />}
-                    <span className="text-xl uppercase tracking-[0.15em]">{editingProduct ? 'Update Product' : 'Add to Inventory'}</span>
+                    <span className="text-xl uppercase tracking-[0.15em]">{editingProduct ? t('product_manager.update_btn') : t('product_manager.add_inventory_btn')}</span>
                   </button>
                 </div>
               </form>
@@ -460,7 +452,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
       <div className="p-6 bg-stone-900 border-t border-white/5 flex items-center gap-4 px-8 text-stone-500 shrink-0">
         <AlertCircle className="w-5 h-5 shrink-0 text-emerald-500" />
         <p className="text-[10px] font-bold uppercase tracking-[0.2em] leading-relaxed max-w-4xl">
-          Catalogue updates are live immediately. Ensure accurate pricing and stock levels to maintain your verified Merchant status and prevent customer disputes.
+          {t('product_manager.warning_banner')}
         </p>
       </div>
     </motion.div>

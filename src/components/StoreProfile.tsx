@@ -70,7 +70,7 @@ export const StoreProfile: React.FC<StoreProfileProps> = ({ store, onBack }) => 
             </div>
             <div className="flex items-center gap-1.5 text-stone-500 font-medium text-sm">
               <MapPin className="w-4 h-4 shrink-0" />
-              <span className="truncate">{store.location?.address || 'Local Store'}</span>
+              <span className="truncate">{store.location?.address || t('merchant.local_store')}</span>
             </div>
           </div>
         </div>
@@ -81,20 +81,20 @@ export const StoreProfile: React.FC<StoreProfileProps> = ({ store, onBack }) => 
         <section className="space-y-4">
           <div className="flex gap-4 p-4 bg-white rounded-3xl border border-stone-100 shadow-sm">
             <div className="flex-1 text-center border-r border-stone-50">
-              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Category</p>
-              <p className="font-bold text-stone-800">{store.category}</p>
+              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store_profile.category_label')}</p>
+              <p className="font-bold text-stone-800">{t(`merchant.categories.${store.category.toLowerCase()}`)}</p>
             </div>
             <div className="flex-1 text-center border-r border-stone-50">
-              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Followers</p>
+              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store_profile.followers_label')}</p>
               <p className="font-bold text-stone-800">{store.followersCount || 0}</p>
             </div>
             <div className="flex-1 text-center">
-              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">Status</p>
+              <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store_profile.status_label')}</p>
               <p className={cn(
                 "font-bold",
                 store.status === 'active' ? "text-emerald-600" : "text-amber-500"
               )}>
-                {store.status === 'active' ? 'Open' : 'Pending'}
+                {store.status === 'active' ? t('store_profile.status_open') : t('store_profile.status_pending')}
               </p>
             </div>
           </div>
@@ -102,10 +102,10 @@ export const StoreProfile: React.FC<StoreProfileProps> = ({ store, onBack }) => 
           <div className="p-6 bg-white rounded-3xl border border-stone-100 shadow-sm">
             <h3 className="flex items-center gap-2 text-sm font-bold text-stone-400 uppercase tracking-widest mb-3">
               <Info className="w-4 h-4" />
-              About
+              {t('store_profile.about_title')}
             </h3>
             <p className="text-stone-600 leading-relaxed">
-              {store.description || 'No description provided by the merchant.'}
+              {store.description || t('store_profile.no_description')}
             </p>
           </div>
         </section>
@@ -113,8 +113,8 @@ export const StoreProfile: React.FC<StoreProfileProps> = ({ store, onBack }) => 
         {/* Products Grid */}
         <section className="space-y-6">
           <div className="flex items-center justify-between px-2">
-            <h2 className="text-xl font-black text-stone-900 tracking-tight">Products in stock</h2>
-            <span className="text-xs font-bold text-stone-400 bg-stone-100 px-3 py-1 rounded-full">{products.length} items</span>
+            <h2 className="text-xl font-black text-stone-900 tracking-tight">{t('store_profile.products_in_stock')}</h2>
+            <span className="text-xs font-bold text-stone-400 bg-stone-100 px-3 py-1 rounded-full">{t('store_profile.item_count', { count: products.length })}</span>
           </div>
 
           {loading ? (
@@ -128,7 +128,7 @@ export const StoreProfile: React.FC<StoreProfileProps> = ({ store, onBack }) => 
               <div className="w-16 h-16 bg-stone-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <ShoppingBag className="w-8 h-8 text-stone-200" />
               </div>
-              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">No products listed yet</p>
+              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('store_profile.no_products')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -143,22 +143,22 @@ export const StoreProfile: React.FC<StoreProfileProps> = ({ store, onBack }) => 
                     
                     {!product.inStock && (
                       <div className="absolute inset-0 bg-stone-900/10 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="px-3 py-1 bg-white/90 rounded-full text-[10px] font-black uppercase text-stone-400 tracking-widest">Out of Stock</span>
+                        <span className="px-3 py-1 bg-white/90 rounded-full text-[10px] font-black uppercase text-stone-400 tracking-widest">{t('store_profile.out_of_stock')}</span>
                       </div>
                     )}
 
                     {product.saleEnd && product.saleEnd > Date.now() && (
                       <div className="absolute top-3 left-3 px-2 py-1 bg-rose-500 text-white text-[9px] font-black uppercase tracking-widest rounded-lg shadow-sm">
-                        Sale
+                        {t('store_profile.sale_badge')}
                       </div>
                     )}
                   </div>
                   
                   <div className="p-4 space-y-1">
-                    <p className="text-xs font-bold text-stone-400 uppercase tracking-widest truncate">{product.category}</p>
+                    <p className="text-xs font-bold text-stone-400 uppercase tracking-widest truncate">{product.category || t('merchant.categories.general')}</p>
                     <h4 className="font-bold text-stone-900 truncate">{product.name}</h4>
                     <div className="flex items-center justify-between pt-2">
-                      <span className="text-sm font-black text-emerald-600">{product.currency} {product.price}</span>
+                      <span className="text-sm font-black text-emerald-600">{t('common.currency_symbol')} {product.price}</span>
                       <button className="p-2 hover:bg-rose-50 text-stone-300 hover:text-rose-500 rounded-xl transition-colors">
                         <Heart className="w-4 h-4" />
                       </button>

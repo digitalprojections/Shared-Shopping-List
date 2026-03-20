@@ -20,52 +20,52 @@ interface OnboardingProps {
 
 import { userService } from '../services/userService';
 import { cn } from '../lib/utils';
+import { useTranslation } from 'react-i18next';
 
-const INTEREST_CATEGORIES = [
-  'Grocery', 'Halaal', 'Organic', 'Electronics', 'Home', 'Pets', 'Pharma', 'Fashion', 'Beauty', 'Sports'
-];
+import { STORE_CATEGORIES } from '../constants/categories';
+
 
 const MIN_REQUIRED_INTERESTS = 3;
 
 const slides = [
   {
-    title: "Instant Collaboration",
-    description: "Share lists with family and friends. Everyone sees updates in real-time — no more double-buying!",
+    title: "onboarding.slides.collab_title",
+    description: "onboarding.slides.collab_desc",
     icon: <Users className="w-16 h-16 text-emerald-500" />,
     color: "from-emerald-50 to-teal-50",
     accent: "bg-emerald-500"
   },
   {
-    title: "You're in Control",
-    description: "No annoying banners or popups. We only show short ads if you choose to watch one to earn extra coins.",
+    title: "onboarding.slides.control_title",
+    description: "onboarding.slides.control_desc",
     icon: <Coins className="w-16 h-16 text-sky-500" />,
     color: "from-sky-50 to-indigo-50",
     accent: "bg-sky-500"
   },
   {
-    title: "Minimalist Design",
-    description: "Focused on speed and clarity. A clean interface that helps you get through your shopping faster.",
+    title: "onboarding.slides.design_title",
+    description: "onboarding.slides.design_desc",
     icon: <Layout className="w-16 h-16 text-amber-500" />,
     color: "from-amber-50 to-orange-50",
     accent: "bg-amber-500"
   },
   {
-    title: "Smart Organization",
-    description: "Manage multiple lists for home, work, or parties. Simple, powerful, and completely free.",
+    title: "onboarding.slides.smart_title",
+    description: "onboarding.slides.smart_desc",
     icon: <Sparkles className="w-16 h-16 text-fuchsia-500" />,
     color: "from-fuchsia-50 to-pink-50",
     accent: "bg-fuchsia-500"
   },
   {
-    title: "Loyalty Cards",
-    description: "Keep all your point cards in one place. Instant barcode access at checkout keeps your wallet light and organized.",
+    title: "onboarding.slides.loyalty_title",
+    description: "onboarding.slides.loyalty_desc",
     icon: <Ticket className="w-16 h-16 text-rose-500" />,
     color: "from-rose-50 to-orange-50",
     accent: "bg-rose-500"
   },
   {
-    title: "Your Interests",
-    description: "Select categories you're interested in to get personalized store suggestions.",
+    title: "onboarding.slides.interests_title",
+    description: "onboarding.slides.interests_desc",
     icon: <Sparkles className="w-16 h-16 text-amber-500" />,
     color: "from-amber-50 to-orange-50",
     accent: "bg-amber-500",
@@ -74,6 +74,7 @@ const slides = [
 ];
 
 export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initialSlide = 0, currentPreferences = [] }) => {
+  const { t } = useTranslation();
   const [currentSlide, setCurrentSlide] = useState(initialSlide);
   const [selectedInterests, setSelectedInterests] = useState<string[]>(currentPreferences);
 
@@ -110,7 +111,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
             onClick={onFinish}
             className="text-gray-500 font-medium text-sm hover:text-gray-800 transition-colors"
           >
-            Skip
+            {t('onboarding.skip')}
           </button>
         )}
       </div>
@@ -132,28 +133,28 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
             
             <div className="space-y-4">
               <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
-                {slides[currentSlide].title}
+                {t(slides[currentSlide].title)}
               </h2>
               { isSelectionSlide ? (
                 <div className="grid grid-cols-2 gap-2 pt-4 px-2">
-                  {INTEREST_CATEGORIES.map(category => (
+                  {STORE_CATEGORIES.map(cat => (
                     <button
-                      key={category}
-                      onClick={() => toggleInterest(category)}
+                      key={cat.key}
+                      onClick={() => toggleInterest(cat.key)}
                       className={cn(
                         "px-4 py-3 rounded-xl text-sm font-bold transition-all border-2",
-                        selectedInterests.includes(category)
+                        selectedInterests.includes(cat.key)
                           ? "bg-amber-500 border-amber-500 text-white shadow-md scale-105"
                           : "bg-white border-stone-100 text-stone-600 hover:border-amber-200"
                       )}
                     >
-                      {category}
+                      {t(`merchant.categories.${cat.key}`)}
                     </button>
                   ))}
                 </div>
               ) : (
                 <p className="text-lg text-gray-600 leading-relaxed px-4">
-                  {slides[currentSlide].description}
+                  {t(slides[currentSlide].description)}
                 </p>
               )}
             </div>
@@ -188,9 +189,9 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
           <span>
             {isLastSlide 
               ? (selectedInterests.length < MIN_REQUIRED_INTERESTS 
-                  ? `Select ${MIN_REQUIRED_INTERESTS - selectedInterests.length} more` 
-                  : "Get Started") 
-              : "Next"}
+                  ? t('onboarding.select_more', { count: MIN_REQUIRED_INTERESTS - selectedInterests.length }) 
+                  : t('onboarding.get_started')) 
+              : t('onboarding.next')}
           </span>
           {isLastSlide ? (
             <CheckCircle2 className="w-5 h-5" />

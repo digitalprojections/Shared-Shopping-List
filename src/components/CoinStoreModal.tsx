@@ -137,7 +137,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
                 <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8" />
               </div>
               <h3 className="text-lg sm:text-xl font-bold mb-1">{t('store.success')}</h3>
-              <p className="text-emerald-50 text-[10px] sm:text-sm opacity-80">Coins are now available in your balance.</p>
+              <p className="text-emerald-50 text-[10px] sm:text-sm opacity-80">{t('store.success_subtitle')}</p>
             </motion.div>
           )}
 
@@ -148,7 +148,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
               </div>
               <div className="max-w-[240px] mx-auto">
                 <p className="text-stone-900 font-bold">{t('store.mobile_only')}</p>
-                <p className="text-stone-400 text-sm mt-1">Please open the app on your Android or iOS device to purchase coins.</p>
+                <p className="text-stone-400 text-sm mt-1">{t('store.mobile_only_subtitle')}</p>
               </div>
             </div>
           ) : loading ? (
@@ -195,7 +195,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
                           {iapService.getCoinsForProduct(pack.product.identifier)} 🪙
                         </span>
                         {pack.product.identifier.includes('1000') && (
-                          <span className="w-fit px-2 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-lg uppercase tracking-wider mt-1 sm:mt-0">Best Value</span>
+                          <span className="w-fit px-2 py-0.5 bg-violet-100 text-violet-600 text-[10px] font-black rounded-lg uppercase tracking-wider mt-1 sm:mt-0">{t('store.best_value')}</span>
                         )}
                       </div>
                       <p className="text-[11px] sm:text-sm font-bold text-stone-400 mt-0.5 line-clamp-1">{pack.product.description || pack.product.title}</p>
@@ -231,7 +231,7 @@ export const CoinStoreModal: React.FC<CoinStoreModalProps> = ({ onClose }) => {
         <div className="p-8 pt-0 text-center">
           <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-stone-300 uppercase tracking-widest mt-4">
             <ShieldCheck className="w-3 h-3" />
-            Secure Payment via Google Play / App Store
+            {t('store.secure_payment')}
           </div>
         </div>
       </motion.div>

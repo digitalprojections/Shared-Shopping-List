@@ -26,7 +26,10 @@ import {
   List,
   RotateCcw,
   Gift,
-  CreditCard
+  CreditCard,
+  MapIcon,
+  MapPin,
+  MapPinPlus
 } from 'lucide-react';
 import { adService } from './services/adService';
 import { motion, AnimatePresence } from 'motion/react';
@@ -355,7 +358,7 @@ export default function App() {
       console.error("Auth state change error:", err);
       // Only show error if we don't have a cached session or it's a hard failure
       if (!localStorage.getItem('ss_cached_user')) {
-        setError("Firebase connection failed. Check your network.");
+        setError(t('app.network_error'));
       }
       setLoading(false);
     });
@@ -415,7 +418,7 @@ export default function App() {
       const shareId = params.get('share');
       if (shareId && user && isFirebaseConfigured) {
         if (user.isAnonymous) {
-          setError("You must sign in with a real account to join shared lists.");
+          setError(t('app.join_ref_real_account'));
           return;
         }
         try {
@@ -434,7 +437,7 @@ export default function App() {
           }
         } catch (err) {
           console.error("Error joining share:", err);
-          setError("Could not join shared list. Please check your configuration.");
+          setError(t('app.join_ref_fail'));
         }
       }
     };
@@ -471,7 +474,7 @@ export default function App() {
     } catch (err: any) {
       console.error("Anonymous login error:", err);
       if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-        setError("Firebase Auth is not enabled. Please enable 'Anonymous' sign-in in your Firebase Console.");
+        setError(t('app.auth_err_not_enabled'));
       } else {
         setError(err.message);
       }
@@ -776,7 +779,7 @@ export default function App() {
                         {user?.isAnonymous ? t('app.continue_guest') : t('user_menu.profile')}
                       </p>
                       <p className="text-sm font-bold text-stone-900 truncate">
-                        {user?.displayName || user?.email || 'Anonymous Traveler'}
+                        {user?.displayName || user?.email || t('user_menu.anonymous_traveler')}
                       </p>
                     </div>
 
@@ -800,7 +803,7 @@ export default function App() {
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors text-left font-bold"
                       >
                         <ShoppingBag className="w-4 h-4" />
-                        {appUser?.isMerchant ? t('user_menu.manage_stores', 'Manage My Stores') : t('user_menu.register_store', 'Register as Store')}
+                        {appUser?.isMerchant ? t('user_menu.manage_stores') : t('user_menu.register_store')}
                       </button>
                     )}
 
@@ -813,13 +816,13 @@ export default function App() {
                         className="w-full flex items-center gap-3 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors text-left font-bold"
                       >
                         <Shield className="w-4 h-4" />
-                        {t('user_menu.manage_submissions', 'Manage Submissions')}
+                        {t('user_menu.manage_submissions')}
                       </button>
                     )}
 
                     <button
                       onClick={async () => {
-                        const confirmed = window.confirm(t('user_menu.clear_cache_confirm', 'This will log you out and refresh the app to fix any issues. Continue?'));
+                        const confirmed = window.confirm(t('common.clear_cache_confirm'));
                         if (confirmed) {
                           setShowUserMenu(false);
                           await forceClearCache();
@@ -828,7 +831,7 @@ export default function App() {
                       className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
                     >
                       <RotateCcw className="w-4 h-4" />
-                      {t('user_menu.clear_cache', 'Fix App / Clear Cache')}
+                      {t('user_menu.clear_cache')}
                     </button>
 
                     {!user?.isAnonymous && (
@@ -1211,9 +1214,9 @@ function InstallAppBanner({ onInstall, onClose }: { onInstall: () => void, onClo
             <ShoppingBag className="w-6 h-6" />
           </div>
           <div className="text-center sm:text-left">
-            <h3 className="font-bold text-lg">{t('pwa.install_title', 'Install ListShare')}</h3>
+            <h3 className="font-bold text-lg">{t('install_banner.title')}</h3>
             <p className="text-emerald-50 text-sm opacity-90">
-              {t('pwa.install_desc', 'Get the full app experience on your home screen')}
+              {t('install_banner.subtitle')}
             </p>
           </div>
         </div>
@@ -1222,7 +1225,7 @@ function InstallAppBanner({ onInstall, onClose }: { onInstall: () => void, onClo
             onClick={onInstall}
             className="flex-1 sm:flex-none px-6 py-3 bg-white text-emerald-600 font-bold rounded-xl shadow-lg hover:bg-emerald-50 transition-all active:scale-95"
           >
-            {t('pwa.install_button', 'Install App')}
+            {t('install_banner.button')}
           </button>
           <button
             onClick={onClose}
@@ -1302,9 +1305,9 @@ function Dashboard({
         const result = await grantRewardedCoin({ amount: 1 });
         const data = result.data as { success: boolean; error?: string };
         if (data.success) {
-          alert(t('dashboard.reward_success', 'Reward received! +1 Coin'));
+          alert(t('dashboard.reward_success'));
         } else {
-          alert(data.error || t('dashboard.reward_fail', 'Failed to get reward. Try again later.'));
+          alert(data.error || t('dashboard.reward_fail'));
         }
       } catch (error) {
         console.error("Error rewarding dev visit:", error);
@@ -1317,13 +1320,13 @@ function Dashboard({
     try {
       const result = await adService.showRewardedAd();
       if (result.success) {
-        alert(t('dashboard.reward_success', 'Reward received! +1 Coin'));
+        alert(t('dashboard.reward_success'));
       } else {
-        alert(result.error || t('dashboard.reward_fail', 'Failed to get reward. Try again later.'));
+        alert(result.error || t('dashboard.reward_fail'));
       }
     } catch (error) {
       console.error("Error showing rewarded ad:", error);
-      alert(t('dashboard.ad_error', 'Failed to load or show ad. Please try again later.'));
+      alert(t('dashboard.ad_error'));
     } finally {
       setIsAdLoading(false);
     }
@@ -1536,11 +1539,11 @@ function Dashboard({
                 className="w-full aspect-[16/10] p-4 rounded-3xl border-2 border-indigo-100 bg-indigo-50/20 flex flex-col items-center justify-center text-center gap-2 transition-all hover:bg-indigo-50 hover:border-indigo-200"
               >
                 <div className="p-2 bg-indigo-100 rounded-2xl text-indigo-600 group-hover:scale-110 transition-transform">
-                  <ShoppingBag className="w-7 h-7" />
+                  <MapPinPlus className="w-7 h-7" />
                 </div>
                 <div>
-                  <span className="block font-bold text-stone-900 leading-tight">Nearby Stores</span>
-                  <span className="text-xs text-stone-500">Discover local products</span>
+                  <span className="block font-bold text-stone-900 leading-tight">{t('dashboard.nearby_stores')}</span>
+                  <span className="text-xs text-stone-500">{t('dashboard.discover_local')}</span>
                 </div>
               </button>
             </motion.div>
@@ -1863,7 +1866,7 @@ function ListView({
       const itemsToDelete = items.filter(remote => !localDraftItems.find(local => local.id === remote.id)).map(i => i.id);
 
       if (itemsToAdd.length === 0 && itemsToUpdate.length === 0 && itemsToDelete.length === 0) {
-        alert("No changes to sync");
+        alert(t('common.no_changes'));
         setIsSyncing(false);
         return;
       }
@@ -1883,7 +1886,7 @@ function ListView({
       setLocalDraftItems(syncedItems);
 
       // Show success feedback
-      alert(t('list_view.sync_success', 'Sync successful! Changes are saved.'));
+      alert(t('list_view.sync_success'));
 
       // Remote listener will update items and localDraftItems via useEffect
     } catch (error: any) {
@@ -1970,7 +1973,7 @@ function ListView({
               className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all"
             >
               <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
-              {isSyncing ? t('list_view.syncing') : t('list_view.sync_changes')} (1 🪙)
+              {isSyncing ? t('list_view.syncing') : t('list_view.sync_changes')} (1 {t('admin.coins')})
             </motion.button>
           ) : null}
           {!isShared && !user?.isAnonymous && (
@@ -2006,7 +2009,7 @@ function ListView({
                     {hasChanges && (
                       <button
                         onClick={() => {
-                          if (window.confirm(t('list_view.discard_confirm', 'Discard all unsynced changes?'))) {
+                          if (window.confirm(t('list_view.discard_confirm'))) {
                             setLocalDraftItems(items);
                             localStorage.removeItem(`list_draft_${listId}`);
                             setShowOptions(false);
@@ -2015,7 +2018,7 @@ function ListView({
                         className="w-full px-5 py-4 text-left text-sm font-bold text-amber-600 hover:bg-amber-50 flex items-center gap-3 transition-colors border-b border-stone-50"
                       >
                         <RotateCcw className="w-5 h-5" />
-                        {t('list_view.discard_changes', 'Discard Changes')}
+                        {t('list_view.discard_changes')}
                       </button>
                     )}
                     {!isShared && (
@@ -2293,7 +2296,7 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
                   <button
                     onClick={() => copyShareLink(share.id)}
                     className="p-3 bg-white hover:bg-stone-100 rounded-xl shadow-sm border border-stone-200 transition-all text-stone-600"
-                    title="Copy Link"
+                    title={t('list_view.copy_link')}
                   >
                     {copiedId === share.id ? <CheckCircle2 className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                   </button>
@@ -2305,14 +2308,14 @@ function ShareModal({ listId, onClose, type = 'list' }: { listId: string, onClos
                         ? "bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100"
                         : "bg-white border-stone-200 text-stone-400 hover:bg-stone-100"
                     )}
-                    title={share.isActive ? "Deactivate" : "Activate"}
+                    title={share.isActive ? t('share_modal.deactivate') : t('share_modal.activate')}
                   >
                     <CheckCircle2 className={cn("w-4 h-4", !share.isActive && "opacity-20")} />
                   </button>
                   <button
                     onClick={() => shoppingService.deleteShare(share.id)}
                     className="p-3 bg-white hover:bg-rose-50 rounded-xl shadow-sm border border-stone-200 transition-all text-rose-500"
-                    title="Delete Link"
+                    title={t('share_modal.delete_link')}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -2527,7 +2530,7 @@ function FreeGiftCard({ appUser }: { appUser: AppUser | null }) {
         alert(result.message);
       }
     } catch (error: any) {
-      alert(error.message || 'Error claiming gift');
+      alert(error.message || t('redeem_modal.claim_gift_error'));
     } finally {
       setLoading(false);
     }

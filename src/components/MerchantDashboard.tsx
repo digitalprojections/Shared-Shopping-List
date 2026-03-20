@@ -50,7 +50,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
   }, [userId]);
 
   const handleDelete = async (storeId: string) => {
-    if (!window.confirm("Are you sure you want to delete this store? This will also remove its application and products.")) return;
+    if (!window.confirm(t('merchant.delete_confirm_q'))) return;
     setProcessingId(storeId);
     try {
       await storeService.deleteStore(storeId);
@@ -89,10 +89,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             </div>
             <div>
               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
-                {t('merchant.dashboard', 'Merchant Hub')}
-                <span className="hidden sm:inline-block px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] uppercase font-black rounded-lg border border-emerald-500/30">Business</span>
+                {t('merchant.hub')}
+                <span className="hidden sm:inline-block px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] uppercase font-black rounded-lg border border-emerald-500/30">{t('common.business', 'Business')}</span>
               </h1>
-              <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">Store & Product Control Center</p>
+              <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">{t('merchant.dashboard_subtitle')}</p>
             </div>
           </div>
         </div>
@@ -102,7 +102,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             <Search className="w-4 h-4 text-white/30" />
             <input 
               type="text"
-              placeholder="Search stores..."
+              placeholder={t('merchant.search_stores')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-transparent border-none outline-none text-sm text-white px-3 w-48 placeholder:text-white/20"
@@ -114,7 +114,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             className="flex items-center gap-2 px-6 py-3 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-400 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">Add Location</span>
+            <span className="hidden sm:inline">{t('merchant.add_location')}</span>
           </button>
         </div>
       </header>
@@ -126,7 +126,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             <StoreIcon className="w-4 h-4 text-stone-400" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">Total Stores</p>
+            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">{t('merchant.total_stores')}</p>
             <p className="text-lg font-black text-stone-900 leading-none">{stores.length}</p>
           </div>
         </div>
@@ -136,7 +136,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">Active</p>
+            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">{t('merchant.active')}</p>
             <p className="text-lg font-black text-stone-900 leading-none">{stores.filter(s => s.status === 'active').length}</p>
           </div>
         </div>
@@ -146,7 +146,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             <Clock className="w-4 h-4 text-amber-500" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">Pending</p>
+            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">{t('merchant.pending')}</p>
             <p className="text-lg font-black text-stone-900 leading-none">{stores.filter(s => s.status === 'pending').length}</p>
           </div>
         </div>
@@ -164,7 +164,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                 className="flex flex-col items-center justify-center py-32 space-y-4"
               >
                 <div className="w-12 h-12 border-4 border-stone-200 border-t-emerald-500 rounded-full animate-spin" />
-                <p className="text-stone-400 font-black uppercase tracking-[0.2em] text-xs">Loading Storefronts...</p>
+                <p className="text-stone-400 font-black uppercase tracking-[0.2em] text-xs">{t('merchant.loading_stores')}</p>
               </motion.div>
             ) : filteredStores.length === 0 ? (
               <motion.div 
@@ -177,9 +177,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                   <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-2xl shadow-lg border border-stone-50 flex items-center justify-center italic font-serif text-stone-300">?</div>
                 </div>
                 <div className="space-y-3">
-                  <h3 className="text-2xl font-black text-stone-900 tracking-tight">No Stores Found</h3>
+                  <h3 className="text-2xl font-black text-stone-900 tracking-tight">{t('merchant.no_stores_found')}</h3>
                   <p className="text-stone-500 max-w-sm mx-auto font-medium">
-                    {searchQuery ? "We couldn't find any stores matching your search. Try looking for a different name or category." : "You haven't registered any stores yet. Expand your reach and list your business today!"}
+                    {searchQuery ? t('merchant.no_stores_search_desc') : t('merchant.no_stores_desc')}
                   </p>
                 </div>
                 <button
@@ -187,7 +187,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                   className="flex items-center gap-3 px-10 py-5 bg-stone-900 text-white font-black rounded-3xl hover:bg-emerald-600 transition-all active:scale-95 shadow-2xl shadow-stone-200 group"
                 >
                   <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform" />
-                  <span>{searchQuery ? t('common.clear_search', 'Clear Search') : 'Register Your Business'}</span>
+                  <span>{searchQuery ? t('common.clear_search') : t('merchant.register_business_btn')}</span>
                 </button>
               </motion.div>
             ) : (
@@ -212,7 +212,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                          store.status === 'pending' ? <Clock className="w-3.5 h-3.5" /> : 
                          <XCircle className="w-3.5 h-3.5" />}
                         <span className="text-[10px] font-black uppercase tracking-wider leading-none">
-                          {store.status === 'active' ? 'Verified' : store.status}
+                          {store.status === 'active' ? t('merchant.verified') : t(`merchant.status.${store.status}`)}
                         </span>
                       </div>
                     </div>
@@ -227,7 +227,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                     {/* Placeholder Hero */}
                     <div className="h-32 bg-stone-50 flex items-center justify-center border-b border-stone-50 overflow-hidden relative">
                        <StoreIcon className="w-16 h-16 text-stone-100 group-hover:scale-110 transition-transform duration-700" />
-                       <div className="absolute bottom-4 left-6 px-3 py-1 bg-white/90 rounded-full text-[9px] font-black text-stone-400 uppercase tracking-widest border border-stone-100/50">{store.category}</div>
+                       <div className="absolute bottom-4 left-6 px-3 py-1 bg-white/90 rounded-full text-[9px] font-black text-stone-400 uppercase tracking-widest border border-stone-100/50">{t(`merchant.categories.${store.category.toLowerCase()}`)}</div>
                     </div>
 
                     <div className="p-8 flex-1 flex flex-col">
@@ -236,12 +236,12 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                           <h4 className="text-xl font-black text-stone-900 tracking-tight leading-tight group-hover:text-emerald-600 transition-colors">{store.name}</h4>
                           <div className="flex items-center gap-1.5 text-stone-400 text-xs font-bold">
                             <MapPin className="w-3.5 h-3.5" />
-                            <span className="truncate">{store.location?.address || 'Physical Address TBD'}</span>
+                            <span className="truncate">{store.location?.address || t('merchant.address_tbd')}</span>
                           </div>
                         </div>
                         
                         <p className="text-stone-500 text-sm leading-relaxed line-clamp-3 font-medium">
-                          {store.description || 'Provide a compelling description for your store to attract more local customers and boost your visibility.'}
+                          {store.description || t('merchant.default_desc')}
                         </p>
                       </div>
 
@@ -255,7 +255,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                           className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-stone-50 text-stone-600 font-black rounded-2xl hover:bg-stone-100 transition-all active:scale-95 text-sm"
                         >
                           <Settings className="w-5 h-5" />
-                          <span>{store.status === 'active' ? 'Settings' : 'Edit Application'}</span>
+                          <span>{store.status === 'active' ? t('merchant.settings') : t('merchant.edit_app')}</span>
                         </button>
                         
                         {store.status === 'active' && (
@@ -268,7 +268,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                             className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-400 transition-all active:scale-95 text-sm shadow-xl shadow-emerald-500/10"
                           >
                             <Package className="w-5 h-5" />
-                            <span>Inventory</span>
+                            <span>{t('merchant.inventory')}</span>
                           </button>
                         )}
                       </div>
@@ -288,13 +288,13 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
             <ShieldCheck className="w-5 h-5 text-emerald-400" />
           </div>
           <p className="text-[10px] font-black text-stone-400 uppercase tracking-[0.2em] max-w-[240px]">
-            Your business is secured and verified. Manage your local listings with confidence.
+            {t('merchant.branding_p')}
           </p>
         </div>
 
         <div className="flex items-center gap-4">
           <button className="text-xs font-bold text-stone-400 hover:text-stone-900 transition-colors uppercase tracking-widest flex items-center gap-2">
-            Merchant Docs <ExternalLink className="w-3.5 h-3.5" />
+            {t('merchant.docs_link')} <ExternalLink className="w-3.5 h-3.5" />
           </button>
         </div>
       </footer>

@@ -174,11 +174,11 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
           {/* Stats Bar */}
           <div className="flex items-center justify-between bg-stone-50 rounded-3xl p-4 border border-stone-100">
             <div className="text-center flex-1 border-r border-stone-200">
-              <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">Followers</p>
+              <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.followers_label')}</p>
               <p className="text-lg font-black text-stone-900">{store.followersCount}</p>
             </div>
             <div className="text-center flex-1 border-r border-stone-200">
-              <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">Rating</p>
+              <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.rating_label')}</p>
               <div className="flex items-center justify-center gap-0.5">
                 <p className="text-lg font-black text-stone-900">4.8</p>
                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
@@ -200,21 +200,21 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
           {/* About */}
           <div className="space-y-4">
              <div className="flex items-center justify-between">
-               <h3 className="text-xl font-black text-stone-900 tracking-tight">Information</h3>
+               <h3 className="text-xl font-black text-stone-900 tracking-tight">{t('store_front.info_title')}</h3>
                <Info className="w-5 h-5 text-stone-300" />
              </div>
              <div className="grid gap-4">
                 <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl">
                   <MapPin className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-bold text-stone-700">Location</p>
+                    <p className="text-sm font-bold text-stone-700">{t('store_front.location_label')}</p>
                     <p className="text-sm text-stone-500 font-medium">{store.location?.address || '123 Market St, Downtown City'}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl">
                   <Clock className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-bold text-stone-700">Opening Hours</p>
+                    <p className="text-sm font-bold text-stone-700">{t('store_front.hours_label')}</p>
                     <p className="text-sm text-stone-500 font-medium">{store.workingHours || 'Mon-Sat: 08:00 - 21:00'}</p>
                   </div>
                 </div>
@@ -222,7 +222,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                    <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl">
                      <MessageCircle className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
                      <div>
-                       <p className="text-sm font-bold text-stone-700">Contact</p>
+                       <p className="text-sm font-bold text-stone-700">{t('store_front.contact_label')}</p>
                        <p className="text-sm text-stone-500 font-medium">{store.contactPhone}</p>
                      </div>
                    </div>
@@ -231,7 +231,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                    <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl">
                      <ExternalLink className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
                      <div>
-                       <p className="text-sm font-bold text-stone-700">Website</p>
+                       <p className="text-sm font-bold text-stone-700">{t('store_front.website_label')}</p>
                        <a href={store.website} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 font-bold hover:underline">
                          {store.website.replace(/^https?:\/\//, '')}
                        </a>
@@ -249,14 +249,14 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
             <div className="flex items-center justify-between">
               <h3 className="text-2xl font-black text-stone-900 tracking-tight">{t('store_front.products')}</h3>
               <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                {products.length} Items Available
+                {t('store_front.items_available', { count: products.length })}
               </div>
             </div>
 
             { products.length === 0 ? (
               <div className="py-20 text-center space-y-4 border-2 border-dashed border-stone-100 rounded-[2.5rem]">
                  <Package className="w-12 h-12 text-stone-100 mx-auto" />
-                 <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">No items currently listed</p>
+                 <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('store_front.no_items')}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
@@ -269,12 +269,12 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                     <div className="relative aspect-square bg-stone-50 rounded-[1.8rem] flex items-center justify-center overflow-hidden">
                        <ShoppingBag className="w-10 h-10 text-stone-200 transition-transform group-hover:scale-110 duration-500" />
                        <div className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-stone-100">
-                         <span className="text-[10px] font-black text-stone-900">${product.price.toFixed(2)}</span>
+                         <span className="text-[10px] font-black text-stone-900">{t('common.currency_symbol')}{product.price.toFixed(2)}</span>
                        </div>
                        {!product.inStock && (
                          <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
                             <span className="px-3 py-1 bg-stone-900 text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-full">
-                              Out of Stock
+                              {t('store_front.out_of_stock')}
                             </span>
                          </div>
                        )}
@@ -282,7 +282,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                     
                     <div className="space-y-1">
                       <h4 className="font-bold text-stone-900 text-sm truncate">{product.name}</h4>
-                      <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest truncate">{product.category}</p>
+                      <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest truncate">{t(`merchant.categories.${product.category?.toLowerCase() || 'grocery'}`)}</p>
                     </div>
 
                     <button
@@ -297,7 +297,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                       { addedItemIds.has(product.id) ? (
                         <>
                           <Check className="w-3.5 h-3.5 stroke-[3px]" />
-                          <span>Added!</span>
+                          <span>{t('store_front.added')}</span>
                         </>
                       ) : (
                         <>
@@ -324,7 +324,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                <div className="p-3 bg-white rounded-2xl shadow-sm">
                  <ShieldCheck className="w-6 h-6 text-stone-600" />
                </div>
-               <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">Report Store</span>
+               <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.report_store')}</span>
              </button>
           </div>
         </div>

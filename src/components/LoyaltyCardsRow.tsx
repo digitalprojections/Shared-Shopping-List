@@ -5,6 +5,7 @@ import { loyaltyService } from '../services/loyaltyService';
 import { LoyaltyCard } from '../types';
 import { cn } from '../lib/utils';
 import { IconComponent } from './LoyaltyCardsModal';
+import { useTranslation } from 'react-i18next';
 
 interface LoyaltyCardsRowProps {
   userId: string;
@@ -13,6 +14,7 @@ interface LoyaltyCardsRowProps {
 }
 
 export const LoyaltyCardsRow: React.FC<LoyaltyCardsRowProps> = ({ userId, onCardClick, onAddClick }) => {
+  const { t } = useTranslation();
   const [cards, setCards] = useState<LoyaltyCard[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -70,7 +72,7 @@ export const LoyaltyCardsRow: React.FC<LoyaltyCardsRowProps> = ({ userId, onCard
           {cards.length === 0 && !loading && (
             <div className="flex items-center gap-2 text-stone-400 py-2">
               <CreditCard className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-widest">No cards saved</span>
+              <span className="text-xs font-bold uppercase tracking-widest">{t('loyalty.no_cards_saved')}</span>
             </div>
           )}
         </div>

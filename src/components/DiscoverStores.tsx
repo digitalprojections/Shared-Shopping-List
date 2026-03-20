@@ -19,6 +19,8 @@ import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 
+import { STORE_CATEGORIES } from '../constants/categories';
+
 interface DiscoverStoresProps {
   onClose: () => void;
   onSelectStore: (storeId: string) => void;
@@ -31,7 +33,14 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
 
-  const categories = ['All', 'Grocery', 'Pharmacy', 'Apparel', 'Electronics'];
+  const categoryOptions = [
+    { key: 'all', label: t('discover_stores.categories.all'), value: 'All' },
+    ...STORE_CATEGORIES.map(cat => ({
+      key: cat.key,
+      label: t(`merchant.categories.${cat.key}`),
+      value: cat.value
+    }))
+  ];
 
   useEffect(() => {
     const fetchStores = async () => {
@@ -75,8 +84,8 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                   <MapIcon className="w-6 h-6 text-stone-900" />
                </div>
                <div>
-                 <h2 className="text-2xl font-black text-stone-900 tracking-tight">Discover Stores</h2>
-                 <p className="text-stone-400 text-sm font-medium">Find products near you</p>
+                 <h2 className="text-2xl font-black text-stone-900 tracking-tight">{t('discover_stores.title')}</h2>
+                 <p className="text-stone-400 text-sm font-medium">{t('discover_stores.subtitle')}</p>
                </div>
             </div>
             <button
@@ -92,7 +101,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 transition-colors group-focus-within:text-stone-900" />
             <input
               type="text"
-              placeholder="Search stores or markers..."
+              placeholder={t('discover_stores.search_placeholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-12 pr-4 py-4 bg-white border border-stone-100 rounded-3xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-medium text-stone-900 shadow-sm shadow-stone-100"
@@ -101,18 +110,18 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
 
           {/* Categories */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2">
-            {categories.map(cat => (
+            {categoryOptions.map(cat => (
               <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
+                key={cat.key}
+                onClick={() => setActiveCategory(cat.value)}
                 className={cn(
                   "px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shrink-0 whitespace-nowrap",
-                  activeCategory === cat 
+                  activeCategory === cat.value 
                     ? "bg-stone-900 text-white shadow-xl shadow-stone-200" 
                     : "bg-white text-stone-400 hover:text-stone-600 border border-stone-100"
                 )}
               >
-                {cat}
+                {cat.label}
               </button>
             ))}
           </div>
@@ -123,14 +132,14 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
           {loading ? (
              <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <div className="w-10 h-10 border-4 border-stone-100 border-t-stone-900 rounded-full animate-spin" />
-                <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest">Finding stores near you...</p>
+                <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest">{t('discover_stores.loading')}</p>
              </div>
           ) : filteredStores.length === 0 ? (
             <div className="text-center py-20 border-2 border-dashed border-stone-100 rounded-[2.5rem] bg-white">
               <div className="w-16 h-16 bg-stone-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
                 <StoreIcon className="w-8 h-8 text-stone-100" />
               </div>
-              <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">No stores matching your search</p>
+              <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">{t('discover_stores.no_results')}</p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -168,7 +177,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                         <span>•</span>
                         <div className="flex items-center gap-1 truncate">
                           <MapPin className="w-3.5 h-3.5" />
-                          <span>0.8 miles away</span>
+                          <span>{t('discover_stores.miles_away', { count: 0.8 })}</span>
                         </div>
                       </div>
                     </div>
@@ -186,7 +195,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
         <div className="p-6 bg-white border-t border-stone-100 flex items-center gap-3 px-8 shrink-0">
           <Clock className="w-4 h-4 text-stone-300" />
           <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest leading-none">
-            Showing stores open within 10 miles of your current location.
+            {t('discover_stores.footer')}
           </p>
         </div>
       </motion.div>

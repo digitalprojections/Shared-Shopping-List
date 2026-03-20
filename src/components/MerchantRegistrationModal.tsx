@@ -5,6 +5,7 @@ import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { Store } from '../types';
 import { cn } from '../lib/utils';
+import { STORE_CATEGORIES } from '../constants/categories';
 
 interface MerchantRegistrationModalProps {
   userId: string;
@@ -12,8 +13,6 @@ interface MerchantRegistrationModalProps {
   onSuccess: () => void;
   initialStore?: Store;
 }
-
-const CATEGORIES = ['Grocery', 'Halaal', 'Organic', 'Electronics', 'Home', 'Pets', 'Pharma', 'Fashion', 'Beauty', 'Sports'];
 
 export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps> = ({ 
   userId, 
@@ -24,11 +23,25 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
   const { t } = useTranslation();
   const isEditing = !!initialStore;
   
+  const categoryOptions = STORE_CATEGORIES.map(cat => ({
+    key: cat.key,
+    label: t(`merchant.categories.${cat.key}`),
+    value: cat.value
+  }));
+
+  const themeOptions = [
+    { key: 'emerald', label: t('merchant.themes.emerald'), value: 'Emerald' },
+    { key: 'indigo', label: t('merchant.themes.indigo'), value: 'Indigo' },
+    { key: 'rose', label: t('merchant.themes.rose'), value: 'Rose' },
+    { key: 'amber', label: t('merchant.themes.amber'), value: 'Amber' },
+    { key: 'stone', label: t('merchant.themes.stone'), value: 'Stone' }
+  ];
+
   const [name, setName] = useState(initialStore?.name || '');
   const [address, setAddress] = useState(initialStore?.location?.address || '');
   const [category, setCategory] = useState(initialStore?.category || 'Grocery');
   const [description, setDescription] = useState(initialStore?.description || '');
-  const [workingHours, setWorkingHours] = useState(initialStore?.workingHours || 'Mon-Sat: 08:00 - 21:00');
+  const [workingHours, setWorkingHours] = useState(initialStore?.workingHours || t('merchant.working_hours_placeholder'));
   const [contactPhone, setContactPhone] = useState(initialStore?.contactPhone || '');
   const [website, setWebsite] = useState(initialStore?.website || '');
   const [themeColor, setThemeColor] = useState(initialStore?.themeColor || 'Emerald');
@@ -104,7 +117,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                 <StoreIcon className="w-6 h-6 text-emerald-600" />
               </div>
               <h2 className="text-2xl font-bold text-stone-900">
-                {isEditing ? t('merchant.edit_title', 'Edit Store Details') : t('merchant.register_title', 'Register as Store')}
+                {isEditing ? t('merchant.edit_title') : t('merchant.register_title')}
               </h2>
             </div>
             <button
@@ -125,7 +138,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                 <CheckCircle2 className="w-12 h-12" />
               </div>
               <h3 className="text-xl font-bold text-stone-900">
-                {isEditing ? t('merchant.update_success_title', 'Store Updated!') : t('merchant.success_title', 'Application Sent!')}
+                {isEditing ? t('merchant.update_success_title') : t('merchant.success_title')}
               </h3>
               <p className="text-stone-500">
                 {isEditing ? t('merchant.update_success_desc', 'Your changes have been saved successfully.') : t('merchant.success_desc', 'An admin will review your store shortly.')}
@@ -190,8 +203,8 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     onChange={(e) => setCategory(e.target.value)}
                     className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium appearance-none"
                   >
-                    {CATEGORIES.map(c => (
-                      <option key={c} value={c}>{c}</option>
+                    {categoryOptions.map(c => (
+                      <option key={c.key} value={c.value}>{c.label}</option>
                     ))}
                   </select>
                 </div>
@@ -204,68 +217,68 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium resize-none h-24"
-                    placeholder="Tell users what you sell..."
+                    placeholder={t('merchant.desc_placeholder')}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
-                      Working Hours
+                      {t('merchant.working_hours')}
                     </label>
                     <input
                       type="text"
                       value={workingHours}
                       onChange={(e) => setWorkingHours(e.target.value)}
                       className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
-                      placeholder="Mon-Sat: 08:00 - 21:00"
+                      placeholder={t('merchant.working_hours_placeholder')}
                     />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
-                      Contact Phone
+                      {t('merchant.contact_phone')}
                     </label>
                     <input
                       type="text"
                       value={contactPhone}
                       onChange={(e) => setContactPhone(e.target.value)}
                       className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
-                      placeholder="+27 12 345 6789"
+                      placeholder={t('merchant.contact_phone_placeholder')}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
-                    Website (Optional)
+                    {t('merchant.website_label')}
                   </label>
                   <input
                     type="text"
                     value={website}
                     onChange={(e) => setWebsite(e.target.value)}
                     className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
-                    placeholder="https://www.yourstore.com"
+                    placeholder={t('merchant.website_placeholder')}
                   />
                 </div>
 
                 <div className="space-y-3">
                   <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
-                    Store Theme
+                    {t('merchant.store_theme')}
                   </label>
                   <div className="flex flex-wrap gap-3">
-                    {['Emerald', 'Indigo', 'Rose', 'Amber', 'Stone'].map(color => (
+                    {themeOptions.map(theme => (
                         <button
-                          key={color}
+                          key={theme.key}
                           type="button"
-                          onClick={() => setThemeColor(color)}
+                          onClick={() => setThemeColor(theme.value)}
                           className={cn(
                             "px-4 py-2 rounded-xl text-xs font-bold transition-all border-2",
-                            themeColor === color 
+                            themeColor === theme.value 
                               ? "bg-stone-900 text-white border-stone-900 shadow-lg shadow-stone-200" 
                               : "bg-white text-stone-500 border-stone-100 hover:border-stone-200"
                           )}
                         >
-                          {color}
+                          {theme.label}
                         </button>
                       ))}
                     </div>

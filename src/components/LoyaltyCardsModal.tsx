@@ -144,7 +144,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
 
   const startScan = async () => {
     if (!Capacitor.isNativePlatform()) {
-      alert("Scanning is only available on Android/iOS devices.");
+      alert(t('loyalty.mobile_only_scan'));
       return;
     }
 
@@ -162,13 +162,13 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
       }
     } catch (e) {
       console.error("Scan error:", e);
-      alert("Failed to start scanner. Ensure camera permissions are granted.");
+      alert(t('loyalty.scan_error'));
     }
   };
 
   const startOCR = async () => {
     if (!Capacitor.isNativePlatform()) {
-      alert("OCR is only available on Android/iOS devices.");
+      alert(t('loyalty.mobile_only_ocr'));
       return;
     }
 
@@ -194,7 +194,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
       }
     } catch (e) {
       console.error("OCR error:", e);
-      alert("Failed to recognize text. Try taking a clearer photo.");
+      alert(t('loyalty.ocr_error'));
     }
   };
 
@@ -272,7 +272,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
     e.stopPropagation();
     if (!id) return;
     
-    if (window.confirm('Are you sure you want to delete this card?')) {
+    if (window.confirm(t('loyalty.remove_confirm'))) {
       try {
         await loyaltyService.deleteCard(id);
         if (initialCard) {
@@ -282,7 +282,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
         }
       } catch (err) {
         console.error("Delete error:", err);
-        alert("Failed to delete card. Please try again.");
+        alert(t('loyalty.delete_error'));
       }
     }
   };
@@ -424,7 +424,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                         type="submit"
                         className="flex-1 py-4 bg-emerald-500 text-white font-bold rounded-2xl shadow-lg shadow-emerald-200"
                       >
-                        {t('loyalty.save_changes', 'Save Changes')}
+                        {t('loyalty.save_changes')}
                       </button>
                     </div>
                   </form>
@@ -679,7 +679,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
               </div>
             </div>
             <div className="absolute bottom-12 w-full text-center px-8">
-              <p className="text-xl font-black text-stone-300 uppercase tracking-[0.3em]">{t('common.tap_to_close', 'Tap X to close')}</p>
+              <p className="text-xl font-black text-stone-300 uppercase tracking-[0.3em]">{t('loyalty.tap_to_close', 'Tap X to close')}</p>
             </div>
           </motion.div>
         )}

@@ -73,7 +73,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
   };
 
   const handleDelete = async (storeId: string) => {
-    if (!window.confirm("Are you sure you want to permanently delete this store? This cannot be undone.")) return;
+    if (!window.confirm(t('admin.delete_confirm'))) return;
     setProcessingId(storeId);
     try {
       await storeService.deleteStore(storeId);
@@ -107,7 +107,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
               <h2 className="text-2xl font-black text-stone-900 tracking-tight">
                 {t('admin.manage_stores', 'Store Management')}
               </h2>
-              <p className="text-stone-400 text-sm font-medium">Verify and moderate store applications</p>
+              <p className="text-stone-400 text-sm font-medium">{t('admin.moderate_subtitle')}</p>
             </div>
           </div>
           <button
@@ -127,7 +127,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
               activeTab === 'pending' ? "text-amber-600" : "text-stone-400 hover:text-stone-600"
             )}
           >
-            Pending Applications
+            {t('admin.pending_tab')}
             {activeTab === 'pending' && (
               <motion.div layoutId="admintab" className="absolute bottom-0 left-0 right-0 h-1 bg-amber-600 rounded-full" />
             )}
@@ -139,7 +139,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
               activeTab === 'all' ? "text-stone-900" : "text-stone-400 hover:text-stone-600"
             )}
           >
-            All Stores
+            {t('admin.all_stores_tab')}
             {activeTab === 'all' && (
               <motion.div layoutId="admintab" className="absolute bottom-0 left-0 right-0 h-1 bg-stone-900 rounded-full" />
             )}
@@ -151,7 +151,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <div className="w-10 h-10 border-4 border-stone-100 border-t-amber-500 rounded-full animate-spin" />
-              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">Syncing data...</p>
+              <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('admin.syncing')}</p>
             </div>
           ) : stores.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-stone-50 rounded-[2rem] border-2 border-dashed border-stone-100">
@@ -159,8 +159,8 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                 <Check className="w-8 h-8 text-emerald-500" />
               </div>
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-stone-900">Nothing here!</h3>
-                <p className="text-stone-400 text-sm">No stores found in this category.</p>
+                <h3 className="text-lg font-bold text-stone-900">{t('admin.nothing_here')}</h3>
+                <p className="text-stone-400 text-sm">{t('admin.no_stores_found')}</p>
               </div>
             </div>
           ) : (
@@ -179,27 +179,27 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                         store.status === 'pending' ? "bg-amber-50 text-amber-600" :
                         "bg-rose-50 text-rose-600"
                       )}>
-                        {store.status}
+                        {t(`merchant.status.${store.status}`)}
                       </span>
                       <span className="px-3 py-1 bg-stone-50 text-stone-600 text-[10px] font-black uppercase tracking-widest rounded-full">
-                        {store.category}
+                        {t(`merchant.categories.${store.category.toLowerCase()}`)}
                       </span>
-                      <span className="text-[10px] text-stone-300 font-mono">ID: {store.id}</span>
+                      <span className="text-[10px] text-stone-300 font-mono">{t('admin.id_label')}: {store.id}</span>
                     </div>
                     
                     <div>
                       <h4 className="text-lg font-bold text-stone-900">{store.name}</h4>
-                      <p className="text-stone-500 text-sm leading-relaxed truncate max-w-md">{store.description || 'No description provided.'}</p>
+                      <p className="text-stone-500 text-sm leading-relaxed truncate max-w-md">{store.description || t('admin.no_description')}</p>
                     </div>
 
                     <div className="flex flex-wrap gap-4 pt-1">
                       <div className="flex items-center gap-1.5 text-stone-400 text-xs font-bold">
                         <UserIcon className="w-3.5 h-3.5" />
-                        <span>Owner: {store.ownerId.slice(0, 8)}...</span>
+                        <span>{t('admin.owner_label', { id: store.ownerId.slice(0, 8) })}...</span>
                       </div>
                       <div className="flex items-center gap-1.5 text-stone-400 text-xs font-bold">
                         <MapPin className="w-3.5 h-3.5" />
-                        <span>Local Store</span>
+                        <span>{t('admin.local_store')}</span>
                       </div>
                     </div>
                   </div>
@@ -213,7 +213,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                           className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-stone-600 font-bold hover:bg-stone-50 rounded-2xl transition-all disabled:opacity-50"
                         >
                           <Settings className="w-5 h-5" />
-                          <span>Edit</span>
+                          <span>{t('admin.edit')}</span>
                         </button>
                         <button
                           disabled={!!processingId}
@@ -221,7 +221,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                           className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-rose-600 font-bold hover:bg-rose-50 rounded-2xl transition-all disabled:opacity-50"
                         >
                           <XCircle className="w-5 h-5" />
-                          <span>Reject</span>
+                          <span>{t('admin.reject')}</span>
                         </button>
                         <button
                           disabled={!!processingId}
@@ -233,7 +233,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                           ) : (
                             <Check className="w-5 h-5" />
                           )}
-                          <span>Approve</span>
+                          <span>{t('admin.approve')}</span>
                         </button>
                       </>
                     )}
@@ -246,7 +246,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                           className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-stone-50 text-stone-600 font-bold hover:bg-stone-100 rounded-2xl transition-all disabled:opacity-50"
                         >
                           <Settings className="w-5 h-5" />
-                          <span>Edit</span>
+                          <span>{t('admin.edit')}</span>
                         </button>
                         <button
                           disabled={!!processingId}
@@ -254,7 +254,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
                           className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 text-rose-600 font-bold hover:bg-rose-50 rounded-2xl transition-all disabled:opacity-50"
                         >
                           <Trash2 className="w-5 h-5" />
-                          <span>Delete</span>
+                          <span>{t('admin.delete')}</span>
                         </button>
                       </>
                     )}
@@ -269,7 +269,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
         <div className="p-6 bg-stone-50 border-t border-stone-100 flex items-center gap-3 px-8 shrink-0">
           <AlertCircle className="w-4 h-4 text-stone-400" />
           <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
-            Admins can moderate all stores. Owners can only manage their own verified stores.
+            {t('admin.footer_info')}
           </p>
         </div>
       </motion.div>
