@@ -4,6 +4,7 @@ import { X, ShoppingBag, Store as StoreIcon, Send, CheckCircle2 } from 'lucide-r
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { Store } from '../types';
+import { cn } from '../lib/utils';
 
 interface MerchantRegistrationModalProps {
   userId: string;
