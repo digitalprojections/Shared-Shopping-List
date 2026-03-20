@@ -126,6 +126,7 @@ export interface StoreProduct {
   saleStart?: number;
   saleEnd?: number;
   likesCount: number;
+  imageUrl?: string;
   createdAt: number;
   updatedAt: number;
 }

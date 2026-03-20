@@ -16,7 +16,11 @@ import {
   Clock,
   ExternalLink,
   ShieldCheck,
-  Info
+  Info,
+  LayoutGrid,
+  List,
+  SortAsc,
+  History
 } from 'lucide-react';
 import { Store, StoreProduct, DAYS_OF_WEEK, DayKey, DailySchedule } from '../types';
 import { storeService } from '../services/storeService';
@@ -36,6 +40,8 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [addedItemIds, setAddedItemIds] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'newest' | 'alpha'>('newest');
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -58,11 +64,16 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
   useEffect(() => {
     if (store) {
       const unsubscribe = storeService.subscribeToStoreProducts(store.id, (data) => {
-        setProducts(data);
+        // Apply sorting
+        const sorted = [...data].sort((a, b) => {
+          if (sortBy === 'alpha') return a.name.localeCompare(b.name);
+          return (b.createdAt || 0) - (a.createdAt || 0); // Newest first
+        });
+        setProducts(sorted);
       });
       return () => unsubscribe();
     }
-  }, [store]);
+  }, [store, sortBy]);
 
   const handleAdd = (product: StoreProduct) => {
     if (onAddProductToList) {
@@ -266,10 +277,46 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
 
           {/* Products Section */}
           <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h3 className="text-2xl font-black text-stone-900 tracking-tight">{t('store_front.products')}</h3>
-              <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                {t('store_front.items_available', { count: products.length })}
+              <div className="flex items-center gap-2">
+                {/* View Mode Toggle */}
+                <div className="flex bg-stone-100 p-1 rounded-xl">
+                  <button 
+                    onClick={() => setViewMode('grid')}
+                    className={cn("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                  >
+                    <LayoutGrid className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setViewMode('list')}
+                    className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                  >
+                    <List className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                {/* Sort Toggle */}
+                <div className="flex bg-stone-100 p-1 rounded-xl">
+                  <button 
+                    onClick={() => setSortBy('newest')}
+                    className={cn("p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'newest' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                  >
+                    <History className="w-3.5 h-3.5" />
+                    <span className="text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_newest', 'Newest')}</span>
+                  </button>
+                  <button 
+                    onClick={() => setSortBy('alpha')}
+                    className={cn("p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'alpha' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                  >
+                    <SortAsc className="w-3.5 h-3.5" />
+                    <span className="text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_alpha', 'A-Z')}</span>
+                  </button>
+                </div>
+
+                <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest h-9 flex items-center">
+                  {t('store_front.items_available', { count: products.length })}
+                </div>
               </div>
             </div>
 
@@ -279,15 +326,30 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                  <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('store_front.no_items')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className={cn(
+                "grid gap-6",
+                viewMode === 'grid' 
+                  ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
+                  : "grid-cols-1 max-w-3xl mx-auto w-full"
+              )}>
                 {products.map(product => (
                   <motion.div
                     key={product.id}
                     layout
-                    className="p-5 bg-white border border-stone-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-indigo-50/50 hover:border-indigo-100 transition-all flex flex-col gap-4 group"
+                    className={cn(
+                      "p-5 bg-white border border-stone-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-indigo-50/50 hover:border-indigo-100 transition-all flex gap-4 group",
+                      viewMode === 'grid' ? "flex-col" : "flex-row items-center"
+                    )}
                   >
-                    <div className="relative aspect-square bg-stone-50 rounded-[1.8rem] flex items-center justify-center overflow-hidden">
-                       <ShoppingBag className="w-10 h-10 text-stone-200 transition-transform group-hover:scale-110 duration-500" />
+                    <div className={cn(
+                      "relative bg-stone-50 rounded-[1.8rem] flex items-center justify-center overflow-hidden shrink-0",
+                      viewMode === 'grid' ? "aspect-square w-full" : "w-24 h-24"
+                    )}>
+                       {product.imageUrl ? (
+                         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+                       ) : (
+                         <ShoppingBag className="w-10 h-10 text-stone-200 transition-transform group-hover:scale-110 duration-500" />
+                       )}
                        <div className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-stone-100">
                          <span className="text-[10px] font-black text-stone-900">{t('common.currency_symbol')}{product.price.toFixed(2)}</span>
                        </div>
@@ -300,16 +362,20 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                        )}
                     </div>
                     
-                    <div className="space-y-1">
+                    <div className="flex-1 space-y-1 min-w-0">
                       <h4 className="font-bold text-stone-900 text-sm truncate">{product.name}</h4>
                       <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest truncate">{t(`merchant.categories.${product.category?.toLowerCase() || 'grocery'}`)}</p>
+                      {viewMode === 'list' && product.description && (
+                        <p className="text-stone-400 text-xs line-clamp-1 mt-1 font-medium">{product.description}</p>
+                      )}
                     </div>
 
                     <button
                       disabled={!product.inStock || addedItemIds.has(product.id)}
                       onClick={() => handleAdd(product)}
                       className={cn(
-                        "w-full py-3 rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2",
+                        "rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shrink-0 h-12",
+                        viewMode === 'grid' ? "w-full py-3" : "px-6 py-3",
                         addedItemIds.has(product.id) ? "bg-emerald-500 text-white shadow-emerald-100" :
                         product.inStock ? "bg-stone-900 text-white hover:bg-indigo-600 shadow-xl shadow-stone-100" : "bg-stone-100 text-stone-400 cursor-not-allowed"
                       )}
@@ -317,12 +383,12 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                       { addedItemIds.has(product.id) ? (
                         <>
                           <Check className="w-3.5 h-3.5 stroke-[3px]" />
-                          <span>{t('store_front.added')}</span>
+                          <span className={cn(viewMode === 'list' && "hidden sm:inline")}>{t('store_front.added')}</span>
                         </>
                       ) : (
                         <>
                           <Plus className="w-3.5 h-3.5 stroke-[3px]" />
-                          <span>{t('store_front.add_to_list')}</span>
+                          <span className={cn(viewMode === 'list' && "hidden sm:inline")}>{t('store_front.add_to_list')}</span>
                         </>
                       )}
                     </button>

@@ -15,7 +15,8 @@ import {
   writeBatch,
   setDoc
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured, auth, cleanObject } from '../lib/firebase';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, isFirebaseConfigured, auth, cleanObject, storage } from '../lib/firebase';
 import { Store, StoreProduct } from '../types';
 
 export const storeService = {
@@ -136,6 +137,14 @@ export const storeService = {
       const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as StoreProduct));
       callback(products);
     });
+  },
+
+  uploadProductImage: async (storeId: string, file: File) => {
+    if (!isFirebaseConfigured || !storage) return null;
+    const fileName = `${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, `images/${storeId}/${fileName}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
   },
 
   // Discovery

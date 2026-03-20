@@ -14,13 +14,20 @@ import {
   Loader2, 
   Save, 
   Box, 
-  AlertCircle 
+  AlertCircle,
+  Image as ImageIcon,
+  Camera,
+  LayoutGrid,
+  List,
+  SortAsc,
+  History
 } from 'lucide-react';
 import { Store, StoreProduct } from '../types';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { STORE_CATEGORIES, PRODUCT_CATEGORIES } from '../constants/categories';
+import { shrinkImage } from '../lib/imageUtils';
 
 
 interface ProductManagerProps {
@@ -36,6 +43,8 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
   const [editingProduct, setEditingProduct] = useState<StoreProduct | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [sortBy, setSortBy] = useState<'newest' | 'alpha'>('newest');
   
   // Form State
   const [formData, setFormData] = useState({
@@ -45,8 +54,11 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
     inStock: true,
     category: 'General',
     saleStart: '',
-    saleEnd: ''
+    saleEnd: '',
+    imageUrl: ''
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -65,10 +77,23 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
       inStock: true,
       category: 'General',
       saleStart: '',
-      saleEnd: ''
+      saleEnd: '',
+      imageUrl: ''
     });
+    setImageFile(null);
+    setImagePreview('');
     setEditingProduct(null);
     setShowAddForm(false);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,7 +102,22 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
 
     setIsSubmitting(true);
     try {
-      const submissionData: any = { ...formData };
+      let finalImageUrl = formData.imageUrl;
+
+      // Handle image upload with shrinking
+      if (imageFile) {
+        console.log("[ProductManager] Original size:", (imageFile.size / 1024).toFixed(2), "KB");
+        const shrunkBlob = await shrinkImage(imageFile, 600, 600, 0.8);
+        const shrunkFile = new File([shrunkBlob], imageFile.name, { type: 'image/jpeg' });
+        console.log("[ProductManager] Shrunk size:", (shrunkFile.size / 1024).toFixed(2), "KB");
+
+        finalImageUrl = await storeService.uploadProductImage(store.id, shrunkFile) || '';
+      }
+
+      const submissionData: any = { 
+        ...formData,
+        imageUrl: finalImageUrl
+      };
       
       // Remove empty strings to prevent Firestore 'undefined' error
       if (formData.saleStart) {
@@ -123,17 +163,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
       inStock: product.inStock,
       category: product.category || 'General',
       saleStart: product.saleStart ? new Date(product.saleStart).toISOString().split('T')[0] : '',
-      saleEnd: product.saleEnd ? new Date(product.saleEnd).toISOString().split('T')[0] : ''
+      saleEnd: product.saleEnd ? new Date(product.saleEnd).toISOString().split('T')[0] : '',
+      imageUrl: product.imageUrl || ''
     });
+    setImagePreview(product.imageUrl || '');
     setShowAddForm(true);
   };
-
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         p.description?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   const categoryTabs = [
     { key: 'all', label: t('merchant.categories.all'), value: 'All' },
@@ -143,6 +178,18 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
       value: cat.value
     }))
   ];
+
+  const sortedProducts = [...products].sort((a, b) => {
+    if (sortBy === 'alpha') return a.name.localeCompare(b.name);
+    return (b.createdAt || 0) - (a.createdAt || 0);
+  });
+
+  const filteredProducts = sortedProducts.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         p.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = activeCategory === 'All' || p.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <motion.div
@@ -179,7 +226,39 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
           </div>
 
           <div className="flex items-center gap-4 h-12">
-            <div className="relative flex-1 md:w-80 group h-full">
+            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 h-full">
+              <button 
+                onClick={() => setViewMode('grid')}
+                className={cn("p-2 px-3 rounded-xl transition-all flex items-center gap-2", viewMode === 'grid' ? "bg-emerald-500 text-stone-900 shadow-lg" : "text-stone-500 hover:text-white")}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">{t('common.grid', 'Grid')}</span>
+              </button>
+              <button 
+                onClick={() => setViewMode('list')}
+                className={cn("p-2 px-3 rounded-xl transition-all flex items-center gap-2", viewMode === 'list' ? "bg-emerald-500 text-stone-900 shadow-lg" : "text-stone-500 hover:text-white")}
+              >
+                <List className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">{t('common.list', 'List')}</span>
+              </button>
+            </div>
+
+            <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 h-full">
+              <button 
+                onClick={() => setSortBy('newest')}
+                className={cn("p-2 px-3 rounded-xl transition-all flex items-center gap-2", sortBy === 'newest' ? "bg-white/10 text-white" : "text-stone-500")}
+              >
+                <History className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={() => setSortBy('alpha')}
+                className={cn("p-2 px-3 rounded-xl transition-all flex items-center gap-2", sortBy === 'alpha' ? "bg-emerald-500 text-stone-900" : "text-stone-500")}
+              >
+                <SortAsc className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="relative flex-1 md:w-80 group h-full hidden lg:block">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-500 group-focus-within:text-emerald-400 transition-colors" />
               <input
                 type="text"
@@ -255,7 +334,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
           ) : (
             <motion.div 
               layout
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-8"
+              className={cn(
+                "grid gap-8",
+                viewMode === 'grid' 
+                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6" 
+                  : "grid-cols-1 max-w-5xl mx-auto"
+              )}
             >
               {filteredProducts.map((product) => (
                 <motion.div
@@ -264,14 +348,18 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ y: -8, scale: 1.02 }}
-                  className="group bg-white rounded-[2.5rem] p-7 shadow-sm border border-stone-100 hover:shadow-3xl hover:shadow-stone-200/60 transition-all flex flex-col gap-6 relative overflow-hidden"
+                  whileHover={viewMode === 'grid' ? { y: -8, scale: 1.02 } : { x: 8 }}
+                  className={cn(
+                    "group bg-white rounded-[2.5rem] p-7 shadow-sm border border-stone-100 hover:shadow-3xl hover:shadow-stone-200/60 transition-all flex relative overflow-hidden",
+                    viewMode === 'grid' ? "flex-col gap-6" : "flex-row items-center gap-8"
+                  )}
                 >
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/[0.02] group-hover:to-transparent transition-all duration-700" />
                   
                   {/* Status Badge */}
                   <div className={cn(
-                    "absolute top-6 right-6 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
+                    "absolute px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border z-10",
+                    viewMode === 'grid' ? "top-6 right-6" : "top-2 right-2 scale-75",
                     product.inStock 
                       ? "bg-emerald-50 text-emerald-600 border-emerald-100" 
                       : "bg-rose-50 text-rose-500 border-rose-100"
@@ -279,37 +367,29 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     {product.inStock ? t('merchant.in_stock') : t('merchant.out_of_stock')}
                   </div>
                   
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between shrink-0">
                     <div className={cn(
-                      "w-20 h-20 rounded-3xl flex items-center justify-center transition-all duration-700 bg-stone-50 group-hover:bg-emerald-500 group-hover:rotate-6 shadow-sm group-hover:shadow-emerald-200 group-hover:shadow-xl",
+                      "rounded-3xl flex items-center justify-center transition-all duration-700 bg-stone-50 group-hover:bg-emerald-500 group-hover:rotate-6 shadow-sm group-hover:shadow-emerald-200 group-hover:shadow-xl overflow-hidden",
+                      viewMode === 'grid' ? "w-20 h-20" : "w-16 h-16",
                       !product.inStock && "grayscale opacity-50"
                     )}>
-                      <ShoppingBag className={cn(
-                        "w-10 h-10 transition-all duration-700",
-                        product.inStock ? "text-stone-300 group-hover:text-white" : "text-stone-400"
-                      )} />
-                    </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300">
-                      <button
-                        onClick={() => startEdit(product)}
-                        className="p-3 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-all shadow-lg"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(product.id)}
-                        className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all shadow-lg"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <ShoppingBag className={cn(
+                          "transition-all duration-700",
+                          viewMode === 'grid' ? "w-10 h-10" : "w-8 h-8",
+                          product.inStock ? "text-stone-300 group-hover:text-white" : "text-stone-400"
+                        )} />
+                      )}
                     </div>
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 flex-1 min-w-0">
                     <h4 className="text-lg font-black text-stone-900 group-hover:text-emerald-600 transition-colors line-clamp-1">
                       {product.name}
                     </h4>
-                    <p className="text-stone-400 text-sm font-medium line-clamp-2 leading-relaxed min-h-[2.5rem]">
+                    <p className="text-stone-400 text-sm font-medium line-clamp-2 leading-relaxed">
                       {product.description || t('product_manager.no_description')}
                     </p>
                     <div className="flex items-center gap-2 pt-1">
@@ -319,7 +399,10 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     </div>
                   </div>
 
-                  <div className="mt-auto pt-6 border-t border-stone-50 flex items-center justify-between">
+                  <div className={cn(
+                    "mt-auto flex items-center justify-between",
+                    viewMode === 'grid' ? "pt-6 border-t border-stone-50" : "shrink-0 gap-6"
+                  )}>
                     <div className="flex flex-col">
                       <span className="text-[10px] font-black text-stone-300 uppercase tracking-widest leading-none mb-1">{t('product_manager.price')}</span>
                       <span className="text-2xl font-black text-stone-900 tracking-tight">
@@ -328,17 +411,33 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                       </span>
                     </div>
                     
-                    <button
-                      onClick={() => storeService.updateProduct(product.id, { inStock: !product.inStock })}
-                      className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all border-2",
-                        product.inStock 
-                          ? "bg-white border-emerald-100 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500" 
-                          : "bg-white border-stone-200 text-stone-300 hover:border-rose-500 hover:text-rose-500"
-                      )}
-                    >
-                      <Check className="w-6 h-6 stroke-[3px]" />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                        <button
+                          onClick={() => startEdit(product)}
+                          className="p-3 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-all shadow-lg"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(product.id)}
+                          className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all shadow-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => storeService.updateProduct(product.id, { inStock: !product.inStock })}
+                        className={cn(
+                          "w-12 h-12 rounded-2xl flex items-center justify-center transition-all border-2",
+                          product.inStock 
+                            ? "bg-white border-emerald-100 text-emerald-500 hover:bg-emerald-500 hover:text-white hover:border-emerald-500" 
+                            : "bg-white border-stone-200 text-stone-300 hover:border-rose-500 hover:text-rose-500"
+                        )}
+                      >
+                        <Check className="w-6 h-6 stroke-[3px]" />
+                      </button>
+                    </div>
                   </div>
                 </motion.div>
               ))}
@@ -388,6 +487,31 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
               <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
                 <div className="flex-1 overflow-y-auto no-scrollbar">
                   <div className="p-8 space-y-8">
+                    <div className="flex flex-col items-center gap-6">
+                      <div className="relative w-40 h-40 bg-stone-50 rounded-[2rem] border-2 border-dashed border-stone-200 flex items-center justify-center overflow-hidden group/img cursor-pointer hover:border-emerald-400 transition-all">
+                        {imagePreview ? (
+                          <>
+                            <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                              <Camera className="w-8 h-8 text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center p-4">
+                            <ImageIcon className="w-8 h-8 text-stone-300 mx-auto mb-2" />
+                            <span className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{t('product_manager.add_image', 'Add Image')}</span>
+                          </div>
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageChange}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                      </div>
+                      <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest">{t('product_manager.image_hint', 'Max 1MB • 800x800 recommended')}</p>
+                    </div>
+
                     <div className="space-y-2">
                       <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.title_label')}</label>
                       <input
