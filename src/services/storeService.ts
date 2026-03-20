@@ -15,7 +15,7 @@ import {
   writeBatch,
   setDoc
 } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, isFirebaseConfigured, auth, cleanObject, storage } from '../lib/firebase';
 import { Store, StoreProduct } from '../types';
 
@@ -122,8 +122,28 @@ export const storeService = {
     }));
   },
 
-  deleteProduct: async (productId: string) => {
+  deleteProduct: async (productId: string, imageUrl?: string) => {
     if (!isFirebaseConfigured) return;
+    
+    // 1. Delete image from storage if it exists
+    if (imageUrl && storage) {
+      try {
+        // Firebase Storage URLs contain the full path between /o/ and ?alt=
+        // Example: .../o/images%2FstoreId%2FfileName.jpg?alt=media...
+        const decodedUrl = decodeURIComponent(imageUrl);
+        const pathMatch = decodedUrl.match(/\/o\/(.*?)\?/);
+        const pathPart = pathMatch ? pathMatch[1] : null;
+        
+        if (pathPart) {
+          const imageRef = ref(storage, pathPart);
+          await deleteObject(imageRef);
+          console.log("[StoreService] Product image deleted from storage:", pathPart);
+        }
+      } catch (error) {
+        console.error("[StoreService] Failed to delete product image:", error);
+      }
+    }
+
     await deleteDoc(doc(db, 'store_products', productId));
   },
 

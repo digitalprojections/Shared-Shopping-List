@@ -49,6 +49,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
   const [existingProductIds, setExistingProductIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'alpha'>('newest');
+  const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
 
   useEffect(() => {
     if (!activeListId) {
@@ -119,8 +120,9 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
         layout
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
+        onClick={() => setSelectedProduct(product)}
         className={cn(
-          "group bg-stone-50 rounded-[2rem] p-4 sm:p-6 hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/5 transition-all flex h-full relative overflow-hidden ring-1 ring-stone-100 hover:ring-indigo-100",
+          "group bg-stone-50 rounded-[2rem] p-4 sm:p-6 hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/5 transition-all flex h-full relative overflow-hidden ring-1 ring-stone-100 hover:ring-indigo-100 cursor-pointer",
           viewMode === 'grid' ? "flex-col gap-4" : "flex-row items-center gap-6"
         )}
       >
@@ -178,7 +180,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
             
             <button
               disabled={!product.inStock || addedItemIds.has(product.id) || existingProductIds.has(product.id)}
-              onClick={() => handleAdd(product)}
+              onClick={(e) => { e.stopPropagation(); handleAdd(product); }}
               className={cn(
                 "w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 group/btn overflow-hidden",
                 existingProductIds.has(product.id)
@@ -213,9 +215,156 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
 
   if (!store) return null;
 
+  const renderProductDetail = () => {
+    if (!selectedProduct) return null;
+    
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[200] bg-stone-900/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
+        onClick={() => setSelectedProduct(null)}
+      >
+        <motion.div
+          initial={{ y: '100%' }}
+          animate={{ y: 0 }}
+          exit={{ y: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="w-full max-w-2xl bg-white rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden flex flex-col max-h-[95vh] relative"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Header Image */}
+          <div className="relative h-72 sm:h-96 shrink-0 bg-stone-50">
+            {selectedProduct.imageUrl ? (
+              <img src={selectedProduct.imageUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <ShoppingBag className="w-20 h-20 text-stone-200" />
+              </div>
+            )}
+            <button
+               onClick={() => setSelectedProduct(null)}
+               className="absolute top-6 right-6 p-3 bg-black/20 backdrop-blur-md rounded-2xl text-white hover:bg-black/30 transition-all active:scale-90 shadow-xl z-20"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            
+            {/* Badges */}
+            <div className="absolute bottom-6 left-6 flex gap-2 z-20">
+               <span className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-stone-900 shadow-xl">
+                 {t(`merchant.categories.${selectedProduct.category?.toLowerCase() || 'grocery'}`)}
+               </span>
+               {!selectedProduct.inStock && (
+                 <span className="px-4 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
+                   {t('store_front.out_of_stock')}
+                 </span>
+               )}
+               {selectedProduct.likesCount > 0 && (
+                 <span className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 shadow-xl flex items-center gap-1.5">
+                   <Heart className="w-3.5 h-3.5 fill-current" />
+                   {selectedProduct.likesCount}
+                 </span>
+               )}
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-8 sm:p-12 space-y-8 no-scrollbar">
+            <div className="space-y-2">
+              <h2 className="text-3xl font-black text-stone-900 leading-tight">{selectedProduct.name}</h2>
+              <div className="flex items-center gap-4">
+                <span className="text-3xl font-black text-indigo-600">
+                   <span className="text-sm mr-1">{selectedProduct.currency || t('common.currency_symbol')}</span>
+                   {selectedProduct.price.toFixed(2)}
+                </span>
+                {existingProductIds.has(selectedProduct.id) && (
+                   <span className="px-4 py-1.5 bg-emerald-100 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                     <Check className="w-4 h-4 stroke-[4px]" />
+                     {t('store.in_list', 'In Your List')}
+                   </span>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-sm font-black text-stone-400 uppercase tracking-widest">{t('store_front.description', 'Description')}</h4>
+              <p className="text-stone-600 leading-relaxed font-medium text-lg">
+                {selectedProduct.description || t('store_front.no_description', 'No description available for this product.')}
+              </p>
+            </div>
+            
+            {(selectedProduct.saleStart || selectedProduct.saleEnd) && (
+              <div className="p-8 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100 space-y-4">
+                <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">{t('store.sale_info', 'Promotion Period')}</h4>
+                <div className="flex items-center gap-12">
+                  {selectedProduct.saleStart && (
+                    <div>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store.starts', 'Starts')}</p>
+                      <p className="font-bold text-indigo-900 text-lg">{new Date(selectedProduct.saleStart).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                  {selectedProduct.saleEnd && (
+                    <div>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store.ends', 'Ends')}</p>
+                      <p className="font-bold text-indigo-900 text-lg">{new Date(selectedProduct.saleEnd).toLocaleDateString()}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-4 pt-4">
+               <button className="flex-1 py-4 bg-stone-50 hover:bg-stone-100 rounded-2xl flex items-center justify-center gap-2 text-stone-600 font-bold transition-all active:scale-95 border border-stone-100">
+                  <Heart className="w-5 h-5" />
+                  <span className="text-sm uppercase tracking-widest">{t('store.like', 'Like')}</span>
+               </button>
+               <button className="flex-1 py-4 bg-stone-50 hover:bg-stone-100 rounded-2xl flex items-center justify-center gap-2 text-stone-600 font-bold transition-all active:scale-95 border border-stone-100">
+                  <Share2 className="w-5 h-5" />
+                  <span className="text-sm uppercase tracking-widest">{t('store.share', 'Share')}</span>
+               </button>
+            </div>
+          </div>
+
+          <div className="p-8 sm:p-12 border-t border-stone-100 bg-white shrink-0">
+            <button
+              disabled={!selectedProduct.inStock || addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id)}
+              onClick={(e) => { e.stopPropagation(); handleAdd(selectedProduct); setSelectedProduct(null); }}
+              className={cn(
+                "w-full py-7 rounded-[2.5rem] font-black flex items-center justify-center gap-4 transition-all active:scale-95 shadow-2xl",
+                existingProductIds.has(selectedProduct.id)
+                  ? "bg-emerald-100 text-emerald-600 cursor-default"
+                  : addedItemIds.has(selectedProduct.id)
+                  ? "bg-emerald-500 text-white shadow-emerald-200"
+                  : selectedProduct.inStock
+                  ? "bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300"
+                  : "bg-stone-100 text-stone-400 cursor-not-allowed"
+              )}
+            >
+               { (addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id)) ? (
+                <>
+                  <Check className="w-7 h-7 stroke-[4px]" />
+                  <span className="text-xl uppercase tracking-widest">{t('store.item_added', 'Added to List')}</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-7 h-7 stroke-[4px]" />
+                  <span className="text-xl uppercase tracking-widest">{t('store.add_to_list', 'Add to Shopping List')}</span>
+                </>
+              )}
+            </button>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
   return (
-    <motion.div
-      initial={{ x: '100%' }}
+    <div className="fixed inset-0 z-[150]">
+      <AnimatePresence mode="wait">
+        {selectedProduct && renderProductDetail()}
+      </AnimatePresence>
+      <motion.div
+        initial={{ x: '100%' }}
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', damping: 25, stiffness: 200 }}
@@ -482,5 +631,6 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
         </div>
       </div>
     </motion.div>
+    </div>
   );
 };

@@ -358,7 +358,17 @@
     "success_subtitle": "Coins are now available in your balance.",
     "mobile_only_subtitle": "Please open the app on your Android or iOS device to purchase coins.",
     "best_value": "Best Value",
-    "secure_payment": "Secure Payment via Google Play / App Store"
+    "secure_payment": "Secure Payment via Google Play / App Store",
+    "sale_info": "Promotion Period",
+    "starts": "Starts",
+    "ends": "Ends",
+    "in_list": "In Your List",
+    "item_added": "Added to List",
+    "add_to_list": "Add to Shopping List",
+    "items_in_list": "In Your Shopping List",
+    "ready_to_buy": "Items you added to your list",
+    "like": "Like",
+    "share": "Share"
   },
   "loyalty": {
     "title": "Point Cards",

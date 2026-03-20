@@ -152,10 +152,10 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
     }
   };
 
-  const handleDelete = async (productId: string) => {
+  const handleDelete = async (product: StoreProduct) => {
     if (!window.confirm(t('product_manager.delete_confirm'))) return;
     try {
-      await storeService.deleteProduct(productId);
+      await storeService.deleteProduct(product.id, product.imageUrl);
     } catch (error) {
       console.error("Error deleting product:", error);
     }
@@ -427,7 +427,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(product.id)}
+                          onClick={() => handleDelete(product)}
                           className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all shadow-lg"
                         >
                           <Trash2 className="w-4 h-4" />
