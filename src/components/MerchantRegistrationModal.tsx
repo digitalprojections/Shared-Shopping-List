@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShoppingBag, Store as StoreIcon, Send, CheckCircle2 } from 'lucide-react';
+import { X, ShoppingBag, Store as StoreIcon, Send, CheckCircle2, LocateFixed, Clock, Trash2 } from 'lucide-react';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
-import { Store } from '../types';
 import { cn } from '../lib/utils';
 import { STORE_CATEGORIES } from '../constants/categories';
+
+import { Store, DAYS_OF_WEEK, DayKey, DailySchedule } from '../types';
 
 interface MerchantRegistrationModalProps {
   userId: string;
@@ -41,7 +42,6 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
   const [address, setAddress] = useState(initialStore?.location?.address || '');
   const [category, setCategory] = useState(initialStore?.category || 'Grocery');
   const [description, setDescription] = useState(initialStore?.description || '');
-  const [workingHours, setWorkingHours] = useState(initialStore?.workingHours || '');
   const [openingDate, setOpeningDate] = useState(initialStore?.createdAt ? new Date(initialStore.createdAt).toISOString().split('T')[0] : '');
   const [contactPhone, setContactPhone] = useState(initialStore?.contactPhone || '');
   const [website, setWebsite] = useState(initialStore?.website || '');
@@ -49,9 +49,82 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
   const [mapLink, setMapLink] = useState('');
   const [lat, setLat] = useState<number>(initialStore?.location?.lat || 0);
   const [lng, setLng] = useState<number>(initialStore?.location?.lng || 0);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [permissionStatus, setPermissionStatus] = useState<PermissionState | 'unknown'>('unknown');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+
+  // Structured Working Hours
+  const [schedules, setSchedules] = useState<Record<DayKey, DailySchedule>>(() => {
+    const defaultSchedule = DAYS_OF_WEEK.reduce((acc, day) => ({
+      ...acc,
+      [day]: { isOpen: true, open: '08:00', close: '20:00' }
+    }), {} as Record<DayKey, DailySchedule>);
+
+    if (!initialStore?.workingHours) return defaultSchedule;
+
+    try {
+      // Try to parse if it was saved as JSON in some version, 
+      // otherwise we just return default to start fresh with the new standard
+      if (initialStore.workingHours.startsWith('{')) {
+        return JSON.parse(initialStore.workingHours);
+      }
+    } catch (e) {
+      console.warn("Failed to parse working hours JSON:", e);
+    }
+    return defaultSchedule;
+  });
+
+  const handleDayChange = (day: DayKey, updates: Partial<DailySchedule>) => {
+    setSchedules(prev => ({
+      ...prev,
+      [day]: { ...prev[day], ...updates }
+    }));
+  };
+
+  const detectLocation = () => {
+    if (!navigator.geolocation) {
+      setError(t('merchant.location_error', 'Geolocation is not supported by your browser'));
+      return;
+    }
+
+    setIsDetectingLocation(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setLat(latitude);
+        setLng(longitude);
+        console.log("[MerchantRegistration] Detected coordinates:", latitude, longitude);
+
+        // Try reverse geocoding to auto-fill address
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`);
+          const data = await response.json();
+          if (data && data.display_name && !address) {
+             setAddress(data.display_name);
+             console.log("[MerchantRegistration] Reverse geocoded address:", data.display_name);
+          }
+        } catch (e) {
+          console.warn("[MerchantRegistration] Reverse geocoding failed (optional step):", e);
+        }
+
+        setIsDetectingLocation(false);
+      },
+      (err) => {
+        console.error("[MerchantRegistration] Geolocation error code:", err.code, "message:", err.message);
+        let errorMsg = t('merchant.location_error', 'Failed to detect location.');
+        if (err.code === 1) errorMsg = t('merchant.location_denied', 'Permission denied. Please enable location access in your browser settings.');
+        if (err.code === 3) errorMsg = t('merchant.location_timeout', 'Location request timed out. Please try again.');
+        
+        setError(errorMsg);
+        setIsDetectingLocation(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   // Parse Google Maps link
   const parseMapLink = (link: string) => {
@@ -90,7 +163,19 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !address.trim()) {
+    console.log("[MerchantRegistration] Submit attempt:", { name, address, lat, lng });
+
+    // Name is always required. 
+    // Address is strictly required unless we have coordinates, in which case we provide a fallback.
+    if (!name.trim()) {
+      setError(t('merchant.name_required', 'Store name is required'));
+      setShake(true);
+      setTimeout(() => setShake(false), 500);
+      return;
+    }
+
+    if (!address.trim() && !lat) {
+      setError(t('merchant.location_required', 'Store address or location coordinates are required'));
       setShake(true);
       setTimeout(() => setShake(false), 500);
       return;
@@ -98,6 +183,11 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
 
     setStatus('submitting');
     setError(null);
+
+    // Serialize working hours to a readable string for displays, 
+    // but we could also store it as JSON string if we want strict standardization.
+    // For now, let's create a readable summary but keep the JSON structure internally if needed.
+    const workingHoursString = JSON.stringify(schedules);
 
     const storeData = {
       name: name.trim(),
@@ -108,7 +198,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
       },
       category,
       description: description.trim(),
-      workingHours: workingHours.trim(),
+      workingHours: workingHoursString,
       contactPhone: contactPhone.trim(),
       website: website.trim(),
       themeColor,
@@ -241,16 +331,36 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
                       {t('merchant.map_link', 'Map Location Link (Google Maps)')}
                     </label>
-                    <input
-                      type="text"
-                      value={mapLink}
-                      onChange={(e) => parseMapLink(e.target.value)}
-                      className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
-                      placeholder="https://maps.app.goo.gl/... or google.com/maps/place/..."
-                    />
+                    <div className="flex gap-2">
+                       <input
+                        type="text"
+                        value={mapLink}
+                        onChange={(e) => parseMapLink(e.target.value)}
+                        className="flex-1 px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
+                        placeholder="Paste Google Maps link..."
+                      />
+                      <button
+                        type="button"
+                        onClick={detectLocation}
+                        disabled={isDetectingLocation}
+                        className={cn(
+                          "px-5 rounded-2xl border-2 transition-all flex items-center justify-center gap-2",
+                          isDetectingLocation 
+                            ? "bg-stone-50 border-stone-100 text-stone-400" 
+                            : "bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100 active:scale-95"
+                        )}
+                        title={t('merchant.use_my_location')}
+                      >
+                        {isDetectingLocation ? (
+                          <div className="w-5 h-5 border-2 border-stone-200 border-t-stone-400 rounded-full animate-spin" />
+                        ) : (
+                          <LocateFixed className="w-5 h-5" />
+                        )}
+                      </button>
+                    </div>
                     <div className="flex gap-2 px-1">
                       <p className="text-[10px] text-stone-400">
-                        {t('merchant.map_link_help', 'Paste link to auto-fill coordinates')}
+                        {t('merchant.map_link_help', 'Paste link or use GPS to set coordinates')}
                       </p>
                       {lat !== 0 && (
                          <p className="text-[10px] text-emerald-500 font-bold ml-auto">
@@ -300,44 +410,76 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
-                        {t('merchant.working_hours')}
-                      </label>
-                      <input
-                        type="text"
-                        value={workingHours}
-                        onChange={(e) => setWorkingHours(e.target.value)}
-                        className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
-                        placeholder={t('merchant.working_hours_placeholder')}
-                      />
+                  <div className="space-y-4">
+                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1 flex items-center gap-2">
+                       <Clock className="w-4 h-4" />
+                       {t('merchant.working_hours')}
+                    </label>
+                    <div className="bg-stone-50 rounded-[2rem] p-4 border border-stone-100 space-y-3">
+                      {DAYS_OF_WEEK.map((day) => (
+                        <div key={day} className="flex items-center gap-4">
+                          <button
+                            type="button"
+                            onClick={() => handleDayChange(day, { isOpen: !schedules[day].isOpen })}
+                            className={cn(
+                              "w-24 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-center",
+                              schedules[day].isOpen ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "bg-white text-stone-300 border border-stone-100"
+                            )}
+                          >
+                            {t(`merchant.weekdays.${day}`).substring(0, 3)}
+                          </button>
+                          
+                          {schedules[day].isOpen ? (
+                            <div className="flex-1 flex items-center gap-2">
+                              <input
+                                type="time"
+                                value={schedules[day].open}
+                                onChange={(e) => handleDayChange(day, { open: e.target.value })}
+                                className="flex-1 px-3 py-2 bg-white border border-stone-100 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-all"
+                              />
+                              <span className="text-stone-300 font-bold">→</span>
+                              <input
+                                type="time"
+                                value={schedules[day].close}
+                                onChange={(e) => handleDayChange(day, { close: e.target.value })}
+                                className="flex-1 px-3 py-2 bg-white border border-stone-100 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-all"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex-1 text-center py-2 px-4 bg-stone-100/50 rounded-xl text-[10px] font-bold text-stone-300 uppercase tracking-widest leading-none flex items-center justify-center">
+                              {t('merchant.closed')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
                         {t('merchant.contact_phone')}
                       </label>
                       <input
-                        type="text"
+                        type="tel"
                         value={contactPhone}
                         onChange={(e) => setContactPhone(e.target.value)}
                         className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
                         placeholder={t('merchant.contact_phone_placeholder')}
                       />
                     </div>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
-                      {t('merchant.website_label')}
-                    </label>
-                    <input
-                      type="text"
-                      value={website}
-                      onChange={(e) => setWebsite(e.target.value)}
-                      className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
-                      placeholder={t('merchant.website_placeholder')}
-                    />
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
+                        {t('merchant.website_label')}
+                      </label>
+                      <input
+                        type="text"
+                        value={website}
+                        onChange={(e) => setWebsite(e.target.value)}
+                        className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
+                        placeholder={t('merchant.website_placeholder')}
+                      />
+                    </div>
                   </div>
 
                   <div className="space-y-3">

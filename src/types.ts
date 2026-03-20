@@ -106,6 +106,14 @@ export interface Store {
   logoUrl?: string;
 }
 
+export const DAYS_OF_WEEK = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+export type DayKey = typeof DAYS_OF_WEEK[number];
+
+export interface DailySchedule {
+  isOpen: boolean;
+  open: string;
+  close: string;
+}
 export interface StoreProduct {
   id: string;
   storeId: string;

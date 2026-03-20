@@ -59,7 +59,7 @@ export const storeService = {
       
       // Use setDoc with a manually generated ID to see if it bypasses the hang
       const newDocRef = doc(colRef);
-      console.log("[StoreService] Prepared ID:", newDocRef.id);
+      console.log("[StoreService] Prepared ID:", newDocRef.id, "Data:", store);
       
       await setDoc(newDocRef, {
         ...store,

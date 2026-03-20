@@ -260,7 +260,28 @@
       "butchery": "Butchery",
       "dairy": "Dairy",
       "general": "General"
-    }
+    },
+    "use_my_location": "Use My Current Location",
+    "detecting_location": "Detecting...",
+    "location_detected": "Location detected",
+    "location_error": "Failed to detect location",
+    "location_denied": "Location permission denied. Please allow access in browser settings.",
+    "location_timeout": "Location detection timed out. Please try again.",
+    "name_required": "Store name is required",
+    "location_required": "Please provide an address or detect your location",
+    "detected_location": "Detected via coordinates",
+    "weekdays": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    },
+    "hours_from": "Open From",
+    "hours_to": "Close At",
+    "closed": "Closed"
   },
   "product_manager": {
     "inventory_title": "Product Inventory",

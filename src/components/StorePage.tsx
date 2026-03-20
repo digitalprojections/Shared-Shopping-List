@@ -18,7 +18,7 @@ import {
   ShieldCheck,
   Info
 } from 'lucide-react';
-import { Store, StoreProduct } from '../types';
+import { Store, StoreProduct, DAYS_OF_WEEK, DayKey, DailySchedule } from '../types';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
@@ -76,6 +76,26 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
         });
       }, 2000);
     }
+  };
+
+  const formatWorkingHours = (hours?: string) => {
+    if (!hours) return t('store_front.hours_not_available', 'Hours not available');
+    
+    if (hours.startsWith('{')) {
+      try {
+        const schedules = JSON.parse(hours) as Record<DayKey, DailySchedule>;
+        return DAYS_OF_WEEK
+          .map(day => {
+            const sched = schedules[day];
+            const dayLabel = t(`merchant.weekdays.${day}`).substring(0, 3);
+            return sched.isOpen ? `${dayLabel}: ${sched.open}-${sched.close}` : `${dayLabel}: ${t('merchant.closed')}`;
+          })
+          .join(', ');
+      } catch (e) {
+        return hours;
+      }
+    }
+    return hours;
   };
 
   if (loading) {
@@ -215,7 +235,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                   <Clock className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-bold text-stone-700">{t('store_front.hours_label')}</p>
-                    <p className="text-sm text-stone-500 font-medium">{store.workingHours || 'Mon-Sat: 08:00 - 21:00'}</p>
+                    <p className="text-sm text-stone-500 font-medium">{formatWorkingHours(store.workingHours)}</p>
                   </div>
                 </div>
                  {store.contactPhone && (
