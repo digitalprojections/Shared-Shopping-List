@@ -43,7 +43,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
     description: '',
     price: 0,
     inStock: true,
-    category: 'General'
+    category: 'General',
+    saleStart: '',
+    saleEnd: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -61,7 +63,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
       description: '',
       price: 0,
       inStock: true,
-      category: 'General'
+      category: 'General',
+      saleStart: '',
+      saleEnd: ''
     });
     setEditingProduct(null);
     setShowAddForm(false);
@@ -73,10 +77,25 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
 
     setIsSubmitting(true);
     try {
-      if (editingProduct) {
-        await storeService.updateProduct(editingProduct.id, formData);
+      const submissionData: any = { ...formData };
+      
+      // Remove empty strings to prevent Firestore 'undefined' error
+      if (formData.saleStart) {
+        submissionData.saleStart = new Date(formData.saleStart).getTime();
       } else {
-        await storeService.addProduct(store.id, formData);
+        delete submissionData.saleStart;
+      }
+      
+      if (formData.saleEnd) {
+        submissionData.saleEnd = new Date(formData.saleEnd).getTime();
+      } else {
+        delete submissionData.saleEnd;
+      }
+
+      if (editingProduct) {
+        await storeService.updateProduct(editingProduct.id, submissionData);
+      } else {
+        await storeService.addProduct(store.id, submissionData);
       }
       resetForm();
     } catch (error) {
@@ -102,7 +121,9 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
       description: product.description || '',
       price: product.price,
       inStock: product.inStock,
-      category: product.category || 'General'
+      category: product.category || 'General',
+      saleStart: product.saleStart ? new Date(product.saleStart).toISOString().split('T')[0] : '',
+      saleEnd: product.saleEnd ? new Date(product.saleEnd).toISOString().split('T')[0] : ''
     });
     setShowAddForm(true);
   };
@@ -114,7 +135,14 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
     return matchesSearch && matchesCategory;
   });
 
-  const categories: string[] = ['All', ...Array.from(new Set<string>(products.map(p => p.category || 'General')))];
+  const categoryTabs = [
+    { key: 'all', label: t('merchant.categories.all'), value: 'All' },
+    ...PRODUCT_CATEGORIES.map(cat => ({
+      key: cat.key,
+      label: t(`merchant.categories.${cat.key}`),
+      value: cat.value
+    }))
+  ];
 
   return (
     <motion.div
@@ -174,19 +202,19 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
         {/* Categories Tab Bar */}
         <div className="w-full px-6 border-t border-white/5 bg-stone-900/50 backdrop-blur-md">
           <div className="flex gap-8 overflow-x-auto no-scrollbar">
-            {categories.map(cat => (
+            {categoryTabs.map(cat => (
               <button
-                key={cat}
-                onClick={() => setActiveCategory(cat || 'General')}
+                key={cat.key}
+                onClick={() => setActiveCategory(cat.value)}
                 className={cn(
                   "py-4 text-[10px] font-black uppercase tracking-[0.2em] whitespace-nowrap border-b-2 transition-all relative",
-                  activeCategory === cat 
+                  activeCategory === cat.value 
                     ? 'text-emerald-400 border-emerald-400' 
                     : 'text-stone-500 border-transparent hover:text-stone-300'
                 )}
               >
-                {cat === 'All' ? t('merchant.categories.all') : t(`merchant.categories.${cat.toLowerCase()}`)}
-                {activeCategory === cat && (
+                {cat.label}
+                {activeCategory === cat.value && (
                   <motion.div 
                     layoutId="activeTab"
                     className="absolute inset-x-0 bottom-0 h-0.5 bg-emerald-400"
@@ -357,93 +385,121 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                 </button>
               </div>
 
-              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto no-scrollbar">
-                <div className="p-8 space-y-8">
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.title_label')}</label>
-                    <input
-                      required
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder={t('product_manager.title_placeholder')}
-                      className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900 text-lg placeholder:text-stone-300"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-6">
+              <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                <div className="flex-1 overflow-y-auto no-scrollbar">
+                  <div className="p-8 space-y-8">
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.price')}</label>
-                      <div className="relative">
-                        <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.title_label')}</label>
+                      <input
+                        required
+                        type="text"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder={t('product_manager.title_placeholder')}
+                        className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900 text-lg placeholder:text-stone-300"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.price')}</label>
+                        <div className="relative">
+                          <DollarSign className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-emerald-500" />
+                          <input
+                            required
+                            type="number"
+                            step="0.01"
+                            value={formData.price}
+                            onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                            className="w-full pl-14 pr-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-black text-stone-900 text-2xl"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.category_label')}</label>
+                        <select
+                          value={formData.category}
+                          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                          className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900 h-[72px] appearance-none cursor-pointer"
+                        >
+                          {PRODUCT_CATEGORIES.map(cat => (
+                            <option key={cat.key} value={cat.value}>
+                              {t(`merchant.categories.${cat.key}`)}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">
+                          {t('product_manager.sale_start', 'Sale Start')}
+                        </label>
                         <input
-                          required
-                          type="number"
-                          step="0.01"
-                          value={formData.price}
-                          onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
-                          className="w-full pl-14 pr-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-black text-stone-900 text-2xl"
+                          type="date"
+                          value={formData.saleStart}
+                          onChange={(e) => setFormData({ ...formData, saleStart: e.target.value })}
+                          className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">
+                          {t('product_manager.sale_end', 'Sale End')}
+                        </label>
+                        <input
+                          type="date"
+                          value={formData.saleEnd}
+                          onChange={(e) => setFormData({ ...formData, saleEnd: e.target.value })}
+                          className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900"
                         />
                       </div>
                     </div>
+
                     <div className="space-y-2">
-                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.category_label')}</label>
-                      <select
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-bold text-stone-900 h-[72px] appearance-none cursor-pointer"
-                      >
-                        {PRODUCT_CATEGORIES.map(cat => (
-                          <option key={cat.key} value={cat.value}>
-                            {t(`merchant.categories.${cat.key}`)}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.desc_label')}</label>
-                    <textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder={t('product_manager.desc_placeholder')}
-                      className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-medium text-stone-800 resize-none h-40 leading-relaxed placeholder:text-stone-300"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-6 bg-stone-50 rounded-[2rem] border border-stone-100">
-                    <div>
-                      <h4 className="font-black text-stone-900 text-sm uppercase tracking-widest">{t('product_manager.available_stock')}</h4>
-                      <p className="text-xs text-stone-400 font-medium mt-1">{t('product_manager.visible_desc')}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setFormData({ ...formData, inStock: !formData.inStock })}
-                      className={cn(
-                        "w-16 h-9 rounded-full relative transition-all duration-300",
-                        formData.inStock ? "bg-emerald-500 shadow-lg shadow-emerald-500/20" : "bg-stone-200"
-                      )}
-                    >
-                      <motion.div
-                        animate={{ x: formData.inStock ? 28 : 4 }}
-                        className="w-7 h-7 bg-white rounded-full absolute top-1 shadow-sm"
+                      <label className="text-xs font-black text-stone-400 uppercase tracking-widest px-1">{t('product_manager.desc_label')}</label>
+                      <textarea
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        placeholder={t('product_manager.desc_placeholder')}
+                        className="w-full px-7 py-5 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-[2rem] outline-none transition-all font-medium text-stone-800 resize-none h-40 leading-relaxed placeholder:text-stone-300"
                       />
-                    </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-6 bg-stone-50 rounded-[2rem] border border-stone-100">
+                      <div>
+                        <h4 className="font-black text-stone-900 text-sm uppercase tracking-widest">{t('product_manager.available_stock')}</h4>
+                        <p className="text-xs text-stone-400 font-medium mt-1">{t('product_manager.visible_desc')}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, inStock: !formData.inStock })}
+                        className={cn(
+                          "w-16 h-9 rounded-full relative transition-all duration-300",
+                          formData.inStock ? "bg-emerald-500 shadow-lg shadow-emerald-500/20" : "bg-stone-200"
+                        )}
+                      >
+                        <motion.div
+                          animate={{ x: formData.inStock ? 28 : 4 }}
+                          className="w-7 h-7 bg-white rounded-full absolute top-1 shadow-sm"
+                        />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div className="p-10 border-t border-stone-100 bg-white flex gap-4">
+                <div className="p-8 border-t border-stone-100 bg-white shrink-0">
                   <button
                     type="submit"
                     disabled={isSubmitting || !formData.name}
-                    className="flex-1 py-7 bg-emerald-600 text-white font-black rounded-[2.5rem] shadow-2xl shadow-emerald-200 hover:bg-emerald-700 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
+                    className="w-full py-6 bg-emerald-600 text-white font-black rounded-[2.5rem] shadow-2xl shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
                   >
                     {isSubmitting ? <Loader2 className="w-7 h-7 animate-spin" /> : <Save className="w-7 h-7" />}
                     <span className="text-xl uppercase tracking-[0.15em]">{editingProduct ? t('product_manager.update_btn') : t('product_manager.add_inventory_btn')}</span>
                   </button>
                 </div>
               </form>
+
             </motion.div>
           </>
         )}

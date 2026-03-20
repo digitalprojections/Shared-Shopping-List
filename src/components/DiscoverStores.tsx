@@ -34,7 +34,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
   const [activeCategory, setActiveCategory] = useState('All');
 
   const categoryOptions = [
-    { key: 'all', label: t('discover_stores.categories.all'), value: 'All' },
+    { key: 'all', label: t('merchant.categories.all'), value: 'All' },
     ...STORE_CATEGORIES.map(cat => ({
       key: cat.key,
       label: t(`merchant.categories.${cat.key}`),

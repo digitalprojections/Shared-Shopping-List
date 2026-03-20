@@ -227,6 +227,9 @@
     "website_placeholder": "https://www.yourstore.com",
     "store_theme": "Store Theme",
     "desc_placeholder": "Tell users what you sell...",
+    "map_link": "Map Location Link",
+    "map_link_placeholder": "Paste Google Maps link here...",
+    "map_link_help": "Paste a Google Maps link to automatically set coordinates.",
     "local_store": "Local Store",
     "verified": "Verified Merchant",
     "status": {
@@ -281,6 +284,8 @@
     "visible_desc": "Visible to customers immediately",
     "update_btn": "Update Product",
     "add_inventory_btn": "Add to Inventory",
+    "sale_start": "Sale Start Date",
+    "sale_end": "Sale End Date",
     "warning_banner": "Catalogue updates are live immediately. Ensure accurate pricing and stock levels to maintain your verified Merchant status and prevent customer disputes.",
     "delete_confirm": "Are you sure you want to delete this product?"
   },
@@ -407,7 +412,6 @@
     "loading": "Finding stores near you...",
     "no_results": "No stores matching your search",
     "miles_away": "{{count}} miles away",
-    "all_categories": "All Categories",
     "footer": "Showing stores open within 10 miles of your current location."
   },
   "onboarding": {
