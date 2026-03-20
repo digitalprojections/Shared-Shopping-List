@@ -8,6 +8,7 @@ import {
   Share2, 
   ArrowLeft,
   ChevronRight,
+  ChevronDown,
   Plus,
   Check,
   Package,
@@ -20,13 +21,16 @@ import {
   LayoutGrid,
   List,
   SortAsc,
-  History
+  History,
+  Search
 } from 'lucide-react';
-import { Store, StoreProduct, DAYS_OF_WEEK, DayKey, DailySchedule } from '../types';
+import { Store, StoreProduct, ListItem } from '../types';
 import { storeService } from '../services/storeService';
 import { shoppingService } from '../services/shoppingService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
+import { StoreWorkingHours } from './StoreWorkingHours';
+
 
 interface StorePageProps {
   storeId: string;
@@ -106,25 +110,98 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
     }
   };
 
-  const formatWorkingHours = (hours?: string) => {
-    if (!hours) return t('store_front.hours_not_available', 'Hours not available');
+  const renderProductCard = (product: StoreProduct) => {
+    const isAdded = addedItemIds.has(product.id) || existingProductIds.has(product.id);
     
-    if (hours.startsWith('{')) {
-      try {
-        const schedules = JSON.parse(hours) as Record<DayKey, DailySchedule>;
-        return DAYS_OF_WEEK
-          .map(day => {
-            const sched = schedules[day];
-            const dayLabel = t(`merchant.weekdays.${day}`).substring(0, 3);
-            return sched.isOpen ? `${dayLabel}: ${sched.open}-${sched.close}` : `${dayLabel}: ${t('merchant.closed')}`;
-          })
-          .join(', ');
-      } catch (e) {
-        return hours;
-      }
-    }
-    return hours;
+    return (
+      <motion.div
+        key={product.id}
+        layout
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className={cn(
+          "group bg-stone-50 rounded-[2rem] p-4 sm:p-6 hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/5 transition-all flex h-full relative overflow-hidden ring-1 ring-stone-100 hover:ring-indigo-100",
+          viewMode === 'grid' ? "flex-col gap-4" : "flex-row items-center gap-6"
+        )}
+      >
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/[0.03] group-hover:to-transparent transition-all duration-700" />
+        
+        <div className={cn(
+          "relative rounded-[1.5rem] flex items-center justify-center transition-all bg-white shadow-sm overflow-hidden",
+          viewMode === 'grid' ? "w-full aspect-square" : "w-16 h-16 sm:w-20 sm:h-20 shrink-0"
+        )}>
+          {product.imageUrl ? (
+            <img src={product.imageUrl} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-stone-50">
+              <ShoppingBag className="w-8 h-8 text-stone-200 group-hover:scale-110 transition-transform duration-700" />
+            </div>
+          )}
+
+          {/* In List Badge Overlay */}
+          {existingProductIds.has(product.id) && (
+            <div className="absolute inset-0 bg-emerald-500/10 backdrop-blur-[1px] flex items-center justify-center z-10 group-hover:backdrop-blur-none transition-all">
+              <div className="bg-emerald-500 text-white p-2 rounded-full shadow-lg shadow-emerald-500/20 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
+                 <Check className="w-4 h-4 stroke-[4px]" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-2 flex-1 min-w-0 flex flex-col relative z-20">
+          <div className="flex-1">
+            <h4 className="font-bold text-stone-900 group-hover:text-indigo-600 transition-colors line-clamp-2 leading-tight">
+              {product.name}
+            </h4>
+            <div className="flex flex-wrap gap-1 mt-1">
+              <p className="text-stone-400 text-[9px] font-black uppercase tracking-wider bg-stone-100 px-2 py-0.5 rounded-full inline-block">
+                {t(`merchant.categories.${product.category?.toLowerCase() || 'grocery'}`)}
+              </p>
+              {!product.inStock && (
+                <p className="text-rose-500 text-[9px] font-black uppercase tracking-wider bg-rose-50 px-2 py-0.5 rounded-full inline-block">
+                  {t('store_front.out_of_stock')}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          <div className={cn(
+            "flex items-center justify-between pt-2 border-t border-stone-100 mt-2",
+            viewMode === 'list' && "pt-0 border-t-0 mt-0"
+          )}>
+            <div className="flex flex-col">
+              <span className="text-[14px] font-black text-stone-900 leading-none">
+                <span className="text-[10px] text-indigo-500 mr-0.5">{t('common.currency_symbol')}</span>
+                {product.price.toFixed(2)}
+              </span>
+            </div>
+            
+            <button
+              disabled={!product.inStock || addedItemIds.has(product.id) || existingProductIds.has(product.id)}
+              onClick={() => handleAdd(product)}
+              className={cn(
+                "w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 group/btn overflow-hidden",
+                existingProductIds.has(product.id)
+                  ? "bg-emerald-100 text-emerald-600 shadow-sm"
+                  : addedItemIds.has(product.id)
+                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200"
+                  : product.inStock
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700"
+                  : "bg-stone-100 text-stone-400 cursor-not-allowed"
+              )}
+            >
+              { (addedItemIds.has(product.id) || existingProductIds.has(product.id)) ? (
+                <Check className="w-4 h-4 stroke-[3px]" />
+              ) : (
+                <Plus className="w-5 h-5 group-hover/btn:scale-125 transition-transform" />
+              )}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
   };
+
 
   if (loading) {
     return (
@@ -263,7 +340,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                   <Clock className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-bold text-stone-700">{t('store_front.hours_label')}</p>
-                    <p className="text-sm text-stone-500 font-medium">{formatWorkingHours(store.workingHours)}</p>
+                    <StoreWorkingHours workingHours={store.workingHours} t={t} />
                   </div>
                 </div>
                  {store.contactPhone && (
@@ -336,86 +413,53 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                 </div>
               </div>
             </div>
-
             { products.length === 0 ? (
               <div className="py-20 text-center space-y-4 border-2 border-dashed border-stone-100 rounded-[2.5rem]">
                  <Package className="w-12 h-12 text-stone-100 mx-auto" />
                  <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('store_front.no_items')}</p>
               </div>
             ) : (
-              <div className={cn(
-                "grid gap-6",
-                viewMode === 'grid' 
-                  ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
-                  : "grid-cols-1 max-w-3xl mx-auto w-full"
-              )}>
-                {products.map(product => (
-                  <motion.div
-                    key={product.id}
-                    layout
-                    className={cn(
-                      "p-5 bg-white border border-stone-100 rounded-[2.5rem] shadow-sm hover:shadow-xl hover:shadow-indigo-50/50 hover:border-indigo-100 transition-all flex gap-4 group",
-                      viewMode === 'grid' ? "flex-col" : "flex-row items-center"
-                    )}
-                  >
-                    <div className={cn(
-                      "relative bg-stone-50 rounded-[1.8rem] flex items-center justify-center overflow-hidden shrink-0",
-                      viewMode === 'grid' ? "aspect-square w-full" : "w-24 h-24"
-                    )}>
-                       {product.imageUrl ? (
-                         <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
-                       ) : (
-                         <ShoppingBag className="w-10 h-10 text-stone-200 transition-transform group-hover:scale-110 duration-500" />
-                       )}
-                       {existingProductIds.has(product.id) && (
-                         <div className="absolute top-3 right-3 p-1.5 bg-emerald-500 text-white rounded-lg shadow-lg border border-white/20 z-10" title={t('store_front.in_your_list', 'In Your List')}>
-                           <Check className="w-3.5 h-3.5 stroke-[4px]" />
-                         </div>
-                       )}
-                       <div className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-stone-100">
-                         <span className="text-[10px] font-black text-stone-900">{t('common.currency_symbol')}{product.price.toFixed(2)}</span>
-                       </div>
-                       {!product.inStock && (
-                         <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex items-center justify-center">
-                            <span className="px-3 py-1 bg-stone-900 text-white text-[9px] font-black uppercase tracking-[0.2em] rounded-full">
-                              {t('store_front.out_of_stock')}
-                            </span>
-                         </div>
-                       )}
+              <div className="space-y-12">
+                {/* Items in list section */}
+                {products.some(p => existingProductIds.has(p.id)) && (
+                  <div className="bg-emerald-50/50 p-6 sm:p-8 rounded-[3rem] border border-emerald-100/50 space-y-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                        <Check className="w-6 h-6 text-white" />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-black text-stone-900 tracking-tight">{t('store.items_in_list', 'In Your Shopping List')}</h4>
+                        <p className="text-emerald-600/60 text-xs font-bold uppercase tracking-widest">
+                          {t('store.ready_to_buy', 'Items you added to your list')}
+                        </p>
+                      </div>
                     </div>
                     
-                    <div className="flex-1 space-y-1 min-w-0">
-                      <h4 className="font-bold text-stone-900 text-sm truncate">{product.name}</h4>
-                      <p className="text-stone-400 text-[10px] font-bold uppercase tracking-widest truncate">{t(`merchant.categories.${product.category?.toLowerCase() || 'grocery'}`)}</p>
-                      {viewMode === 'list' && product.description && (
-                        <p className="text-stone-400 text-xs line-clamp-1 mt-1 font-medium">{product.description}</p>
-                      )}
+                    <div className={cn(
+                      "grid gap-6",
+                      viewMode === 'grid' 
+                        ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
+                        : "grid-cols-1 max-w-3xl"
+                    )}>
+                      {products.filter(p => existingProductIds.has(p.id)).map(product => renderProductCard(product))}
                     </div>
+                  </div>
+                )}
 
-                    <button
-                      disabled={!product.inStock || addedItemIds.has(product.id) || existingProductIds.has(product.id)}
-                      onClick={() => handleAdd(product)}
-                      className={cn(
-                        "rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shrink-0 h-12",
-                        viewMode === 'grid' ? "w-full py-3" : "px-6 py-3",
-                        (addedItemIds.has(product.id) || existingProductIds.has(product.id)) ? "bg-emerald-500 text-white shadow-emerald-100" :
-                        product.inStock ? "bg-stone-900 text-white hover:bg-indigo-600 shadow-xl shadow-stone-100" : "bg-stone-100 text-stone-400 cursor-not-allowed"
-                      )}
-                    >
-                      { (addedItemIds.has(product.id) || existingProductIds.has(product.id)) ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 stroke-[4px]" />
-                          <span className={cn(viewMode === 'list' && "hidden sm:inline")}>{t('store_front.in_list', 'In List')}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5 stroke-[3px]" />
-                          <span className={cn(viewMode === 'list' && "hidden sm:inline")}>{t('store_front.add_to_list')}</span>
-                        </>
-                      )}
-                    </button>
-                  </motion.div>
-                ))}
+                {/* Main catalog */}
+                <div className="space-y-6">
+                  {products.some(p => existingProductIds.has(p.id)) && (
+                    <h4 className="text-sm font-black text-stone-400 uppercase tracking-widest px-2">{t('store_front.all_products', 'All Products')}</h4>
+                  )}
+                  <div className={cn(
+                    "grid gap-6",
+                    viewMode === 'grid' 
+                      ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
+                      : "grid-cols-1 max-w-3xl mx-auto w-full"
+                  )}>
+                    {products.map(product => renderProductCard(product))}
+                  </div>
+                </div>
               </div>
             )}
           </div>

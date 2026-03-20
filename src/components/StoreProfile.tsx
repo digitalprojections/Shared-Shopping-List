@@ -15,6 +15,7 @@ import { Store, StoreProduct } from '../types';
 import { storeService } from '../services/storeService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
+import { StoreWorkingHours } from './StoreWorkingHours';
 
 interface StoreProfileProps {
   store: Store;
@@ -108,6 +109,8 @@ export const StoreProfile: React.FC<StoreProfileProps> = ({ store, onBack }) => 
               {store.description || t('store_profile.no_description')}
             </p>
           </div>
+
+          <StoreWorkingHours workingHours={store.workingHours} />
         </section>
 
         {/* Products Grid */}
