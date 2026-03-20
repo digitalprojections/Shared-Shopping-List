@@ -42,3 +42,18 @@ export const db = dbInstance as Firestore;
 export const auth = authInstance as Auth;
 export const functions = functionsInstance as Functions;
 export const googleProvider = new GoogleAuthProvider();
+
+/**
+ * Removes undefined fields from an object to prevent Firestore validation errors.
+ * Firestore accepts null but throws errors for undefined.
+ */
+export function cleanObject<T extends object>(obj: T): T {
+  const result = { ...obj };
+  Object.keys(result).forEach((key) => {
+    if ((result as any)[key] === undefined) {
+      delete (result as any)[key];
+    }
+  });
+  return result;
+}
+

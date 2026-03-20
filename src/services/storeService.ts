@@ -15,7 +15,7 @@ import {
   writeBatch,
   setDoc
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured, auth } from '../lib/firebase';
+import { db, isFirebaseConfigured, auth, cleanObject } from '../lib/firebase';
 import { Store, StoreProduct } from '../types';
 
 export const storeService = {
@@ -31,7 +31,7 @@ export const storeService = {
       name: storeData.name || 'New Store',
       description: storeData.description || '',
       category: storeData.category || 'Grocery',
-      location: storeData.location,
+      location: storeData.location || null,
       workingHours: storeData.workingHours || '',
       contactPhone: storeData.contactPhone || '',
       website: storeData.website || '',
@@ -85,10 +85,10 @@ export const storeService = {
   updateStore: async (storeId: string, data: Partial<Store>) => {
     if (!isFirebaseConfigured) return;
     const storeRef = doc(db, 'stores', storeId);
-    await updateDoc(storeRef, {
+    await updateDoc(storeRef, cleanObject({
       ...data,
       updatedAt: Date.now()
-    });
+    }));
   },
 
   // Products
@@ -103,8 +103,8 @@ export const storeService = {
       inStock: productData.inStock ?? true,
       category: productData.category || 'General',
       likesCount: 0,
-      saleStart: productData.saleStart,
-      saleEnd: productData.saleEnd,
+      saleStart: productData.saleStart ?? null,
+      saleEnd: productData.saleEnd ?? null,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
@@ -114,10 +114,10 @@ export const storeService = {
   updateProduct: async (productId: string, data: Partial<StoreProduct>) => {
     if (!isFirebaseConfigured) return;
     const productRef = doc(db, 'store_products', productId);
-    await updateDoc(productRef, {
+    await updateDoc(productRef, cleanObject({
       ...data,
       updatedAt: Date.now()
-    });
+    }));
   },
 
   deleteProduct: async (productId: string) => {

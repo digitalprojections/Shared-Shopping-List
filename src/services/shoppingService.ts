@@ -15,7 +15,7 @@ import {
   writeBatch,
   arrayUnion
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../lib/firebase';
+import { db, isFirebaseConfigured, cleanObject } from '../lib/firebase';
 import { userService } from './userService';
 import { ShoppingList, ListItem, ShareLink, Permission } from '../types';
 
@@ -195,7 +195,7 @@ export const shoppingService = {
       // 1. Process Additions
       itemsToAdd.forEach(item => {
         const itemRef = doc(collection(db, 'lists', listId, 'items'));
-        batch.set(itemRef, { ...item, createdAt: Date.now() });
+        batch.set(itemRef, cleanObject({ ...item, createdAt: Date.now() }));
 
         // Track suggestion (best effort, batch.set doesn't support increment directly in set usually without more logic, but we can do it after)
       });
