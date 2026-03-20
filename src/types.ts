@@ -24,6 +24,9 @@ export interface ListItem {
   unit?: string;
   price?: number;
   category?: string;
+  storeId?: string;
+  storeName?: string;
+  productId?: string;
 }
 
 export interface ShareLink {

@@ -645,13 +645,36 @@ export default function App() {
     );
   }
 
-  const handleAddProductToList = async (product: StoreProduct) => {
-    if (!activeListId) {
-      alert("Please select a shopping list first!");
-      return;
+  const handleAddProductToList = async (product: StoreProduct, storeName?: string) => {
+    let targetListId = activeListId;
+
+    if (!targetListId) {
+      if (lists.length > 0) {
+        // Auto-select the first available list if none active
+        targetListId = lists[0].id;
+        setActiveListId(targetListId);
+      } else {
+        // Create a default list automatically if user has none
+        if (!user) return;
+        try {
+          const newListId = await shoppingService.createList(user.uid, t('dashboard.new_list_short'), '#10b981'); // Emerald color
+          if (newListId) {
+            targetListId = newListId;
+            setActiveListId(newListId);
+          } else {
+            alert(t('list_view.insufficient_coins'));
+            return;
+          }
+        } catch (error: any) {
+          console.error("Auto-create list failed:", error);
+          alert(error.message || t('dashboard.create_error'));
+          return;
+        }
+      }
     }
+
     try {
-      await shoppingService.syncListChanges(activeListId, user!.uid, [{
+      await shoppingService.syncListChanges(targetListId, user!.uid, [{
         name: product.name,
         emoji: '🛒',
         quantity: "1",
@@ -659,6 +682,9 @@ export default function App() {
         isBought: false,
         price: product.price,
         category: product.category || 'Store Item',
+        storeId: product.storeId,
+        storeName: storeName,
+        productId: product.id,
         createdAt: Date.now()
       }], [], [], 1, 0);
     } catch (error) {
@@ -979,6 +1005,7 @@ export default function App() {
             storeId={selectedStoreId}
             onClose={() => setSelectedStoreId(null)}
             onAddProductToList={handleAddProductToList}
+            activeListId={activeListId || undefined}
           />
         )}
       </AnimatePresence>
@@ -2131,6 +2158,12 @@ function ListView({
                   </span>
                   {item.quantity && (
                     <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">{item.quantity}</span>
+                  )}
+                  {item.storeName && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <MapPin className="w-3 h-3 text-stone-300" />
+                      <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{item.storeName}</span>
+                    </div>
                   )}
                 </div>
               </div>

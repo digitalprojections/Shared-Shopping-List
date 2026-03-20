@@ -24,24 +24,41 @@ import {
 } from 'lucide-react';
 import { Store, StoreProduct, DAYS_OF_WEEK, DayKey, DailySchedule } from '../types';
 import { storeService } from '../services/storeService';
+import { shoppingService } from '../services/shoppingService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 
 interface StorePageProps {
   storeId: string;
   onClose: () => void;
-  onAddProductToList?: (product: StoreProduct) => void;
+  onAddProductToList?: (product: StoreProduct, storeName?: string) => void;
+  activeListId?: string;
 }
 
-export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddProductToList }) => {
+export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddProductToList, activeListId }) => {
   const { t } = useTranslation();
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [following, setFollowing] = useState(false);
   const [addedItemIds, setAddedItemIds] = useState<Set<string>>(new Set());
+  const [existingProductIds, setExistingProductIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'alpha'>('newest');
+
+  useEffect(() => {
+    if (!activeListId) {
+      setExistingProductIds(new Set());
+      return;
+    }
+
+    const unsubscribe = shoppingService.subscribeToItems(activeListId, (items) => {
+      const ids = new Set(items.map(item => item.productId).filter(id => id !== undefined) as string[]);
+      setExistingProductIds(ids);
+    });
+
+    return () => unsubscribe();
+  }, [activeListId]);
 
   useEffect(() => {
     const fetchStore = async () => {
@@ -77,7 +94,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
 
   const handleAdd = (product: StoreProduct) => {
     if (onAddProductToList) {
-      onAddProductToList(product);
+      onAddProductToList(product, store?.name);
       setAddedItemIds(prev => new Set(prev).add(product.id));
       setTimeout(() => {
         setAddedItemIds(prev => {
@@ -350,6 +367,11 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                        ) : (
                          <ShoppingBag className="w-10 h-10 text-stone-200 transition-transform group-hover:scale-110 duration-500" />
                        )}
+                       {existingProductIds.has(product.id) && (
+                         <div className="absolute top-3 right-3 p-1.5 bg-emerald-500 text-white rounded-lg shadow-lg border border-white/20 z-10" title={t('store_front.in_your_list', 'In Your List')}>
+                           <Check className="w-3.5 h-3.5 stroke-[4px]" />
+                         </div>
+                       )}
                        <div className="absolute top-3 left-3 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-stone-100">
                          <span className="text-[10px] font-black text-stone-900">{t('common.currency_symbol')}{product.price.toFixed(2)}</span>
                        </div>
@@ -371,19 +393,19 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                     </div>
 
                     <button
-                      disabled={!product.inStock || addedItemIds.has(product.id)}
+                      disabled={!product.inStock || addedItemIds.has(product.id) || existingProductIds.has(product.id)}
                       onClick={() => handleAdd(product)}
                       className={cn(
                         "rounded-2xl font-black text-[10px] uppercase tracking-[0.15em] transition-all flex items-center justify-center gap-2 shrink-0 h-12",
                         viewMode === 'grid' ? "w-full py-3" : "px-6 py-3",
-                        addedItemIds.has(product.id) ? "bg-emerald-500 text-white shadow-emerald-100" :
+                        (addedItemIds.has(product.id) || existingProductIds.has(product.id)) ? "bg-emerald-500 text-white shadow-emerald-100" :
                         product.inStock ? "bg-stone-900 text-white hover:bg-indigo-600 shadow-xl shadow-stone-100" : "bg-stone-100 text-stone-400 cursor-not-allowed"
                       )}
                     >
-                      { addedItemIds.has(product.id) ? (
+                      { (addedItemIds.has(product.id) || existingProductIds.has(product.id)) ? (
                         <>
-                          <Check className="w-3.5 h-3.5 stroke-[3px]" />
-                          <span className={cn(viewMode === 'list' && "hidden sm:inline")}>{t('store_front.added')}</span>
+                          <Check className="w-3.5 h-3.5 stroke-[4px]" />
+                          <span className={cn(viewMode === 'list' && "hidden sm:inline")}>{t('store_front.in_list', 'In List')}</span>
                         </>
                       ) : (
                         <>
