@@ -209,7 +209,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                     className="group bg-white rounded-[2.5rem] border border-stone-100 shadow-sm hover:shadow-2xl hover:shadow-emerald-900/5 transition-all flex flex-col overflow-hidden h-full relative"
                   >
                     {/* Badge Overlay */}
-                    <div className="absolute top-6 left-6 z-10 flex flex-wrap gap-2">
+                    <div className="absolute top-10 left-8 z-10 flex flex-wrap gap-2">
                       <div className={cn(
                         "px-3 py-1.5 rounded-xl flex items-center gap-2 backdrop-blur-md shadow-sm border",
                         store.status === 'active' ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" :
@@ -226,8 +226,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                     </div>
 
                     <button 
-                      onClick={() => handleDelete(store.id)}
-                      className="absolute top-6 right-6 z-10 p-3 bg-white/80 backdrop-blur-sm rounded-xl text-stone-300 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100 shadow-sm"
+                      onClick={(e) => { e.stopPropagation(); handleDelete(store.id); }}
+                      className="absolute top-10 right-8 z-10 p-3 bg-white shadow-xl rounded-xl text-stone-300 hover:text-rose-500 hover:bg-rose-50 transition-all shadow-stone-200/50"
+                      title={t('common.delete')}
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>
@@ -253,17 +254,17 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                         </p>
                       </div>
 
-                      <div className="pt-8 flex items-center gap-3 mt-auto">
+                      <div className="pt-8 flex flex-col sm:flex-row items-center gap-3 mt-auto">
                         <button
                           onClick={() => {
                             if (store) {
                               setEditingStore(store);
                             }
                           }}
-                          className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-stone-50 text-stone-600 font-black rounded-2xl hover:bg-stone-100 transition-all active:scale-95 text-sm"
+                          className="w-full sm:flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-stone-50 text-stone-600 font-black rounded-2xl hover:bg-stone-100 transition-all active:scale-95 text-sm"
                         >
-                          <Settings className="w-5 h-5" />
-                          <span>{store.status === 'active' ? t('merchant.settings') : t('merchant.edit_app')}</span>
+                          <Settings className="w-5 h-5 text-stone-400 group-hover:rotate-45 transition-transform" />
+                          <span className="truncate">{store.status === 'active' ? t('merchant.settings') : t('merchant.edit_app')}</span>
                         </button>
                         
                         {store.status === 'active' && (
@@ -273,10 +274,10 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                                 setManagingInventoryStore(store);
                               }
                             }}
-                            className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-400 transition-all active:scale-95 text-sm shadow-xl shadow-emerald-500/10"
+                            className="w-full sm:flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-400 transition-all active:scale-95 text-sm shadow-xl shadow-emerald-500/10"
                           >
                             <Package className="w-5 h-5" />
-                            <span>{t('merchant.inventory')}</span>
+                            <span className="truncate">{t('merchant.inventory')}</span>
                           </button>
                         )}
                       </div>

@@ -392,7 +392,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     viewMode === 'grid' ? "flex-col gap-6" : "flex-row items-center gap-8"
                   )}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/[0.02] group-hover:to-transparent transition-all duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/0 to-emerald-500/0 group-hover:from-emerald-500/[0.02] group-hover:to-transparent transition-all duration-700 pointer-events-none" />
                   
                   {/* Status Badge */}
                   <div className={cn(
@@ -450,16 +450,18 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                      <div className="flex gap-1 transition-all duration-300 relative z-30">
                         <button
-                          onClick={() => startEdit(product)}
-                          className="p-3 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-all shadow-lg"
+                          onClick={(e) => { e.stopPropagation(); startEdit(product); }}
+                          className="p-3 bg-stone-900 text-white rounded-xl hover:bg-stone-800 transition-all shadow-lg active:scale-95 flex items-center justify-center"
+                          title={t('common.edit', 'Edit')}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(product)}
-                          className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all shadow-lg"
+                          onClick={(e) => { e.stopPropagation(); handleDelete(product); }}
+                          className="p-3 bg-rose-500 text-white rounded-xl hover:bg-rose-600 transition-all shadow-lg active:scale-95 flex items-center justify-center"
+                          title={t('common.delete', 'Delete')}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
