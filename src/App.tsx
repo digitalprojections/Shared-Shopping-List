@@ -1928,9 +1928,14 @@ function ListView({
   };
 
   const handleDeleteList = async () => {
+    if (!user) return;
     if (window.confirm(t('list_view.delete_confirm'))) {
-      await shoppingService.deleteList(listId);
-      onBack();
+      try {
+        await shoppingService.deleteList(listId, user.uid);
+        onBack();
+      } catch (error: any) {
+        alert(error.message || t('list_view.sync_fail'));
+      }
     }
   };
 
@@ -2054,7 +2059,7 @@ function ListView({
                         className="w-full px-5 py-4 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3 transition-colors border-b border-stone-50"
                       >
                         <Trash2 className="w-5 h-5" />
-                        {t('list_view.delete_collection')}
+                        {t('list_view.delete_collection', { coin: t('admin.coin') })}
                       </button>
                     )}
                     <button

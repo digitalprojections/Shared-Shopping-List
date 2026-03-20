@@ -247,7 +247,113 @@ export const storeService = {
 
   deleteStore: async (storeId: string) => {
     if (!isFirebaseConfigured) return;
-    await deleteDoc(doc(db, 'stores', storeId));
+    
+    // 1. Get store data
+    const storeRef = doc(db, 'stores', storeId);
+    const storeSnap = await getDoc(storeRef);
+    const storeData = storeSnap.data();
+    
+    if (storeData) {
+      // 2. Cleanup banners/logos
+      const bannerUrl = storeData.bannerUrl;
+      const logoUrl = storeData.logoUrl;
+      
+      const cleanupImage = async (url: string) => {
+        if (!url || !storage) return;
+        try {
+          const decodedUrl = decodeURIComponent(url);
+          const pathMatch = decodedUrl.match(/\/o\/(.*?)\?/);
+          const pathPart = pathMatch ? pathMatch[1] : null;
+          if (pathPart) {
+            await deleteObject(ref(storage, pathPart));
+          }
+        } catch (e) { console.warn("Failed to delete store image", url, e); }
+      };
+      
+      await cleanupImage(bannerUrl);
+      await cleanupImage(logoUrl);
+    }
+    
+    // 3. Delete all products for this store
+    const productsSnap = await getDocs(
+      query(collection(db, 'store_products'), where('storeId', '==', storeId))
+    );
+    
+    for (const prodDoc of productsSnap.docs) {
+      const prodData = prodDoc.data();
+      await storeService.deleteProduct(prodDoc.id, prodData.imageUrl);
+    }
+    
+    // 4. Delete store doc
+    await deleteDoc(storeRef);
+  },
+
+  // Stale Data Management
+  listAllStorageImages: async () => {
+    if (!isFirebaseConfigured || !storage) return [];
+    
+    const allFiles: { path: string; url: string }[] = [];
+    
+    const listRecursive = async (folderRef: any) => {
+      const result = await folderRef.listAll();
+      
+      // Get URLs for all files in this folder
+      for (const item of result.items) {
+        const url = await getDownloadURL(item);
+        allFiles.push({ path: item.fullPath, url });
+      }
+      
+      // Recurse into subfolders
+      for (const folder of result.prefixes) {
+        await listRecursive(folder);
+      }
+    };
+
+    try {
+      const rootRef = ref(storage, 'images');
+      await listRecursive(rootRef);
+      return allFiles;
+    } catch (error) {
+      console.error("[StoreService] Error listing storage images:", error);
+      return [];
+    }
+  },
+
+  findStaleImages: async () => {
+    if (!isFirebaseConfigured) return [];
+    
+    // 1. Get all images from Storage
+    const storageImages = await storeService.listAllStorageImages();
+    if (storageImages.length === 0) return [];
+
+    // 2. Get all referenced image URLs from Firestore
+    const referencedUrls = new Set<string>();
+    
+    // Check products
+    const productsSnap = await getDocs(collection(db, 'store_products'));
+    productsSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.imageUrl) referencedUrls.add(data.imageUrl);
+    });
+    
+    // Check stores (banners and logos)
+    const storesSnap = await getDocs(collection(db, 'stores'));
+    storesSnap.forEach(doc => {
+      const data = doc.data();
+      if (data.bannerUrl) referencedUrls.add(data.bannerUrl);
+      if (data.logoUrl) referencedUrls.add(data.logoUrl);
+    });
+
+    // 3. Find images in storage that are NOT in referencedUrls
+    const staleImages = storageImages.filter(img => !referencedUrls.has(img.url));
+    
+    return staleImages;
+  },
+
+  deleteStorageObject: async (path: string) => {
+    if (!isFirebaseConfigured || !storage) return;
+    const objectRef = ref(storage, path);
+    await deleteObject(objectRef);
   }
 };
 

@@ -17,6 +17,7 @@ exports.consumeCoin = onCall({
   const uid = request.auth.uid;
   const db = admin.firestore();
   const userRef = db.collection('users').doc(uid);
+  const amountToConsume = (request.data && request.data.amount) ? Math.max(1, Number(request.data.amount)) : 1;
 
   try {
     await db.runTransaction(async (transaction) => {
@@ -28,48 +29,60 @@ exports.consumeCoin = onCall({
       const userData = userDoc.data();
       const now = Date.now();
 
-      // Anti-abuse: 2-second cooldown
-      if (userData.lastActionAt && (now - userData.lastActionAt < 2000)) {
-        throw new HttpsError('resource-exhausted', 'Please wait 2 seconds between actions.');
+      // Anti-abuse: 1-second cooldown (reduced from 2s for better UX with multi-actions)
+      if (userData.lastActionAt && (now - userData.lastActionAt < 1000)) {
+        throw new HttpsError('resource-exhausted', 'Please wait 1 second between actions.');
       }
 
       // Filter valid batches and sort by creation time (FIFO)
-      const validBatches = (userData.coinBatches || [])
+      let coinBatches = (userData.coinBatches || [])
+        .map(b => ({ ...b })); // Deep copy for mutation in transaction
+
+      const validBatches = coinBatches
         .filter(b => b.expiresAt > now && b.remaining > 0)
         .sort((a, b) => a.createdAt - b.createdAt);
 
-      if (validBatches.length === 0) {
+      const currentBalance = validBatches.reduce((sum, b) => sum + b.remaining, 0);
+
+      if (currentBalance < amountToConsume) {
         throw new HttpsError('failed-precondition', 'Insufficient coins.');
       }
 
-      // Consume 1 coin from the oldest batch
-      const oldestBatch = validBatches[0];
-      oldestBatch.remaining -= 1;
-
-      // Update the batches in the original data structure
-      const updatedBatches = (userData.coinBatches || []).map(b => 
-        b.id === oldestBatch.id ? oldestBatch : b
-      );
+      // Consume coins across multiple batches if needed
+      let remainingToDeduct = amountToConsume;
+      for (const batch of validBatches) {
+        if (remainingToDeduct <= 0) break;
+        
+        const deduct = Math.min(batch.remaining, remainingToDeduct);
+        batch.remaining -= deduct;
+        remainingToDeduct -= deduct;
+        
+        // Find the batch in the original array and update it
+        const index = coinBatches.findIndex(b => b.id === batch.id);
+        if (index !== -1) {
+          coinBatches[index].remaining = batch.remaining;
+        }
+      }
 
       // Recalculate total balance
-      const totalBalance = updatedBatches
+      const newBalance = coinBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
 
       transaction.update(userRef, {
-        coinBatches: updatedBatches,
-        coinBalance: totalBalance,
+        coinBatches: coinBatches,
+        coinBalance: newBalance,
         lastActionAt: now
       });
       
-      logger.info(`Coin consumed for user ${uid}. New balance: ${totalBalance}`);
+      logger.info(`Consumed ${amountToConsume} coins for user ${uid}. New balance: ${newBalance}`);
     });
 
     return { success: true };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     logger.error("Error in consumeCoin:", error);
-    throw new HttpsError('internal', 'An internal error occurred while consuming a coin.');
+    throw new HttpsError('internal', 'An internal error occurred while consuming coins.');
   }
 });
 

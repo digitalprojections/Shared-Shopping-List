@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Store } from '../types';
 import { storeService } from '../services/storeService';
+import { userService } from '../services/userService';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { MerchantRegistrationModal } from './MerchantRegistrationModal';
@@ -53,9 +54,16 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
     if (!window.confirm(t('merchant.delete_confirm_q'))) return;
     setProcessingId(storeId);
     try {
+      // Deduct 1 coin for deletion
+      const result = await userService.consumeCoin(userId, 1);
+      if (!result.success) {
+        alert(result.error || t('common.insufficient_coins', 'Insufficient coins to perform this action.'));
+        return;
+      }
       await storeService.deleteStore(storeId);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting store:", error);
+      alert(error.message || "Error deleting store");
     } finally {
       setProcessingId(null);
     }

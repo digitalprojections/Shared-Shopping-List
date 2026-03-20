@@ -25,13 +25,19 @@ interface AdminStoreManagerProps {
 
 export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose }) => {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<'pending' | 'all'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'stale'>('pending');
   const [stores, setStores] = useState<Store[]>([]);
+  const [staleImages, setStaleImages] = useState<{ path: string; url: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (activeTab === 'stale') {
+      handleRefreshStale();
+      return () => {};
+    }
+    
     setLoading(true);
     let unsubscribe: () => void;
     
@@ -49,6 +55,46 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
     
     return () => unsubscribe();
   }, [activeTab]);
+
+  const handleRefreshStale = async () => {
+    setLoading(true);
+    try {
+      const images = await storeService.findStaleImages();
+      setStaleImages(images);
+    } catch (error) {
+      console.error("Error finding stale images:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteStale = async (path: string) => {
+    if (!window.confirm(t('admin.delete_stale_confirm', 'Are you sure you want to delete this stale image?'))) return;
+    setProcessingId(path);
+    try {
+      await storeService.deleteStorageObject(path);
+      setStaleImages(prev => prev.filter(img => img.path !== path));
+    } catch (error) {
+      console.error("Error deleting stale image:", error);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDeleteAllStale = async () => {
+    if (!window.confirm(t('admin.delete_all_stale_confirm', 'Delete ALL stale images?'))) return;
+    setLoading(true);
+    try {
+      for (const img of staleImages) {
+        await storeService.deleteStorageObject(img.path);
+      }
+      setStaleImages([]);
+    } catch (error) {
+      console.error("Error deleting all stale images:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleApprove = async (store: Store) => {
     setProcessingId(store.id);
@@ -144,6 +190,18 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
               <motion.div layoutId="admintab" className="absolute bottom-0 left-0 right-0 h-1 bg-stone-900 rounded-full" />
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('stale')}
+            className={cn(
+              "pb-4 text-sm font-bold transition-all relative",
+              activeTab === 'stale' ? "text-rose-600" : "text-stone-400 hover:text-stone-600"
+            )}
+          >
+            {t('admin.stale_images_tab', 'Stale Images')}
+            {activeTab === 'stale' && (
+              <motion.div layoutId="admintab" className="absolute bottom-0 left-0 right-0 h-1 bg-rose-600 rounded-full" />
+            )}
+          </button>
         </div>
 
         {/* Content */}
@@ -153,6 +211,56 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
               <div className="w-10 h-10 border-4 border-stone-100 border-t-amber-500 rounded-full animate-spin" />
               <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('admin.syncing')}</p>
             </div>
+          ) : activeTab === 'stale' ? (
+            staleImages.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-stone-50 rounded-[2rem] border-2 border-dashed border-stone-100">
+                <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">
+                  <Check className="w-8 h-8 text-emerald-500" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-lg font-bold text-stone-900">{t('admin.no_stale_data', 'System Clean!')}</h3>
+                  <p className="text-stone-400 text-sm">{t('admin.no_stale_desc', 'No stale images found in storage.')}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center bg-rose-50 p-4 rounded-3xl border border-rose-100 mb-4">
+                  <div>
+                    <h4 className="text-rose-900 font-black text-sm uppercase tracking-widest">{staleImages.length} {t('admin.stale_count', 'Stale Files')}</h4>
+                    <p className="text-rose-600 text-xs font-bold">{t('admin.stale_hint', 'These files occupy space but are not linked to any store or product.')}</p>
+                  </div>
+                  <button 
+                    onClick={handleDeleteAllStale}
+                    className="px-6 py-2 bg-rose-600 text-white font-black rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 active:scale-95 transition-all"
+                  >
+                    {t('admin.delete_all_stale', 'Flush All')}
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {staleImages.map(img => (
+                    <motion.div
+                      layout
+                      key={img.path}
+                      className="group bg-white rounded-3xl border border-stone-100 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col"
+                    >
+                      <div className="aspect-square bg-stone-50 relative overflow-hidden">
+                        <img src={img.url} alt="" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Trash2 
+                            className="w-8 h-8 text-white cursor-pointer hover:scale-125 transition-transform" 
+                            onClick={() => handleDeleteStale(img.path)}
+                          />
+                        </div>
+                      </div>
+                      <div className="p-3">
+                        <p className="text-[9px] font-mono text-stone-400 truncate">{img.path}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            )
           ) : stores.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 bg-stone-50 rounded-[2rem] border-2 border-dashed border-stone-100">
               <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center shadow-sm">

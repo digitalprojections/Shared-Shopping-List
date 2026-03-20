@@ -31,10 +31,19 @@ export const loyaltyService = {
     });
   },
 
-  addCard: async (card: Omit<LoyaltyCard, 'id' | 'createdAt'>) => {
+  addCard: async (userId: string, card: Omit<LoyaltyCard, 'id' | 'createdAt' | 'ownerId'>) => {
     if (!isFirebaseConfigured) return null;
+    
+    // Consume 1 coin
+    const { userService } = await import('./userService');
+    const consumption = await userService.consumeCoin(userId);
+    if (!consumption.success) {
+      throw new Error(consumption.error || 'Insufficient coins');
+    }
+    
     const docRef = await addDoc(collection(db, 'loyalty_cards'), {
       ...card,
+      ownerId: userId,
       createdAt: Date.now()
     });
     return docRef.id;
@@ -45,8 +54,16 @@ export const loyaltyService = {
     await updateDoc(doc(db, 'loyalty_cards', cardId), updates);
   },
 
-  deleteCard: async (cardId: string) => {
+  deleteCard: async (userId: string, cardId: string) => {
     if (!isFirebaseConfigured) return;
+    
+    // Consume 1 coin
+    const { userService } = await import('./userService');
+    const consumption = await userService.consumeCoin(userId);
+    if (!consumption.success) {
+      throw new Error(consumption.error || 'Insufficient coins');
+    }
+    
     await deleteDoc(doc(db, 'loyalty_cards', cardId));
   }
 };

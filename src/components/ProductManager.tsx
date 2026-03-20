@@ -24,6 +24,8 @@ import {
 } from 'lucide-react';
 import { Store, StoreProduct } from '../types';
 import { storeService } from '../services/storeService';
+import { userService } from '../services/userService';
+import { auth } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { STORE_CATEGORIES, PRODUCT_CATEGORIES } from '../constants/categories';
@@ -96,6 +98,15 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
     }
   };
 
+  const getCalculatedCost = () => {
+    const willHaveImage = !!(imageFile || formData.imageUrl);
+    if (!editingProduct) {
+      return willHaveImage ? 30 : 1;
+    }
+    // If updating, adding an image costs 29 (total 30), otherwise updating costs 1
+    return (willHaveImage && !editingProduct.imageUrl) ? 29 : 1;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name) return;
@@ -139,14 +150,26 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
         delete submissionData.saleEnd;
       }
 
+      const coinCost = getCalculatedCost();
+
+      if (auth.currentUser) {
+        const result = await userService.consumeCoin(auth.currentUser.uid, coinCost);
+        if (!result.success) {
+          alert(result.error || t('common.insufficient_coins', 'Insufficient coins to perform this action.'));
+          setIsSubmitting(false);
+          return;
+        }
+      }
+
       if (editingProduct) {
         await storeService.updateProduct(editingProduct.id, submissionData);
       } else {
         await storeService.addProduct(store.id, submissionData);
       }
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error managing product:", error);
+      alert(error.message || "Error saving product");
     } finally {
       setIsSubmitting(false);
     }
@@ -155,9 +178,17 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
   const handleDelete = async (product: StoreProduct) => {
     if (!window.confirm(t('product_manager.delete_confirm'))) return;
     try {
+      if (auth.currentUser) {
+        const result = await userService.consumeCoin(auth.currentUser.uid, 1);
+        if (!result.success) {
+          alert(result.error || t('common.insufficient_coins', 'Insufficient coins to perform this action.'));
+          return;
+        }
+      }
       await storeService.deleteProduct(product.id, product.imageUrl);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting product:", error);
+      alert(error.message || "Error deleting product");
     }
   };
 
@@ -280,7 +311,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
               className="h-full flex items-center gap-2 px-6 bg-emerald-500 text-stone-900 font-black rounded-2xl hover:bg-emerald-400 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 text-sm uppercase tracking-wider"
             >
               <Plus className="w-5 h-5 stroke-[3px]" />
-              <span className="hidden sm:inline">{t('product_manager.add_product')}</span>
+              <span className="hidden sm:inline">{t('product_manager.add_product')} (1-30 {t('admin.coin')})</span>
             </button>
           </div>
         </div>
@@ -626,7 +657,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     className="w-full py-6 bg-emerald-600 text-white font-black rounded-[2.5rem] shadow-2xl shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
                   >
                     {isSubmitting ? <Loader2 className="w-7 h-7 animate-spin" /> : <Save className="w-7 h-7" />}
-                    <span className="text-xl uppercase tracking-[0.15em]">{editingProduct ? t('product_manager.update_btn') : t('product_manager.add_inventory_btn')}</span>
+                    <span className="text-xl uppercase tracking-[0.15em]">{editingProduct ? t('product_manager.update_btn') : t('product_manager.add_inventory_btn')} ({getCalculatedCost()} {getCalculatedCost() === 1 ? t('admin.coin') : t('admin.coins')})</span>
                   </button>
                 </div>
               </form>

@@ -134,8 +134,13 @@ export const shoppingService = {
     return null;
   },
 
-  deleteList: async (listId: string) => {
+  deleteList: async (listId: string, userId: string) => {
     if (isFirebaseConfigured) {
+      const consumption = await userService.consumeCoin(userId, 1);
+      if (!consumption.success) {
+        throw new Error(consumption.error || 'Failed to consume coin');
+      }
+
       await deleteDoc(doc(db, 'lists', listId));
       const items = await getDocs(collection(db, 'lists', listId, 'items'));
       const batch = writeBatch(db);

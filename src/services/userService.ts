@@ -85,12 +85,12 @@ export const userService = {
       .reduce((sum, b) => sum + b.remaining, 0);
   },
 
-  consumeCoin: async (userId: string): Promise<{ success: boolean; error?: string }> => {
+  consumeCoin: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {
     if (!isFirebaseConfigured) return { success: true };
 
     try {
-      const consumeCoinFn = httpsCallable<{ userId: string }, { success: boolean }>(functions, 'consumeCoin');
-      const result = await consumeCoinFn({ userId });
+      const consumeCoinFn = httpsCallable<{ userId: string; amount: number }, { success: boolean }>(functions, 'consumeCoin');
+      const result = await consumeCoinFn({ userId, amount });
       return { success: result.data.success };
     } catch (error: any) {
       console.error("Error consuming coin via Cloud Function:", error);
