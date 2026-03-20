@@ -107,9 +107,16 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
       // Handle image upload with shrinking
       if (imageFile) {
         console.log("[ProductManager] Original size:", (imageFile.size / 1024).toFixed(2), "KB");
-        const shrunkBlob = await shrinkImage(imageFile, 600, 600, 0.8);
-        const shrunkFile = new File([shrunkBlob], imageFile.name, { type: 'image/jpeg' });
+        
+        // Shrink to 512x512 as requested (500 is good enough)
+        const shrunkBlob = await shrinkImage(imageFile, 512, 512, 0.8);
+        
+        // Ensure the filename reflects the JPEG conversion
+        const cleanName = imageFile.name.replace(/\.[^/.]+$/, "") + ".jpg";
+        const shrunkFile = new File([shrunkBlob], cleanName, { type: 'image/jpeg' });
+        
         console.log("[ProductManager] Shrunk size:", (shrunkFile.size / 1024).toFixed(2), "KB");
+        console.log("[ProductManager] Saved:", (100 - (shrunkFile.size / imageFile.size * 100)).toFixed(1), "%");
 
         finalImageUrl = await storeService.uploadProductImage(store.id, shrunkFile) || '';
       }

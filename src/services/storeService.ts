@@ -106,6 +106,7 @@ export const storeService = {
       likesCount: 0,
       saleStart: productData.saleStart ?? null,
       saleEnd: productData.saleEnd ?? null,
+      imageUrl: productData.imageUrl || '',
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
