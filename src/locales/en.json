@@ -68,7 +68,7 @@
     "create": "Create",
     "creating": "Creating...",
     "create_error": "Failed to create list",
-    "get_free_coins": "Earn Free Coins",
+    "get_free_coins": "Earn +10🪙 Coins",
     "watch_ad": "Watch Video Ad",
     "reward_success": "Reward received! +1 Coin",
     "reward_fail": "Failed to get reward. Try again later.",
@@ -458,6 +458,27 @@
     "added": "Added!",
     "report_store": "Report Store",
     "search_placeholder": "Search stores or products..."
+  },
+  "order": {
+    "status": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "processing": "Processing",
+      "out_for_delivery": "Out for Delivery",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
+    "id_label": "Order #{{id}}",
+    "current_status": "Current Status",
+    "change_status": "Edit Status",
+    "pick_status": "Update Order Status",
+    "delivery_time": "Estimated Delivery",
+    "pending_delivery": "Waiting for store...",
+    "total_amount": "Total Amount",
+    "items_title": "Items Ordered",
+    "chat_title": "Messages",
+    "no_messages": "No messages yet. Send a greeting!",
+    "chat_placeholder": "Type a message..."
   },
   "store_profile": {
     "category_label": "Category",

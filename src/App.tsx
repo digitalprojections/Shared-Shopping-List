@@ -63,6 +63,7 @@ import {
 import { shoppingService } from './services/shoppingService';
 import { userService } from './services/userService';
 import { storeService } from './services/storeService';
+import { getOrderStatusColor } from './lib/orderUtils';
 import { couponService } from './services/couponService';
 import { useTranslation, Trans } from 'react-i18next';
 import './i18n'; // Import i18n configuration
@@ -318,19 +319,19 @@ export default function App() {
         } catch (e) {
           console.error("Error setting up Native notifications:", e);
         }
-      } 
+      }
       // 2. WEB / PWA PLATFORM FLOW (Browser)
       else if ('serviceWorker' in navigator && messaging) {
         try {
           // Note: VAPID key usually required for Web Push. Replace with your actual key from Firebase Console.
-          const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY; 
-          
+          const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+
           if (!VAPID_KEY) {
             console.warn("VITE_FIREBASE_VAPID_KEY missing in .env. Web notifications won't work.");
             return;
           }
 
-          const token = await getToken(messaging, { 
+          const token = await getToken(messaging, {
             vapidKey: VAPID_KEY,
             serviceWorkerRegistration: await navigator.serviceWorker.ready
           });
@@ -487,16 +488,16 @@ export default function App() {
     }
 
     console.log("App: Subscribing to orders for user:", user.uid);
-    
+
     // 1. Subscribe to orders as a customer
     const unsubCustomer = orderService.subscribeToUserOrders(user.uid, (orders) => {
       setPurchases(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled'));
     });
 
     // 2. Subscribe to orders as a merchant (if applicable)
-    let unsubMerchant = () => {};
+    let unsubMerchant = () => { };
     const storeIdsToWatch = merchantStoreIds.length > 0 ? merchantStoreIds : (appUser?.ownedStores || []);
-    
+
     if (appUser?.isMerchant && storeIdsToWatch.length > 0) {
       unsubMerchant = orderService.subscribeToStoresOrders(storeIdsToWatch, (orders) => {
         setSalesOrders(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled'));
@@ -1116,8 +1117,8 @@ export default function App() {
           />
         )}
         {showUserOrdersView && (
-          <UserOrdersView 
-            onClose={() => setShowUserOrdersView(false)} 
+          <UserOrdersView
+            onClose={() => setShowUserOrdersView(false)}
           />
         )}
         {selectedOrderDetailId && (
@@ -1146,7 +1147,7 @@ export default function App() {
           />
         )}
         {showUserOrdersView && (
-          <UserOrdersView 
+          <UserOrdersView
             onClose={() => setShowUserOrdersView(false)}
           />
         )}
@@ -1576,7 +1577,7 @@ function Dashboard({
                   </button>
                 )}
               </div>
-              <button 
+              <button
                 onClick={onShowOrders}
                 className="p-2 bg-white border border-stone-100 rounded-xl text-stone-400 hover:text-indigo-600 transition-colors shadow-sm"
               >
@@ -1602,9 +1603,7 @@ function Dashboard({
                       </div>
                       <span className={cn(
                         "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border",
-                        order.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                        order.status === 'completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                        'bg-blue-100 text-blue-700 border-blue-200'
+                        getOrderStatusColor(order.status)
                       )}>
                         {t(`order.status.${order.status}`)}
                       </span>
@@ -1621,9 +1620,9 @@ function Dashboard({
                 ))
               ) : (
                 <div className="w-full py-8 text-center bg-stone-50 rounded-[2.5rem] border border-stone-100 border-dashed border-2">
-                   <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest">
-                     {t('dashboard.no_active_orders', 'No active orders')}
-                   </p>
+                  <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest">
+                    {t('dashboard.no_active_orders', 'No active orders')}
+                  </p>
                 </div>
               )}
             </div>

@@ -21,6 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { Order, OrderStatus, ChatMessage } from '../types';
 import { orderService } from '../services/orderService';
 import { cn } from '../lib/utils';
+import { getOrderStatusColor, getOrderStatusIcon } from '../lib/orderUtils';
 import { auth } from '../lib/firebase';
 
 interface OrderDetailViewProps {
@@ -98,17 +99,6 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({ orderId, onClo
 
   if (!order) return null;
 
-  const getStatusIcon = (status: OrderStatus) => {
-    switch (status) {
-      case 'pending': return <Clock className="w-5 h-5 text-amber-500" />;
-      case 'confirmed': return <CheckCircle2 className="w-5 h-5 text-blue-500" />;
-      case 'processing': return <Package className="w-5 h-5 text-indigo-500" />;
-      case 'out_for_delivery': return <Truck className="w-5 h-5 text-purple-500" />;
-      case 'completed': return <CheckCircle className="w-5 h-5 text-emerald-500" />;
-      case 'cancelled': return <X className="w-5 h-5 text-rose-500" />;
-      default: return <AlertCircle className="w-5 h-5 text-stone-500" />;
-    }
-  };
 
   const getStatusLabel = (status: OrderStatus) => {
     return t(`order.status.${status}`, status.replace(/_/g, ' '));
@@ -144,9 +134,14 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({ orderId, onClo
                 <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest">{t('order.current_status', 'Current Status')}</p>
                 <div className="flex items-center gap-2">
                   <div className="shrink-0">
-                    {getStatusIcon(order.status)}
+                    {getOrderStatusIcon(order.status, "w-6 h-6 sm:w-8 sm:h-8")}
                   </div>
-                  <span className="text-lg sm:text-xl font-black text-stone-900 uppercase tracking-tight">{getStatusLabel(order.status)}</span>
+                  <span className={cn(
+                    "text-lg sm:text-xl font-black uppercase tracking-tight px-3 py-1 rounded-xl border-2",
+                    getOrderStatusColor(order.status)
+                  )}>
+                    {getStatusLabel(order.status)}
+                  </span>
                 </div>
               </div>
               {isMerchant && (
@@ -316,10 +311,10 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({ orderId, onClo
                     onClick={() => handleUpdateStatus(status)}
                     className={cn(
                       "p-3 sm:p-4 rounded-xl sm:2xl flex flex-col items-center gap-2 border-2 transition-all",
-                      order.status === status ? "bg-indigo-50 border-indigo-600" : "bg-stone-50 border-transparent hover:border-stone-200"
+                      order.status === status ? getOrderStatusColor(status) : "bg-stone-50 border-transparent hover:border-stone-200"
                     )}
                    >
-                     {getStatusIcon(status)}
+                     {getOrderStatusIcon(status)}
                      <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-center leading-tight">{getStatusLabel(status)}</span>
                    </button>
                  ))}
