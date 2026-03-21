@@ -157,25 +157,6 @@
     "signing_in": "Signing in...",
     "login_prompt": "Login to unlock all features"
   },
-  "store_front": {
-    "follow": "Follow",
-    "unfollow": "Unfollow",
-    "following": "Following",
-    "followers_label": "Followers",
-    "rating_label": "Rating",
-    "rate_this_store": "Rate this Store",
-    "thanks_for_rating": "Thanks for your feedback!",
-    "tap_to_rate": "Tap a star to rate",
-    "about_title": "About",
-    "no_description": "No description provided.",
-    "products_label": "Products",
-    "in_stock": "In Stock",
-    "out_of_stock": "Out of Stock",
-    "back": "Back to Lists",
-    "contact": "Contact",
-    "report_store": "Report Store",
-    "search_placeholder": "Search stores or products..."
-  },
   "admin": {
     "title": "Admin Console",
     "merchant_management": "Merchant Management",

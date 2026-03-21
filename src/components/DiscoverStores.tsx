@@ -98,38 +98,38 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
         onClick={e => e.stopPropagation()}
-        className="bg-stone-50 rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden"
+        className="bg-stone-50 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="p-4 sm:p-8 pb-4 shrink-0 space-y-6">
+        <div className="p-4 sm:p-8 pb-3 sm:pb-4 shrink-0 space-y-4 sm:space-y-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-               <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-stone-200">
-                  <MapIcon className="w-6 h-6 text-stone-900" />
+            <div className="flex items-center gap-3 sm:gap-4">
+               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl sm:2xl flex items-center justify-center shadow-lg shadow-stone-200">
+                  <MapIcon className="w-5 h-5 sm:w-6 sm:h-6 text-stone-900" />
                </div>
                <div>
-                 <h2 className="text-2xl font-black text-stone-900 tracking-tight">{t('discover_stores.title')}</h2>
-                 <p className="text-stone-400 text-sm font-medium">{t('discover_stores.subtitle')}</p>
+                 <h2 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight">{t('discover_stores.title')}</h2>
+                 <p className="text-stone-400 text-[10px] sm:text-sm font-medium">{t('discover_stores.subtitle')}</p>
                </div>
             </div>
             <button
               onClick={onClose}
-              className="p-3 hover:bg-white rounded-full transition-all border border-transparent hover:border-stone-100"
+              className="p-2 sm:p-3 hover:bg-white rounded-full transition-all border border-transparent hover:border-stone-100"
             >
-              <X className="w-6 h-6 text-stone-400" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6 text-stone-400" />
             </button>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-2.5 sm:gap-4">
             {/* Search Bar */}
             <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300 transition-colors group-focus-within:text-stone-900" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-stone-300 transition-colors group-focus-within:text-stone-900" />
               <input
                 type="text"
                 placeholder={t('discover_stores.search_placeholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-white border border-stone-100 rounded-3xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-medium text-stone-900 shadow-sm shadow-stone-100"
+                className="w-full pl-11 pr-4 py-3 sm:py-4 bg-white border border-stone-100 rounded-2xl sm:3xl focus:ring-4 focus:ring-stone-900/5 focus:border-stone-900 outline-none transition-all font-medium text-xs sm:text-sm text-stone-900 shadow-sm shadow-stone-100"
               />
             </div>
 
@@ -137,13 +137,13 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
             <div className="relative sm:w-56 shrink-0">
               <button
                 onClick={() => setIsCategoryOpen(!isCategoryOpen)}
-                className="w-full h-full flex items-center justify-between pl-12 pr-4 py-4 sm:py-0 bg-white border border-stone-100 rounded-3xl hover:border-stone-200 transition-all font-bold text-xs text-stone-900 shadow-sm shadow-stone-100 group whitespace-nowrap"
+                className="w-full flex items-center justify-between pl-11 pr-4 py-3 sm:py-4 bg-white border border-stone-100 rounded-2xl sm:3xl hover:border-stone-200 transition-all font-bold text-[10px] sm:text-xs text-stone-900 shadow-sm shadow-stone-100 group whitespace-nowrap"
               >
-                <Filter className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400 group-hover:text-stone-900 transition-colors" />
+                <Filter className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-400 group-hover:text-stone-900 transition-colors" />
                 <span className="truncate pr-2">
                   {categoryOptions.find(c => c.value === activeCategory)?.label}
                 </span>
-                <ChevronDown className={cn("w-4 h-4 text-stone-300 transition-transform duration-300 shrink-0", isCategoryOpen && "rotate-180")} />
+                <ChevronDown className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-300 transition-transform duration-300 shrink-0", isCategoryOpen && "rotate-180")} />
               </button>
 
               <AnimatePresence>
@@ -157,7 +157,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                       initial={{ opacity: 0, y: 10, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      className="absolute top-full left-0 right-0 mt-2 p-2 bg-white border border-stone-100 rounded-[2rem] shadow-2xl z-[140] overflow-hidden"
+                      className="absolute top-full left-0 right-0 mt-2 p-1.5 sm:p-2 bg-white border border-stone-100 rounded-2xl sm:rounded-[2rem] shadow-2xl z-[140] overflow-hidden"
                     >
                       <div className="max-h-60 overflow-y-auto no-scrollbar">
                         {categoryOptions.map(cat => (
@@ -168,7 +168,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                               setIsCategoryOpen(false);
                             }}
                             className={cn(
-                              "w-full text-left px-5 py-3 rounded-2xl text-[10px] uppercase tracking-widest font-black transition-all",
+                              "w-full text-left px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl sm:2xl text-[9px] sm:text-[10px] uppercase tracking-widest font-black transition-all",
                               activeCategory === cat.value 
                                 ? "bg-stone-900 text-white" 
                                 : "text-stone-400 hover:text-stone-900 hover:bg-stone-50"
@@ -187,7 +187,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 pt-4 space-y-6 no-scrollbar">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-8 pt-3 sm:pt-4 space-y-4 sm:space-y-6 no-scrollbar">
           {loading ? (
              <div className="flex flex-col items-center justify-center py-20 gap-4">
                 <div className="w-10 h-10 border-4 border-stone-100 border-t-stone-900 rounded-full animate-spin" />
@@ -207,54 +207,54 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                   key={store.id}
                   layout
                   onClick={() => onSelectStore(store.id)}
-                  className="p-4 sm:p-5 bg-white border border-stone-50 rounded-[2.2rem] shadow-sm hover:shadow-2xl hover:shadow-stone-200/50 transition-all cursor-pointer group flex items-center justify-between gap-4 sm:gap-6 w-full overflow-hidden"
+                  className="p-3.5 sm:p-5 bg-white border border-stone-50 rounded-2xl sm:rounded-[2.2rem] shadow-sm hover:shadow-2xl hover:shadow-stone-200/50 transition-all cursor-pointer group flex items-center justify-between gap-3 sm:gap-6 w-full overflow-hidden"
                 >
                   <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
                     <div className={cn(
-                      "w-16 h-16 rounded-[1.5rem] flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-500",
+                      "w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-[1.5rem] flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-500",
                       store.category === 'Grocery' ? "bg-emerald-50 text-emerald-600" :
                       store.category === 'Pharmacy' ? "bg-rose-50 text-rose-600" :
                       store.category === 'Apparel' ? "bg-indigo-50 text-indigo-600" :
                       "bg-stone-50 text-stone-600"
                     )}>
-                      <ShoppingBag className="w-7 h-7" />
+                      <ShoppingBag className="w-6 h-6 sm:w-7 sm:h-7" />
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-black text-stone-900 text-lg truncate tracking-tight">{store.name}</h4>
+                        <h4 className="font-black text-stone-900 text-base sm:text-lg truncate tracking-tight">{store.name}</h4>
                         {store.isVerified && (
-                          <div className="p-0.5 bg-emerald-500 rounded-full">
-                             <TrendingUp className="w-3 h-3 text-white" />
+                          <div className="p-0.5 bg-emerald-500 rounded-full shrink-0">
+                             <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
                           </div>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-xs font-bold text-stone-400">
+                      <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-xs font-bold text-stone-400">
                         <div className="flex items-center gap-1 text-amber-500">
-                          <Star className="w-3.5 h-3.5 fill-current" />
+                          <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
                           <span>{store.averageRating?.toFixed(1) || '0.0'}</span>
                         </div>
                         <span>•</span>
                         <div className="flex items-center gap-1 text-indigo-500">
-                          <TrendingUp className="w-3.5 h-3.5" />
+                          <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                           <span>{t('store_front.followers_count', { count: store.followersCount || 0 })}</span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                     <button
                       onClick={(e) => handleToggleFollow(e, store.id)}
                       className={cn(
-                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
+                        "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:2xl flex items-center justify-center transition-all",
                         appUser?.followedStores?.includes(store.id)
                           ? "bg-rose-50 text-rose-600 shadow-sm"
                           : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
                       )}
                     >
-                      <Heart className={cn("w-5 h-5 transition-all", appUser?.followedStores?.includes(store.id) && "fill-current scale-110")} />
+                      <Heart className={cn("w-4 h-4 sm:w-5 sm:h-5 transition-all", appUser?.followedStores?.includes(store.id) && "fill-current scale-110")} />
                     </button>
-                    <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center group-hover:bg-stone-900 group-hover:text-white transition-all">
-                      <ArrowRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-stone-50 rounded-xl sm:2xl flex items-center justify-center group-hover:bg-stone-900 group-hover:text-white transition-all">
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </motion.div>
@@ -264,9 +264,9 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-white border-t border-stone-100 flex items-center gap-3 px-8 shrink-0">
-          <Clock className="w-4 h-4 text-stone-300" />
-          <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest leading-none">
+        <div className="p-4 sm:p-6 bg-white border-t border-stone-100 flex items-center gap-2.5 sm:gap-3 px-6 sm:px-8 shrink-0">
+          <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-stone-300" />
+          <p className="text-[9px] sm:text-[10px] font-black text-stone-300 uppercase tracking-widest leading-none">
             {t('discover_stores.footer')}
           </p>
         </div>

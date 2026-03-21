@@ -249,8 +249,8 @@ export const StorePage: React.FC<StorePageProps> = ({
         animate={{ opacity: 1, scale: 1 }}
         onClick={() => setSelectedProduct(product)}
         className={cn(
-          "group bg-stone-50 rounded-[2rem] p-5 sm:p-7 hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/5 transition-all flex h-full relative overflow-hidden ring-1 ring-stone-100 hover:ring-indigo-100 cursor-pointer",
-          viewMode === 'grid' ? "flex-col gap-4" : "flex-row items-center gap-6"
+          "group bg-stone-50 rounded-2xl sm:rounded-[2rem] p-3 sm:p-7 hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/5 transition-all flex h-full relative overflow-hidden ring-1 ring-stone-100 hover:ring-indigo-100 cursor-pointer",
+          viewMode === 'grid' ? "flex-col gap-2 sm:gap-4" : "flex-row items-center gap-4 sm:gap-6"
         )}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/[0.03] group-hover:to-transparent transition-all duration-700" />
@@ -283,11 +283,11 @@ export const StorePage: React.FC<StorePageProps> = ({
               {product.name}
             </h4>
             <div className="flex flex-wrap gap-1 mt-1">
-              <p className="text-stone-400 text-[9px] font-black uppercase tracking-wider bg-stone-100 px-2 py-0.5 rounded-full inline-block">
+              <p className="text-stone-400 text-[10px] font-black uppercase tracking-wider bg-stone-100 px-2 py-0.5 rounded-full inline-block">
                 {t(`merchant.categories.${product.category?.toLowerCase() || 'grocery'}`)}
               </p>
               {!product.inStock && (
-                <p className="text-rose-500 text-[9px] font-black uppercase tracking-wider bg-rose-50 px-2 py-0.5 rounded-full inline-block">
+                <p className="text-rose-500 text-[10px] font-black uppercase tracking-wider bg-rose-50 px-2 py-0.5 rounded-full inline-block">
                   {t('store_front.out_of_stock')}
                 </p>
               )}
@@ -358,11 +358,11 @@ export const StorePage: React.FC<StorePageProps> = ({
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="w-full max-w-2xl bg-white rounded-t-[3rem] sm:rounded-[3rem] overflow-hidden flex flex-col max-h-[95vh] relative"
+          className="w-full max-w-2xl bg-white rounded-t-[2rem] sm:rounded-[3rem] overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[95vh] relative"
           onClick={e => e.stopPropagation()}
         >
           {/* Header Image */}
-          <div className="relative h-72 sm:h-96 shrink-0 bg-stone-50">
+          <div className="relative h-56 sm:h-80 shrink-0 bg-stone-50">
             {selectedProduct.imageUrl ? (
               <img src={selectedProduct.imageUrl} alt="" className="w-full h-full object-cover" />
             ) : (
@@ -391,44 +391,44 @@ export const StorePage: React.FC<StorePageProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-8 sm:p-12 space-y-8 no-scrollbar">
-            <div className="space-y-2">
-              <h2 className="text-3xl font-black text-stone-900 leading-tight">{selectedProduct.name}</h2>
-              <div className="flex items-center gap-4">
-                <span className="text-3xl font-black text-indigo-600">
-                   <span className="text-sm mr-1">{selectedProduct.currency || t('common.currency_symbol')}</span>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-10 space-y-6 sm:space-y-8 no-scrollbar">
+            <div className="space-y-1">
+              <h2 className="text-lg sm:text-3xl font-black text-stone-900 leading-tight">{selectedProduct.name}</h2>
+              <div className="flex items-center gap-3">
+                <span className="text-xl sm:text-3xl font-black text-indigo-600">
+                   <span className="text-[10px] sm:text-sm mr-1 font-bold">{selectedProduct.currency || t('common.currency_symbol')}</span>
                    {selectedProduct.price.toFixed(2)}
                 </span>
                 {existingProductIds.has(selectedProduct.id) && (
-                   <span className="px-4 py-1.5 bg-emerald-100 text-emerald-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
-                     <Check className="w-4 h-4 stroke-[4px]" />
+                   <span className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                     <Check className="w-3 h-3 stroke-[4px]" />
                      {t('store.in_list', 'In Your List')}
                    </span>
                 )}
               </div>
             </div>
 
-            <div className="space-y-4">
-              <h4 className="text-sm font-black text-stone-400 uppercase tracking-widest">{t('store_front.description', 'Description')}</h4>
-              <p className="text-stone-600 leading-relaxed font-medium text-lg">
+            <div className="space-y-3 sm:space-y-4">
+              <h4 className="text-[10px] font-black text-stone-400 uppercase tracking-widest">{t('store_front.description', 'Description')}</h4>
+              <p className="text-stone-600 leading-relaxed font-medium text-base sm:text-lg">
                 {selectedProduct.description || t('store_front.no_description', 'No description available for this product.')}
               </p>
             </div>
             
             {(selectedProduct.saleStart || selectedProduct.saleEnd) && (
-              <div className="p-8 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100 space-y-4">
+              <div className="p-5 sm:p-8 bg-indigo-50/50 rounded-[1.5rem] sm:rounded-[2.5rem] border border-indigo-100 space-y-3 sm:space-y-4">
                 <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">{t('store.sale_info', 'Promotion Period')}</h4>
-                <div className="flex items-center gap-12">
+                <div className="flex items-center gap-6 sm:gap-12">
                   {selectedProduct.saleStart && (
                     <div>
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store.starts', 'Starts')}</p>
-                      <p className="font-bold text-indigo-900 text-lg">{new Date(selectedProduct.saleStart).toLocaleDateString()}</p>
+                      <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store.starts', 'Starts')}</p>
+                      <p className="font-bold text-indigo-900 text-sm sm:text-lg">{new Date(selectedProduct.saleStart).toLocaleDateString()}</p>
                     </div>
                   )}
                   {selectedProduct.saleEnd && (
                     <div>
-                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store.ends', 'Ends')}</p>
-                      <p className="font-bold text-indigo-900 text-lg">{new Date(selectedProduct.saleEnd).toLocaleDateString()}</p>
+                      <p className="text-[9px] font-bold text-stone-400 uppercase tracking-widest mb-1">{t('store.ends', 'Ends')}</p>
+                      <p className="font-bold text-indigo-900 text-sm sm:text-lg">{new Date(selectedProduct.saleEnd).toLocaleDateString()}</p>
                     </div>
                   )}
                 </div>
@@ -439,12 +439,12 @@ export const StorePage: React.FC<StorePageProps> = ({
             </div>
           </div>
 
-          <div className="p-8 sm:p-12 border-t border-stone-100 bg-white shrink-0">
+          <div className="p-4 sm:p-10 border-t border-stone-100 bg-white shrink-0">
             <button
               disabled={!selectedProduct.inStock || addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id)}
               onClick={(e) => { e.stopPropagation(); handleAdd(selectedProduct); setSelectedProduct(null); }}
               className={cn(
-                "w-full py-7 rounded-[2.5rem] font-black flex items-center justify-center gap-4 transition-all active:scale-95 shadow-2xl",
+                "w-full py-4 sm:py-6 rounded-xl sm:rounded-3xl font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl",
                 existingProductIds.has(selectedProduct.id)
                   ? "bg-emerald-100 text-emerald-600 cursor-default"
                   : addedItemIds.has(selectedProduct.id)
@@ -456,13 +456,13 @@ export const StorePage: React.FC<StorePageProps> = ({
             >
                { (addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id)) ? (
                 <>
-                  <Check className="w-7 h-7 stroke-[4px]" />
-                  <span className="text-xl uppercase tracking-widest">{t('store.item_added', 'Added to List')}</span>
+                  <Check className="w-4 h-4 sm:w-7 sm:h-7 stroke-[4px]" />
+                  <span className="text-sm sm:text-xl uppercase tracking-widest">{t('store.item_added', 'Added to List')}</span>
                 </>
               ) : (
                 <>
-                  <Plus className="w-7 h-7 stroke-[4px]" />
-                  <span className="text-xl uppercase tracking-widest">{t('store.add_to_list', 'Add to Shopping List')}</span>
+                  <Plus className="w-4 h-4 sm:w-7 sm:h-7 stroke-[4px]" />
+                  <span className="text-sm sm:text-xl uppercase tracking-widest">{t('store.add_to_list', 'Add to Shopping List')}</span>
                 </>
               )}
             </button>
@@ -485,7 +485,7 @@ export const StorePage: React.FC<StorePageProps> = ({
       className="fixed inset-0 z-[150] bg-white flex flex-col overflow-hidden"
     >
       {/* Dynamic Header */}
-      <div className="relative h-64 shrink-0 overflow-hidden">
+      <div className="relative h-44 sm:h-64 shrink-0 overflow-hidden">
         {/* Banner Mockup */}
         <div className={cn(
           "absolute inset-0 bg-gradient-to-br transition-all duration-700",
@@ -502,45 +502,44 @@ export const StorePage: React.FC<StorePageProps> = ({
         )} />
         
         {/* Floating Controls */}
-        <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-20">
+        <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 flex items-center justify-between z-20">
           <button
             onClick={onClose}
-            className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/30 transition-all active:scale-90 shadow-xl"
+            className="p-2 sm:p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/30 transition-all active:scale-90 shadow-xl"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
           <div className="flex gap-2">
           </div>
         </div>
 
         {/* Store Brand Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 pt-20 bg-gradient-to-t from-white via-white/80 to-transparent">
-          <div className="flex items-end gap-6 translate-y-2">
-            <div className="w-24 h-24 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-white overflow-hidden shrink-0">
+        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 pt-12 sm:pt-20 bg-gradient-to-t from-white via-white/80 to-transparent">
+          <div className="flex items-end gap-3 sm:gap-6 translate-y-1 sm:translate-y-2">
+            <div className="w-14 h-14 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-3xl shadow-2xl flex items-center justify-center border-4 border-white overflow-hidden shrink-0">
                <ShoppingBag className={cn(
-                 "w-12 h-12",
+                 "w-7 h-7 sm:w-12 sm:h-12",
                  store.category === 'Grocery' ? "text-emerald-500" :
                  store.category === 'Pharmacy' ? "text-rose-500" :
                  "text-stone-300"
                )} />
             </div>
-            <div className="flex-1 pb-2">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-3xl font-black text-stone-900 tracking-tight">{store.name}</h1>
+            <div className="flex-1 pb-0.5 sm:pb-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                <h1 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">{store.name}</h1>
                 {store.isVerified && (
-                  <div className="bg-emerald-500 rounded-full p-1" title={t('store_front.verified_badge')}>
-                    <Check className="w-3 h-3 text-white stroke-[4px]" />
+                  <div className="bg-emerald-500 rounded-full p-0.5 sm:p-1" title={t('store_front.verified_badge')}>
+                    <Check className="w-2 h-2 sm:w-3 sm:h-3 text-white stroke-[4px]" />
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-4 text-stone-400 font-bold text-sm">
+              <div className="flex items-center gap-2 sm:gap-4 text-stone-400 font-bold text-[10px] sm:text-sm">
                  <div className="flex items-center gap-1">
-                   <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                   <Star className="w-3 sm:w-4 h-3 sm:h-4 text-amber-400 fill-amber-400" />
                    <span className="text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</span>
-                   <span className="font-medium">({store.ratingCount || 0})</span>
                  </div>
                  <span>•</span>
-                 <div className="flex items-center gap-1 uppercase tracking-widest text-[10px]">
+                 <div className="flex items-center gap-1 uppercase tracking-widest text-[8px] sm:text-[10px]">
                    {t(`merchant.categories.${store.category?.toLowerCase() || 'grocery'}`)}
                  </div>
               </div>
@@ -550,28 +549,31 @@ export const StorePage: React.FC<StorePageProps> = ({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto no-scrollbar pb-12">
+      <div className={cn(
+        "flex-1 overflow-y-auto no-scrollbar pb-12",
+        cartCount > 0 && "pb-32"
+      )}>
         <div className="px-4 sm:px-8 space-y-8">
           
           {/* Stats Bar */}
-          <div className="flex items-center justify-between bg-stone-50 rounded-3xl p-4 border border-stone-100">
+          <div className="flex items-center justify-between bg-stone-50 rounded-2xl sm:rounded-3xl p-2 sm:p-4 border border-stone-100 shadow-sm">
             <div className="text-center flex-1 border-r border-stone-200">
-              <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.followers_label')}</p>
-              <p className="text-lg font-black text-stone-900">{store.followersCount}</p>
+              <p className="text-[8px] sm:text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.followers_label')}</p>
+              <p className="text-xs sm:text-lg font-black text-stone-900">{store.followersCount}</p>
             </div>
             <div className="text-center flex-1 border-r border-stone-200">
-              <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.rating_label')}</p>
+              <p className="text-[8px] sm:text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.rating_label')}</p>
               <div className="flex items-center justify-center gap-0.5">
-                <p className="text-lg font-black text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</p>
-                <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                <p className="text-xs sm:text-lg font-black text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</p>
+                <Star className="w-2 sm:w-3.5 h-2 sm:h-3.5 text-amber-400 fill-amber-400" />
               </div>
             </div>
-            <div className="text-center flex-1">
+            <div className="text-center flex-2 sm:flex-1 pl-2">
                <button 
                  onClick={handleFollow}
                  className={cn(
-                   "px-6 py-2 rounded-xl font-bold text-sm transition-all",
-                   isFollowing ? "bg-stone-200 text-stone-600" : "bg-stone-900 text-white shadow-lg shadow-stone-200"
+                   "w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all active:scale-95",
+                   isFollowing ? "bg-stone-200 text-stone-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
                  )}
                >
                  {isFollowing ? t('store_front.unfollow') : t('store_front.follow')}
@@ -580,9 +582,9 @@ export const StorePage: React.FC<StorePageProps> = ({
           </div>
 
           {/* Rating Widget */}
-          <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 flex flex-col items-center gap-4">
-            <h4 className="text-sm font-black text-amber-900 uppercase tracking-widest">{t('store_front.rate_this_store', 'Rate this Store')}</h4>
-            <div className="flex gap-2">
+          <div className="bg-amber-50/50 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 border border-amber-100 flex flex-col items-center gap-2 sm:gap-4">
+            <h4 className="text-[9px] sm:text-[10px] font-black text-amber-900 uppercase tracking-widest">{t('store_front.rate_this_store', 'Rate this Store')}</h4>
+            <div className="flex gap-1.5 sm:gap-2">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
                   key={star}
@@ -591,7 +593,7 @@ export const StorePage: React.FC<StorePageProps> = ({
                 >
                   <Star 
                     className={cn(
-                      "w-8 h-8",
+                      "w-6 sm:w-8 h-6 sm:h-8",
                       star <= (userRating || Math.round(store.averageRating || 0)) 
                         ? "text-amber-400 fill-amber-400" 
                         : "text-amber-200"
@@ -600,7 +602,7 @@ export const StorePage: React.FC<StorePageProps> = ({
                 </button>
               ))}
             </div>
-            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+            <p className="text-[9px] font-bold text-amber-700 uppercase tracking-wider text-center">
               {userRating > 0 ? t('store_front.thanks_for_rating', 'Thanks for your feedback!') : t('store_front.tap_to_rate', 'Tap a star to rate')}
             </p>
           </div>
@@ -608,12 +610,12 @@ export const StorePage: React.FC<StorePageProps> = ({
           {/* About */}
           <div className="space-y-4">
              <div className="flex items-center justify-between">
-               <h3 className="text-xl font-black text-stone-900 tracking-tight">{t('store_front.info_title')}</h3>
-               <Info className="w-5 h-5 text-stone-300" />
+               <h3 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">{t('store_front.info_title')}</h3>
+               <Info className="w-4 h-4 sm:w-5 sm:h-5 text-stone-300" />
              </div>
-             <div className="grid gap-4">
-                <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl">
-                  <MapPin className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
+                  <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-bold text-stone-700">{t('store_front.location_label')}</p>
                     <p className="text-sm text-stone-500 font-medium">{store.location?.address || '123 Market St, Downtown City'}</p>
@@ -627,19 +629,19 @@ export const StorePage: React.FC<StorePageProps> = ({
                   </div>
                 </div>
                  {store.contactPhone && (
-                   <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl">
-                     <MessageCircle className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
+                   <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
+                     <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
                      <div>
-                       <p className="text-sm font-bold text-stone-700">{t('store_front.contact_label')}</p>
-                       <p className="text-sm text-stone-500 font-medium">{store.contactPhone}</p>
+                       <p className="text-[10px] sm:text-sm font-bold text-stone-700">{t('store_front.contact_label')}</p>
+                       <p className="text-xs sm:text-sm text-stone-500 font-medium">{store.contactPhone}</p>
                      </div>
                    </div>
                  )}
                  {store.website && (
-                   <div className="flex items-start gap-3 p-4 bg-stone-50 rounded-2xl">
-                     <ExternalLink className="w-5 h-5 text-stone-400 shrink-0 mt-0.5" />
+                   <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
+                     <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
                      <div>
-                       <p className="text-sm font-bold text-stone-700">{t('store_front.website_label')}</p>
+                       <p className="text-[10px] sm:text-sm font-bold text-stone-700">{t('store_front.website_label')}</p>
                        <a href={store.website} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 font-bold hover:underline">
                          {store.website.replace(/^https?:\/\//, '')}
                        </a>
@@ -650,48 +652,46 @@ export const StorePage: React.FC<StorePageProps> = ({
              <p className="text-stone-500 text-sm leading-relaxed font-medium px-1">
                {store.description}
              </p>
-          </div>
-
-          {/* Products Section */}
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <h3 className="text-2xl font-black text-stone-900 tracking-tight">{t('store_front.products')}</h3>
-              <div className="flex items-center gap-2">
+          </div>          {/* Products Section */}
+          <div className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-1">
+              <h3 className="text-lg sm:text-2xl font-black text-stone-900 tracking-tight">{t('store_front.products')}</h3>
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
                 {/* View Mode Toggle */}
-                <div className="flex bg-stone-100 p-1 rounded-xl">
+                <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
                   <button 
                     onClick={() => setViewMode('grid')}
-                    className={cn("p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
                   >
-                    <LayoutGrid className="w-4 h-4" />
+                    <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                   <button 
                     onClick={() => setViewMode('list')}
-                    className={cn("p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
                   >
-                    <List className="w-4 h-4" />
+                    <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   </button>
                 </div>
                 
                 {/* Sort Toggle */}
-                <div className="flex bg-stone-100 p-1 rounded-xl">
+                <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
                   <button 
                     onClick={() => setSortBy('newest')}
-                    className={cn("p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'newest' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'newest' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
                   >
-                    <History className="w-3.5 h-3.5" />
-                    <span className="text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_newest', 'Newest')}</span>
+                    <History className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_newest', 'Newest')}</span>
                   </button>
                   <button 
                     onClick={() => setSortBy('alpha')}
-                    className={cn("p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'alpha' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'alpha' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
                   >
-                    <SortAsc className="w-3.5 h-3.5" />
-                    <span className="text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_alpha', 'A-Z')}</span>
+                    <SortAsc className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_alpha', 'A-Z')}</span>
                   </button>
                 </div>
 
-                <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black uppercase tracking-widest h-9 flex items-center">
+                <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest h-8 sm:h-9 flex items-center shrink-0">
                   {t('store_front.items_available', { count: products.length })}
                 </div>
               </div>
@@ -748,18 +748,18 @@ export const StorePage: React.FC<StorePageProps> = ({
           </div>
 
           {/* CTA / Quick Actions */}
-          <div className="grid grid-cols-2 gap-4">
-             <button className="p-6 bg-stone-50 rounded-[2rem] flex flex-col items-center gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
-               <div className="p-3 bg-white rounded-2xl shadow-sm">
-                 <MessageCircle className="w-6 h-6 text-stone-600" />
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+             <button className="p-4 sm:p-6 bg-stone-50 rounded-[1.5rem] sm:rounded-[2rem] flex flex-col items-center gap-2 sm:gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
+               <div className="p-2.5 sm:p-3 bg-white rounded-xl sm:rounded-2xl shadow-sm">
+                 <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-stone-600" />
                </div>
-               <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.contact')}</span>
+               <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.contact')}</span>
              </button>
-             <button className="p-6 bg-stone-50 rounded-[2rem] flex flex-col items-center gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
-               <div className="p-3 bg-white rounded-2xl shadow-sm">
-                 <ShieldCheck className="w-6 h-6 text-stone-600" />
+             <button className="p-4 sm:p-6 bg-stone-50 rounded-[1.5rem] sm:rounded-[2rem] flex flex-col items-center gap-2 sm:gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
+               <div className="p-2.5 sm:p-3 bg-white rounded-xl sm:rounded-2xl shadow-sm">
+                 <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-stone-600" />
                </div>
-               <span className="text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.report_store')}</span>
+               <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.report_store')}</span>
              </button>
           </div>
         </div>
@@ -799,7 +799,31 @@ export const StorePage: React.FC<StorePageProps> = ({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {showOrderCheckout && (
+          <StoreOrderCheckout 
+            store={store}
+            items={orderItems}
+            total={cartTotal}
+            count={cartCount}
+            onClose={() => setShowOrderCheckout(false)}
+            onOrderSuccess={handleOrderSuccess}
+            updateQuantity={handleUpdateQuantity}
+            removeItem={handleRemoveItem}
+          />
+        )}
+      </AnimatePresence>
+      
+      <AnimatePresence>
+        {showOrderDetails && activeOrderId && (
+          <OrderDetailView
+            orderId={activeOrderId}
+            onClose={() => setShowOrderDetails(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
-    </div>
+  </div>
   );
 };

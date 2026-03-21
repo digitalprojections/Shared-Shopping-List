@@ -241,15 +241,15 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]"
+        className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh]"
       >
-        <div className="p-5 sm:p-8 pb-4 shrink-0 border-b border-stone-50">
+        <div className="p-4 sm:p-8 pb-3 sm:pb-4 shrink-0 border-b border-stone-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
-                <StoreIcon className="w-6 h-6 text-emerald-600" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-emerald-50 rounded-xl sm:2xl flex items-center justify-center">
+                <StoreIcon className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600" />
               </div>
-              <h2 className="text-2xl font-bold text-stone-900">
+              <h2 className="text-xl sm:text-2xl font-bold text-stone-900 tracking-tight">
                 {isEditing ? t('merchant.edit_title') : t('merchant.register_title')}
               </h2>
             </div>
@@ -280,8 +280,8 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
               </p>
             </motion.div>
           ) : (
-            <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto no-scrollbar p-5 sm:p-8 pt-6 space-y-6">
+            <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 bg-stone-50/30">
+              <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-8 pt-4 sm:pt-6 space-y-5 sm:space-y-6">
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -308,8 +308,8 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className={`w-full px-5 py-4 bg-stone-50 border-2 rounded-2xl outline-none transition-all font-medium ${
-                        shake && !name.trim() ? 'border-rose-300 animate-shake' : 'border-transparent focus:border-emerald-500 focus:bg-white'
+                      className={`w-full px-4 py-3 sm:py-4 bg-white border-2 rounded-2xl outline-none transition-all font-medium text-sm ${
+                        shake && !name.trim() ? 'border-rose-300 animate-shake' : 'border-transparent focus:border-emerald-500 focus:bg-white shadow-sm'
                       }`}
                       placeholder={t('merchant.store_name_placeholder', 'e.g. Sunny Supermarket')}
                     />
@@ -323,8 +323,8 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      className={`w-full px-5 py-4 bg-stone-50 border-2 rounded-2xl outline-none transition-all font-medium ${
-                        shake && !address.trim() ? 'border-rose-300 animate-shake' : 'border-transparent focus:border-emerald-500 focus:bg-white'
+                      className={`w-full px-4 py-3 sm:py-4 bg-white border-2 rounded-2xl outline-none transition-all font-medium text-sm ${
+                        shake && !address.trim() ? 'border-rose-300 animate-shake' : 'border-transparent focus:border-emerald-500 focus:bg-white shadow-sm'
                       }`}
                       placeholder={t('merchant.store_address_placeholder', 'Street, City, Country')}
                     />
@@ -339,7 +339,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                         type="text"
                         value={mapLink}
                         onChange={(e) => parseMapLink(e.target.value)}
-                        className="flex-1 px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
+                        className="flex-1 px-4 py-3 sm:py-4 bg-white border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium text-sm shadow-sm"
                         placeholder="Paste Google Maps link..."
                       />
                       <button
@@ -347,9 +347,9 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                         onClick={detectLocation}
                         disabled={isDetectingLocation}
                         className={cn(
-                          "px-5 rounded-2xl border-2 transition-all flex items-center justify-center gap-2",
+                          "px-4 sm:px-5 rounded-2xl border-2 transition-all flex items-center justify-center gap-2 shadow-sm",
                           isDetectingLocation 
-                            ? "bg-stone-50 border-stone-100 text-stone-400" 
+                            ? "bg-white border-stone-100 text-stone-400" 
                             : "bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100 active:scale-95"
                         )}
                         title={t('merchant.use_my_location')}
@@ -381,7 +381,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                       <select
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium appearance-none"
+                        className="w-full px-4 py-3 sm:py-4 bg-white border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium text-sm appearance-none shadow-sm"
                       >
                         {categoryOptions.map(c => (
                           <option key={c.key} value={c.value}>{c.label}</option>
@@ -396,7 +396,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                         type="date"
                         value={openingDate}
                         onChange={(e) => setOpeningDate(e.target.value)}
-                        className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium"
+                        className="w-full px-4 py-3 sm:py-4 bg-white border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium text-sm shadow-sm"
                       />
                     </div>
                   </div>
@@ -408,7 +408,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      className="w-full px-5 py-4 bg-stone-50 border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium resize-none h-24"
+                      className="w-full px-4 py-3 sm:py-4 bg-white border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium text-sm resize-none h-24 shadow-sm"
                       placeholder={t('merchant.desc_placeholder')}
                     />
                   </div>
@@ -418,14 +418,14 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                        <Clock className="w-4 h-4" />
                        {t('merchant.working_hours')}
                     </label>
-                    <div className="bg-stone-50 rounded-[2rem] p-4 border border-stone-100 space-y-3">
+                    <div className="bg-white rounded-[2rem] p-3 sm:p-4 border border-stone-100 space-y-2 sm:space-y-3 shadow-sm">
                       {DAYS_OF_WEEK.map((day) => (
                         <div key={day} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                           <button
                             type="button"
                             onClick={() => handleDayChange(day, { isOpen: !schedules[day].isOpen })}
                             className={cn(
-                              "w-full sm:w-24 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-center",
+                              "w-full sm:w-24 px-3 py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all text-center",
                               schedules[day].isOpen ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "bg-white text-stone-300 border border-stone-100"
                             )}
                           >
@@ -438,18 +438,18 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                                 type="time"
                                 value={schedules[day].open}
                                 onChange={(e) => handleDayChange(day, { open: e.target.value })}
-                                className="flex-1 px-3 py-2 bg-white border border-stone-100 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-all"
+                                className="flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-stone-50 border border-stone-100 rounded-xl text-[11px] sm:text-xs font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all"
                               />
                               <span className="text-stone-300 font-bold">→</span>
                               <input
                                 type="time"
                                 value={schedules[day].close}
                                 onChange={(e) => handleDayChange(day, { close: e.target.value })}
-                                className="flex-1 px-3 py-2 bg-white border border-stone-100 rounded-xl text-xs font-bold outline-none focus:border-emerald-500 transition-all"
+                                className="flex-1 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-stone-50 border border-stone-100 rounded-xl text-[11px] sm:text-xs font-bold outline-none focus:border-emerald-500 focus:bg-white transition-all"
                               />
                             </div>
                           ) : (
-                            <div className="flex-1 text-center py-2 px-4 bg-stone-100/50 rounded-xl text-[10px] font-bold text-stone-300 uppercase tracking-widest leading-none flex items-center justify-center">
+                            <div className="flex-1 text-center py-1.5 px-4 bg-stone-50 rounded-xl text-[9px] sm:text-[10px] font-bold text-stone-300 uppercase tracking-widest leading-none flex items-center justify-center">
                               {t('merchant.closed')}
                             </div>
                           )}
@@ -496,10 +496,10 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                             type="button"
                             onClick={() => setThemeColor(theme.value)}
                             className={cn(
-                              "px-4 py-2 rounded-xl text-xs font-bold transition-all border-2",
+                              "px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-[10px] sm:text-xs font-bold transition-all border-2",
                               themeColor === theme.value 
                                 ? "bg-stone-900 text-white border-stone-900 shadow-lg shadow-stone-200" 
-                                : "bg-white text-stone-500 border-stone-100 hover:border-stone-200"
+                                : "bg-white text-stone-500 border-stone-100 hover:border-emerald-200 shadow-sm"
                             )}
                           >
                             {theme.label}
@@ -530,13 +530,13 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                           }
                         }}
                         className={cn(
-                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                          "relative inline-flex h-5 w-10 sm:h-6 sm:w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
                           directOrderEnabled ? "bg-emerald-600" : "bg-stone-200"
                         )}
                       >
                         <span
                           className={cn(
-                            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                            "pointer-events-none inline-block h-4 w-4 sm:h-5 sm:w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
                             directOrderEnabled ? "translate-x-5" : "translate-x-0"
                           )}
                         />
@@ -575,20 +575,20 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                 </div>
               </div>
 
-              <div className="px-5 sm:px-8 py-4 sm:py-6 border-t border-stone-50 bg-white shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+              <div className="px-4 sm:px-8 py-4 sm:py-6 border-t border-stone-50 bg-white shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
                 <motion.button
                   animate={shake ? { x: [-5, 5, -5, 5, 0] } : {}}
                   transition={{ duration: 0.4 }}
                   type="submit"
                   disabled={status === 'submitting'}
-                  className="w-full group flex items-center justify-center gap-3 px-8 py-5 bg-emerald-600 text-white font-black rounded-3xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                  className="w-full group flex items-center justify-center gap-3 px-6 sm:px-8 py-3.5 sm:py-5 bg-emerald-600 text-white font-black rounded-2xl sm:rounded-3xl shadow-xl shadow-emerald-100 hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
                 >
                   {status === 'submitting' ? (
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   ) : (
-                    <Send className="w-5 h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                    <Send className="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                   )}
-                  <span>{isEditing ? t('merchant.save_changes', 'Save Changes') : t('merchant.apply_button', 'Submit Application')}</span>
+                  <span className="text-sm sm:text-base">{isEditing ? t('merchant.save_changes', 'Save Changes') : t('merchant.apply_button', 'Submit Application')}</span>
                 </motion.button>
               </div>
             </form>
