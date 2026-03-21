@@ -774,8 +774,12 @@ exports.rateStoreSecure = onCall({
         throw new HttpsError('not-found', 'User or Store not found.');
       }
 
-      const userData = userDoc.data();
       const storeData = storeDoc.data();
+      if (storeData.ownerId === uid) {
+        throw new HttpsError('permission-denied', 'Store owners cannot rate their own stores.');
+      }
+
+      const userData = userDoc.data();
       const now = Date.now();
       const today = new Date().toISOString().split('T')[0];
 

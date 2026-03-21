@@ -25,13 +25,14 @@ import {
 } from 'lucide-react';
 import { StoreOrderCheckout } from './StoreOrderCheckout';
 import { OrderDetailView } from './OrderDetailView';
-import { OrderItem, Store, StoreProduct, ListItem, AppUser } from '../types';
+import { OrderItem, Store, StoreProduct, ListItem, AppUser, Order } from '../types';
 import { storeService } from '../services/storeService';
 import { shoppingService } from '../services/shoppingService';
 import { auth } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { StoreWorkingHours } from './StoreWorkingHours';
+import { orderService } from '../services/orderService';
 
 
 interface StorePageProps {
@@ -65,6 +66,7 @@ export const StorePage: React.FC<StorePageProps> = ({
   const [showOrderCheckout, setShowOrderCheckout] = useState(false);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [userOrders, setUserOrders] = useState<Order[]>([]);
   
   // auth user is now passed via props
 
@@ -96,12 +98,23 @@ export const StorePage: React.FC<StorePageProps> = ({
       storeService.getUserRating(storeId, currentUser.uid).then(rating => {
         if (rating !== null) setUserRating(rating);
       });
+
+      // Subscribe to user's orders for this store
+      const unsubscribeOrders = orderService.subscribeToUserOrders(currentUser.uid, (orders) => {
+        const storeOrders = orders.filter(o => o.storeId === storeId);
+        setUserOrders(storeOrders);
+      });
+      return () => {
+        unsubscribe();
+        unsubscribeOrders();
+      };
     }
 
     return () => unsubscribe();
   }, [storeId, currentUser]);
 
   const isFollowing = appUser?.followedStores?.includes(storeId) || false;
+  const isOwner = store?.ownerId === currentUser?.uid;
 
   const handleFollow = async () => {
     if (!currentUser) {
@@ -306,7 +319,7 @@ export const StorePage: React.FC<StorePageProps> = ({
             </div>
             
             <button
-              disabled={!product.inStock || addedItemIds.has(product.id) || existingProductIds.has(product.id)}
+              disabled={!product.inStock || addedItemIds.has(product.id) || existingProductIds.has(product.id) || isOwner}
               onClick={(e) => { e.stopPropagation(); handleAdd(product); }}
               className={cn(
                 "w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 group/btn overflow-hidden",
@@ -441,7 +454,7 @@ export const StorePage: React.FC<StorePageProps> = ({
 
           <div className="p-4 sm:p-10 border-t border-stone-100 bg-white shrink-0">
             <button
-              disabled={!selectedProduct.inStock || addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id)}
+              disabled={!selectedProduct.inStock || addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id) || isOwner}
               onClick={(e) => { e.stopPropagation(); handleAdd(selectedProduct); setSelectedProduct(null); }}
               className={cn(
                 "w-full py-4 sm:py-6 rounded-xl sm:rounded-3xl font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl",
@@ -568,44 +581,100 @@ export const StorePage: React.FC<StorePageProps> = ({
                 <Star className="w-2 sm:w-3.5 h-2 sm:h-3.5 text-amber-400 fill-amber-400" />
               </div>
             </div>
-            <div className="text-center flex-2 sm:flex-1 pl-2">
-               <button 
-                 onClick={handleFollow}
-                 className={cn(
-                   "w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all active:scale-95",
-                   isFollowing ? "bg-stone-200 text-stone-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
-                 )}
-               >
-                 {isFollowing ? t('store_front.unfollow') : t('store_front.follow')}
-               </button>
-            </div>
+            {isOwner ? (
+              <div className="text-center flex-2 sm:flex-1 pl-2">
+                <div className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center gap-2">
+                   <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                   {t('store.your_store', 'Your Store')}
+                </div>
+              </div>
+            ) : (
+              <div className="text-center flex-2 sm:flex-1 pl-2">
+                 <button 
+                   onClick={handleFollow}
+                   className={cn(
+                     "w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all active:scale-95",
+                     isFollowing ? "bg-stone-200 text-stone-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
+                   )}
+                 >
+                   {isFollowing ? t('store_front.unfollow') : t('store_front.follow')}
+                 </button>
+              </div>
+            )}
           </div>
 
-          {/* Rating Widget */}
-          <div className="bg-amber-50/50 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 border border-amber-100 flex flex-col items-center gap-2 sm:gap-4">
-            <h4 className="text-[9px] sm:text-[10px] font-black text-amber-900 uppercase tracking-widest">{t('store_front.rate_this_store', 'Rate this Store')}</h4>
-            <div className="flex gap-1.5 sm:gap-2">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  onClick={() => handleRate(star)}
-                  className="transition-all active:scale-90"
-                >
-                  <Star 
-                    className={cn(
-                      "w-6 sm:w-8 h-6 sm:h-8",
-                      star <= (userRating || Math.round(store.averageRating || 0)) 
-                        ? "text-amber-400 fill-amber-400" 
-                        : "text-amber-200"
-                    )} 
-                  />
-                </button>
-              ))}
+          {/* User Orders @ Store */}
+          {userOrders.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">{t('store.my_orders_here', 'My Orders at this Store')}</h3>
+                <History className="w-4 h-4 text-stone-300" />
+              </div>
+              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1">
+                {userOrders.map((order) => (
+                  <motion.button
+                    key={order.id}
+                    layoutId={order.id}
+                    onClick={() => {
+                      setActiveOrderId(order.id);
+                      setShowOrderDetails(true);
+                    }}
+                    className="flex-shrink-0 w-64 bg-white p-5 rounded-[2rem] border border-stone-100 shadow-xl shadow-stone-900/[0.02] text-left group relative hover:border-indigo-100 transition-all active:scale-95"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="p-2.5 bg-indigo-50 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                        <ShoppingBag className="w-5 h-5" />
+                      </div>
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border",
+                        order.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                        order.status === 'completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        'bg-blue-100 text-blue-700 border-blue-200'
+                      )}>
+                        {t(`order.status.${order.status}`)}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-stone-300 uppercase tracking-widest leading-none">
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </p>
+                      <p className="text-sm font-black text-stone-900 truncate">
+                        {order.items.map(i => i.name).join(', ')}
+                      </p>
+                    </div>
+                  </motion.button>
+                ))}
+              </div>
             </div>
-            <p className="text-[9px] font-bold text-amber-700 uppercase tracking-wider text-center">
-              {userRating > 0 ? t('store_front.thanks_for_rating', 'Thanks for your feedback!') : t('store_front.tap_to_rate', 'Tap a star to rate')}
-            </p>
-          </div>
+          )}
+
+          {/* Rating Widget */}
+          {!isOwner && (
+            <div className="bg-amber-50/50 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 border border-amber-100 flex flex-col items-center gap-2 sm:gap-4">
+              <h4 className="text-[9px] sm:text-[10px] font-black text-amber-900 uppercase tracking-widest">{t('store_front.rate_this_store', 'Rate this Store')}</h4>
+              <div className="flex gap-1.5 sm:gap-2">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    onClick={() => handleRate(star)}
+                    className="transition-all active:scale-90"
+                  >
+                    <Star 
+                      className={cn(
+                        "w-6 sm:w-8 h-6 sm:h-8",
+                        star <= (userRating || Math.round(store.averageRating || 0)) 
+                          ? "text-amber-400 fill-amber-400" 
+                          : "text-amber-200"
+                      )} 
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] font-bold text-amber-700 uppercase tracking-wider text-center">
+                {userRating > 0 ? t('store_front.thanks_for_rating', 'Thanks for your feedback!') : t('store_front.tap_to_rate', 'Tap a star to rate')}
+              </p>
+            </div>
+          )}
 
           {/* About */}
           <div className="space-y-4">

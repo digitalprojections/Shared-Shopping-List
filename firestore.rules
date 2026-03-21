@@ -62,8 +62,12 @@ service cloud.firestore {
       allow read: if true;
       allow create: if request.auth != null;
       allow update: if request.auth != null && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers', 'followersCount', 'averageRating', 'ratingCount', 'updatedAt']) ||
-        resource.data.ownerId == request.auth.uid || 
+        // Allow followers to update, but not if they are the store owner
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers', 'followersCount', 'averageRating', 'ratingCount', 'updatedAt']) && 
+         request.auth.uid != resource.data.ownerId) ||
+        // Allow store owner to update their own store (except followers)
+        (resource.data.ownerId == request.auth.uid && 
+         !request.resource.data.diff(resource.data).affectedKeys().hasAny(['followers', 'followersCount', 'averageRating', 'ratingCount'])) ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true)
       );
       allow delete: if request.auth != null && (
@@ -113,7 +117,9 @@ service cloud.firestore {
 
     // Orders
     match /orders/{orderId} {
-      allow create: if request.auth != null && request.resource.data.customerId == request.auth.uid;
+      allow create: if request.auth != null && 
+                    request.resource.data.customerId == request.auth.uid &&
+                    request.auth.uid != get(/databases/$(database)/documents/stores/$(request.resource.data.storeId)).data.ownerId;
       allow read: if request.auth != null && (
         resource.data.customerId == request.auth.uid || 
         (get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid &&
