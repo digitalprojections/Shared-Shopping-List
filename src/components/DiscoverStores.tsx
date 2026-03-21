@@ -14,7 +14,8 @@ import {
   Store as StoreIcon,
   Clock,
   ArrowRight,
-  Heart
+  Heart,
+  Settings
 } from 'lucide-react';
 import { Store, AppUser } from '../types';
 import { storeService } from '../services/storeService';
@@ -27,11 +28,18 @@ import { STORE_CATEGORIES } from '../constants/categories';
 interface DiscoverStoresProps {
   onClose: () => void;
   onSelectStore: (storeId: string) => void;
+  onShowMerchantDashboard: () => void;
   currentUser: any; // User | null
   appUser: AppUser | null;
 }
 
-export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelectStore, currentUser, appUser }) => {
+export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ 
+  onClose, 
+  onSelectStore, 
+  onShowMerchantDashboard,
+  currentUser, 
+  appUser 
+}) => {
   const { t } = useTranslation();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
@@ -202,13 +210,19 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
             </div>
           ) : (
             <div className="grid gap-4 w-full">
-              {filteredStores.map(store => (
-                <motion.div
-                  key={store.id}
-                  layout
-                  onClick={() => onSelectStore(store.id)}
-                  className="p-3.5 sm:p-5 bg-white border border-stone-50 rounded-2xl sm:rounded-[2.2rem] shadow-sm hover:shadow-2xl hover:shadow-stone-200/50 transition-all cursor-pointer group flex items-center justify-between gap-3 sm:gap-6 w-full overflow-hidden"
-                >
+              {filteredStores.map(store => {
+                const isOwnStore = currentUser && store.ownerId === currentUser.uid;
+                
+                return (
+                  <motion.div
+                    key={store.id}
+                    layout
+                    onClick={() => onSelectStore(store.id)}
+                    className={cn(
+                      "p-3.5 sm:p-5 bg-white border rounded-2xl sm:rounded-[2.2rem] shadow-sm hover:shadow-2xl hover:shadow-stone-200/50 transition-all cursor-pointer group flex items-center justify-between gap-3 sm:gap-6 w-full overflow-hidden",
+                      isOwnStore ? "border-emerald-500 bg-emerald-50/10 shadow-lg shadow-emerald-500/5" : "border-stone-50"
+                    )}
+                  >
                   <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1">
                     <div className={cn(
                       "w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-[1.5rem] flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-500",
@@ -222,11 +236,18 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-black text-stone-900 text-base sm:text-lg truncate tracking-tight">{store.name}</h4>
-                        {store.isVerified && (
-                          <div className="p-0.5 bg-emerald-500 rounded-full shrink-0">
-                             <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {isOwnStore && (
+                            <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded-lg">
+                              {t('common.your_store', 'Your Store')}
+                            </span>
+                          )}
+                          {store.isVerified && (
+                            <div className="p-0.5 bg-emerald-500 rounded-full shrink-0">
+                               <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white" />
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-xs font-bold text-stone-400">
                         <div className="flex items-center gap-1 text-amber-500">
@@ -242,23 +263,36 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-                    <button
-                      onClick={(e) => handleToggleFollow(e, store.id)}
-                      className={cn(
-                        "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:2xl flex items-center justify-center transition-all",
-                        appUser?.followedStores?.includes(store.id)
-                          ? "bg-rose-50 text-rose-600 shadow-sm"
-                          : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
-                      )}
-                    >
-                      <Heart className={cn("w-4 h-4 sm:w-5 sm:h-5 transition-all", appUser?.followedStores?.includes(store.id) && "fill-current scale-110")} />
-                    </button>
+                    {isOwnStore ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onShowMerchantDashboard();
+                        }}
+                        className="h-10 sm:h-12 px-4 sm:px-6 bg-emerald-500 text-white rounded-xl sm:2xl flex items-center gap-2 font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                      >
+                        <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <span>{t('merchant.settings', 'Edit Page')}</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => handleToggleFollow(e, store.id)}
+                        className={cn(
+                          "w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:2xl flex items-center justify-center transition-all",
+                          appUser?.followedStores?.includes(store.id)
+                            ? "bg-rose-50 text-rose-600 shadow-sm"
+                            : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
+                        )}
+                      >
+                        <Heart className={cn("w-4 h-4 sm:w-5 sm:h-5 transition-all", appUser?.followedStores?.includes(store.id) && "fill-current scale-110")} />
+                      </button>
+                    )}
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-stone-50 rounded-xl sm:2xl flex items-center justify-center group-hover:bg-stone-900 group-hover:text-white transition-all">
                       <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
                     </div>
                   </div>
                 </motion.div>
-              ))}
+              )})}
             </div>
           )}
         </div>

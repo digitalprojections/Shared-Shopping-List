@@ -102,5 +102,19 @@ export const orderService = {
         callback({ id: snap.id, ...snap.data() } as Order);
       }
     }, onError);
+  },
+
+  subscribeToStoresOrders: (storeIds: string[], callback: (orders: Order[]) => void, onError?: (error: any) => void) => {
+    if (!isFirebaseConfigured || !storeIds || storeIds.length === 0) return () => {};
+    // Firestore 'in' query supports up to 10 items
+    const q = query(
+      collection(db, 'orders'),
+      where('storeId', 'in', storeIds.slice(0, 10)),
+      orderBy('createdAt', 'desc')
+    );
+    return onSnapshot(q, (snapshot) => {
+      const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+      callback(orders);
+    }, onError);
   }
 };
