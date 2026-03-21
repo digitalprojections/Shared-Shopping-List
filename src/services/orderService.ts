@@ -19,12 +19,16 @@ export const orderService = {
   createOrder: async (orderData: Omit<Order, 'id' | 'createdAt' | 'updatedAt' | 'chat'>) => {
     if (!isFirebaseConfigured || !db) return null;
     
-    const order: Omit<Order, 'id'> = {
+    // Sanitize order data to remove undefined fields which Firestore doesn't like
+    const sanitizedItems = orderData.items.map(item => cleanObject(item));
+    
+    const order = cleanObject({
       ...orderData,
+      items: sanitizedItems,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       chat: []
-    };
+    });
     
     return await addDoc(collection(db, 'orders'), order);
   },

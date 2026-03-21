@@ -468,3 +468,162 @@ exports.onListUpdateNotification = firestore.document("lists/{listId}").onUpdate
     logger.error("Error sending notifications:", error);
   }
 });
+
+exports.onOrderCreatedNotification = firestore.document("orders/{orderId}").onCreate(async (snapshot, context) => {
+  const orderData = snapshot.data();
+  if (!orderData) return;
+
+  const db = admin.firestore();
+  const orderId = context.params.orderId;
+  const storeId = orderData.storeId;
+  const customerName = orderData.customerName || 'A customer';
+
+  try {
+    // 1. Get the store to find the ownerId
+    const storeDoc = await db.collection('stores').doc(storeId).get();
+    if (!storeDoc.exists) {
+      logger.error(`Store ${storeId} not found for order ${orderId}`);
+      return;
+    }
+
+    const storeData = storeDoc.data();
+    const ownerId = storeData.ownerId;
+    if (!ownerId) {
+      logger.error(`No ownerId found for store ${storeId}`);
+      return;
+    }
+
+    // 2. Get the owner's FCM tokens
+    const ownerDoc = await db.collection('users').doc(ownerId).get();
+    if (!ownerDoc.exists) {
+      logger.error(`Owner ${ownerId} not found for store ${storeId}`);
+      return;
+    }
+
+    const ownerData = ownerDoc.data();
+    const tokens = [];
+    if (ownerData.fcmTokens && Array.isArray(ownerData.fcmTokens)) {
+      tokens.push(...ownerData.fcmTokens);
+    } else if (ownerData.fcmToken) {
+      tokens.push(ownerData.fcmToken);
+    }
+
+    if (tokens.length === 0) {
+      logger.info(`No FCM tokens for owner ${ownerId}`);
+      return;
+    }
+
+    // 3. Send the notification
+    const message = {
+      notification: {
+        title: 'New Order! 🛍️',
+        body: `${customerName} just placed an order at your store "${storeData.name}".`,
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          sound: 'default',
+          click_action: 'FCM_PLUGIN_ACTIVITY',
+          icon: 'ic_launcher',
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1,
+            'content-available': 1,
+          },
+        },
+      },
+      data: {
+        orderId: orderId,
+        type: 'new_order'
+      },
+      tokens: tokens,
+    };
+
+    const response = await admin.messaging().sendEachForMulticast(message);
+    logger.info(`Order notifications sent: ${response.successCount} success, ${response.failureCount} failure`);
+  } catch (error) {
+    logger.error("Error in onOrderCreatedNotification:", error);
+  }
+});
+
+exports.onOrderChatNotification = firestore.document("orders/{orderId}").onUpdate(async (change, context) => {
+  const newValue = change.after.data();
+  const previousValue = change.before.data();
+
+  // Only notify if chat changed and a new message was added
+  const newChat = newValue.chat || [];
+  const oldChat = previousValue.chat || [];
+  if (newChat.length <= oldChat.length) return;
+
+  const lastMessage = newChat[newChat.length - 1];
+  const db = admin.firestore();
+  const orderId = context.params.orderId;
+  const storeId = newValue.storeId;
+
+  try {
+    // Determine recipient: if customer sent message, notify owner. If owner sent message, notify customer.
+    let recipientId;
+    let senderName;
+
+    if (lastMessage.senderId === newValue.customerId) {
+      // Customer sent message -> Notify owner
+      const storeDoc = await db.collection('stores').doc(storeId).get();
+      recipientId = storeDoc.data()?.ownerId;
+      senderName = newValue.customerName || 'Customer';
+    } else {
+      // Owner sent message -> Notify customer
+      recipientId = newValue.customerId;
+      senderName = newValue.storeName || 'Store';
+    }
+
+    if (!recipientId || recipientId === lastMessage.senderId) return;
+
+    const recipientDoc = await db.collection('users').doc(recipientId).get();
+    if (!recipientDoc.exists) return;
+
+    const recipientData = recipientDoc.data();
+    const tokens = [];
+    if (recipientData.fcmTokens && Array.isArray(recipientData.fcmTokens)) {
+      tokens.push(...recipientData.fcmTokens);
+    } else if (recipientData.fcmToken) {
+      tokens.push(recipientData.fcmToken);
+    }
+
+    if (tokens.length === 0) return;
+
+    const message = {
+      notification: {
+        title: `Message from ${senderName}`,
+        body: lastMessage.text,
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          sound: 'default',
+          click_action: 'FCM_PLUGIN_ACTIVITY',
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1,
+          },
+        },
+      },
+      data: {
+        orderId: orderId,
+        type: 'chat_message'
+      },
+      tokens: tokens,
+    };
+
+    await admin.messaging().sendEachForMulticast(message);
+  } catch (error) {
+    logger.error("Error in onOrderChatNotification:", error);
+  }
+});

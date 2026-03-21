@@ -105,12 +105,28 @@ service cloud.firestore {
         get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId == request.auth.uid;
     }
 
-    // Suggested rule pattern for ratings
+    // Store Ratings
     match /stores/{storeId}/ratings/{userId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-
+    // Orders
+    match /orders/{orderId} {
+      allow create: if request.auth != null && request.resource.data.customerId == request.auth.uid;
+      allow read: if request.auth != null && (
+        resource.data.customerId == request.auth.uid || 
+        get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid
+      );
+      allow update: if request.auth != null && (
+        // Store owner can update status and delivery info
+        (get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid) ||
+        // Customer can cancel if pending
+        (resource.data.customerId == request.auth.uid && request.resource.data.status == 'cancelled' && resource.data.status == 'pending') ||
+        // Both parties can add messages to chat
+        ((resource.data.customerId == request.auth.uid || get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid) && 
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chat', 'updatedAt']))
+      );
+    }
   }
 }

@@ -16,7 +16,8 @@ import {
   Search,
   LayoutDashboard,
   ExternalLink,
-  ShieldCheck
+  ShieldCheck,
+  ShoppingBag
 } from 'lucide-react';
 import { Store } from '../types';
 import { storeService } from '../services/storeService';
@@ -25,6 +26,7 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { MerchantRegistrationModal } from './MerchantRegistrationModal';
 import { ProductManager } from './ProductManager';
+import { StoreOrdersView } from './StoreOrdersView';
 
 interface MerchantDashboardProps {
   userId: string;
@@ -38,6 +40,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStore, setEditingStore] = useState<Store | null>(null);
   const [managingInventoryStore, setManagingInventoryStore] = useState<Store | null>(null);
+  const [viewingOrdersStore, setViewingOrdersStore] = useState<Store | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -268,17 +271,31 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
                         </button>
                         
                         {store.status === 'active' && (
-                          <button
-                            onClick={() => {
-                              if (store) {
-                                setManagingInventoryStore(store);
-                              }
-                            }}
-                            className="w-full sm:flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-400 transition-all active:scale-95 text-sm shadow-xl shadow-emerald-500/10"
-                          >
-                            <Package className="w-5 h-5" />
-                            <span className="truncate">{t('merchant.inventory')}</span>
-                          </button>
+                          <div className="flex flex-col gap-3 w-full">
+                            <button
+                              onClick={() => {
+                                if (store) {
+                                  setViewingOrdersStore(store);
+                                }
+                              }}
+                              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-500 transition-all active:scale-95 text-sm shadow-xl shadow-indigo-500/10"
+                            >
+                              <ShoppingBag className="w-5 h-5" />
+                              <span className="truncate">{t('merchant.view_orders', 'View Orders')}</span>
+                            </button>
+                            
+                            <button
+                              onClick={() => {
+                                if (store) {
+                                  setManagingInventoryStore(store);
+                                }
+                              }}
+                              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 text-white font-black rounded-2xl hover:bg-emerald-400 transition-all active:scale-95 text-sm shadow-xl shadow-emerald-500/10"
+                            >
+                              <Package className="w-5 h-5" />
+                              <span className="truncate">{t('merchant.inventory')}</span>
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -329,6 +346,13 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
           <ProductManager
             store={managingInventoryStore}
             onClose={() => setManagingInventoryStore(null)}
+          />
+        )}
+        {viewingOrdersStore && (
+          <StoreOrdersView
+            storeId={viewingOrdersStore.id}
+            storeName={viewingOrdersStore.name}
+            onClose={() => setViewingOrdersStore(null)}
           />
         )}
       </AnimatePresence>
