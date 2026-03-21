@@ -77,7 +77,10 @@
     "visit_apps": "Other Apps (+1 🪙)",
     "nearby_stores": "Nearby Stores",
     "discover_local": "Discover local products",
-    "discover_products": "Discover local products"
+    "discover_products": "Discover local products",
+    "all_purchases": "My Purchases",
+    "customer_orders": "Customer Orders",
+    "no_active_orders": "No active orders"
   },
   "other_apps": {
     "title": "Designer Apps",
@@ -386,8 +389,9 @@
     "add_to_list": "Add to Shopping List",
     "items_in_list": "In Your Shopping List",
     "ready_to_buy": "Items you added to your list",
-    "like": "Like",
-    "share": "Share"
+    "share": "Share",
+    "your_store": "Your Store",
+    "my_orders_here": "My Orders at this Store"
   },
   "loyalty": {
     "title": "Point Cards",

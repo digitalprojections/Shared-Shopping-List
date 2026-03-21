@@ -79,6 +79,7 @@ import { DiscoverStores } from './components/DiscoverStores';
 import { StorePage } from './components/StorePage';
 import { OtherAppsView } from './components/OtherAppsView';
 import { UserOrdersView } from './components/UserOrdersView';
+import { OrderDetailView } from './components/OrderDetailView';
 import { StoreProduct, Order } from './types';
 import { orderService } from './services/orderService';
 import { APP_CONFIG } from './config';
@@ -135,7 +136,11 @@ export default function App() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showOtherApps, setShowOtherApps] = useState(false);
   const [showUserOrdersView, setShowUserOrdersView] = useState(false);
-  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
+  const [purchases, setPurchases] = useState<Order[]>([]);
+  const [salesOrders, setSalesOrders] = useState<Order[]>([]);
+  const [orderTab, setOrderTab] = useState<'purchases' | 'sales'>('purchases');
+  const [selectedOrderDetailId, setSelectedOrderDetailId] = useState<string | null>(null);
+  const [isOrderDetailMerchant, setIsOrderDetailMerchant] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // --- Version Control & Auto-Update Logic ---
@@ -464,7 +469,8 @@ export default function App() {
 
   useEffect(() => {
     if (!user?.uid || !isFirebaseConfigured) {
-      setActiveOrders([]);
+      setPurchases([]);
+      setSalesOrders([]);
       return;
     }
 
@@ -472,40 +478,16 @@ export default function App() {
     
     // 1. Subscribe to orders as a customer
     const unsubCustomer = orderService.subscribeToUserOrders(user.uid, (orders) => {
-      updateActiveOrders(orders, 'customer');
+      setPurchases(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled'));
     });
 
     // 2. Subscribe to orders as a merchant (if applicable)
     let unsubMerchant = () => {};
     if (appUser?.isMerchant && appUser.ownedStores && appUser.ownedStores.length > 0) {
       unsubMerchant = orderService.subscribeToStoresOrders(appUser.ownedStores, (orders) => {
-        updateActiveOrders(orders, 'merchant');
+        setSalesOrders(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled'));
       });
     }
-
-    // Accumulate orders from different sources
-    const ordersMap = new Map<string, Order>();
-    const updateActiveOrders = (newOrders: Order[], type: 'customer' | 'merchant') => {
-      // Filter for active orders only
-      const activeOnly = newOrders.filter(o => o.status !== 'completed' && o.status !== 'cancelled');
-      
-      // We need to merge them correctly since we have two subscriptions
-      // Let's just store the latest from each type and merge
-      // Actually, a simpler way is to just keep them in a Map by ID
-      activeOnly.forEach(o => ordersMap.set(o.id, o));
-      
-      // If an order was in the map but is no longer in the active list for THIS type, remove it
-      // This is tricky because an order might be in both (rare but possible if store owner buys from own store)
-      // For simplicity, let's just use the current type's active orders and combine with the OTHER type's current ones.
-      
-      setActiveOrders(prev => {
-        const otherTypeOrders = prev.filter(o => type === 'customer' ? o.storeOwnerId === user.uid : o.customerId === user.uid);
-        // Wait, storeOwnerId field might not be in Order type. Let's check types.ts
-        // Actually, let's just merge all and filter by status again
-        const combined = [...prev.filter(o => type === 'customer' ? o.customerId !== user.uid : !appUser.ownedStores?.includes(o.storeId)), ...activeOnly];
-        return combined;
-      });
-    };
 
     return () => {
       unsubCustomer();
@@ -1026,8 +1008,15 @@ export default function App() {
                 onInstall={handleInstallApp}
                 onShowDiscoverStores={() => setShowDiscoverStores(true)}
                 onShowOtherApps={() => setShowOtherApps(true)}
-                activeOrders={activeOrders}
+                purchases={purchases}
+                salesOrders={salesOrders}
+                orderTab={orderTab}
+                setOrderTab={setOrderTab}
                 onShowOrders={() => setShowUserOrdersView(true)}
+                onShowOrderDetail={(id, isMerchant) => {
+                  setSelectedOrderDetailId(id);
+                  setIsOrderDetailMerchant(isMerchant);
+                }}
               />
             ) : (
               <ListView
@@ -1110,6 +1099,21 @@ export default function App() {
         {showAdminManager && (
           <AdminStoreManager
             onClose={() => setShowAdminManager(false)}
+          />
+        )}
+        {showUserOrdersView && (
+          <UserOrdersView 
+            onClose={() => setShowUserOrdersView(false)} 
+          />
+        )}
+        {selectedOrderDetailId && (
+          <OrderDetailView
+            orderId={selectedOrderDetailId}
+            isMerchant={isOrderDetailMerchant}
+            onClose={() => {
+              setSelectedOrderDetailId(null);
+              setIsOrderDetailMerchant(false);
+            }}
           />
         )}
         {showDiscoverStores && (
@@ -1416,8 +1420,12 @@ function Dashboard({
   onInstall,
   onShowDiscoverStores,
   onShowOtherApps,
-  activeOrders,
-  onShowOrders
+  purchases,
+  salesOrders,
+  orderTab,
+  setOrderTab,
+  onShowOrders,
+  onShowOrderDetail
 }: {
   userId: string,
   onSelectList: (id: string) => void,
@@ -1428,8 +1436,12 @@ function Dashboard({
   onInstall: () => void,
   onShowDiscoverStores: () => void,
   onShowOtherApps: () => void,
-  activeOrders: Order[],
-  onShowOrders: () => void
+  purchases: Order[],
+  salesOrders: Order[],
+  orderTab: 'purchases' | 'sales',
+  setOrderTab: (tab: 'purchases' | 'sales') => void,
+  onShowOrders: () => void,
+  onShowOrderDetail: (id: string, isMerchant: boolean) => void
 }) {
   const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
@@ -1523,32 +1535,85 @@ function Dashboard({
       className="space-y-8"
     >
       <AnimatePresence>
-        {activeOrders.length > 0 && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -10 }}
-            onClick={onShowOrders}
-            className="w-full bg-indigo-600 p-4 sm:p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-600/20 flex items-center justify-between group overflow-hidden relative"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-white/20 transition-colors" />
-            <div className="flex items-center gap-4 relative">
-              <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                <Package className="w-6 h-6 text-white" />
+        {(purchases.length > 0 || salesOrders.length > 0) && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setOrderTab('purchases')}
+                  className={cn(
+                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                    orderTab === 'purchases' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100" : "text-stone-400 hover:text-stone-600"
+                  )}
+                >
+                  {t('dashboard.all_purchases', 'My Purchases')}
+                  {purchases.length > 0 && <span className="ml-2 opacity-60">({purchases.length})</span>}
+                </button>
+                {appUser?.isMerchant && (
+                  <button
+                    onClick={() => setOrderTab('sales')}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                      orderTab === 'sales' ? "bg-stone-900 text-white shadow-lg shadow-stone-100" : "text-stone-stone-400 hover:text-stone-600"
+                    )}
+                  >
+                    {t('dashboard.customer_orders', 'Customer Orders')}
+                    {salesOrders.length > 0 && <span className="ml-2 opacity-60">({salesOrders.length})</span>}
+                  </button>
+                )}
               </div>
-              <div className="text-left">
-                <h3 className="font-bold text-lg leading-tight">
-                  {t('dashboard.active_orders', '{{count}} Active Orders', { count: activeOrders.length })}
-                </h3>
-                <p className="text-indigo-100 text-sm opacity-90">
-                  {t('dashboard.track_orders_subtitle', 'Tap to view status and chat with stores')}
-                </p>
-              </div>
+              <button 
+                onClick={onShowOrders}
+                className="p-2 bg-white border border-stone-100 rounded-xl text-stone-400 hover:text-indigo-600 transition-colors shadow-sm"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
             </div>
-            <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center group-hover:bg-white group-hover:text-indigo-600 transition-all relative">
-              <ChevronRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
+
+            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1">
+              {(orderTab === 'purchases' ? purchases : salesOrders).length > 0 ? (
+                (orderTab === 'purchases' ? purchases : salesOrders).map((order) => (
+                  <motion.button
+                    key={order.id}
+                    layoutId={order.id}
+                    onClick={() => onShowOrderDetail(order.id, orderTab === 'sales')}
+                    className="flex-shrink-0 w-64 bg-white p-5 rounded-[2.5rem] border border-stone-100 shadow-xl shadow-stone-900/[0.02] text-left group relative hover:border-indigo-100 transition-all active:scale-95"
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className={cn(
+                        "p-2.5 rounded-xl transition-colors",
+                        orderTab === 'purchases' ? "bg-indigo-50 group-hover:bg-indigo-600 group-hover:text-white" : "bg-stone-50 group-hover:bg-stone-900 group-hover:text-white"
+                      )}>
+                        {orderTab === 'purchases' ? <ShoppingBag className="w-5 h-5" /> : <Package className="w-5 h-5" />}
+                      </div>
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border",
+                        order.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                        order.status === 'completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                        'bg-blue-100 text-blue-700 border-blue-200'
+                      )}>
+                        {t(`order.status.${order.status}`)}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-bold text-stone-300 uppercase tracking-widest leading-none">
+                        {orderTab === 'purchases' ? order.storeName : order.customerName || 'Customer'}
+                      </p>
+                      <p className="text-sm font-black text-stone-900 truncate">
+                        {order.items.map(i => i.name).join(', ')}
+                      </p>
+                    </div>
+                  </motion.button>
+                ))
+              ) : (
+                <div className="w-full py-8 text-center bg-stone-50 rounded-[2.5rem] border border-stone-100 border-dashed border-2">
+                   <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest">
+                     {t('dashboard.no_active_orders', 'No active orders')}
+                   </p>
+                </div>
+              )}
             </div>
-          </motion.button>
+          </div>
         )}
       </AnimatePresence>
 
