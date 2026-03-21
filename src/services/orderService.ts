@@ -12,7 +12,8 @@ import {
   Timestamp,
   serverTimestamp
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured, auth, cleanObject } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, isFirebaseConfigured, auth, cleanObject, functions } from '../lib/firebase';
 import { Order, OrderStatus, ChatMessage } from '../types';
 
 export const orderService = {
@@ -34,16 +35,14 @@ export const orderService = {
   },
 
   updateOrderStatus: async (orderId: string, status: OrderStatus, deliveryTime?: string) => {
-    if (!isFirebaseConfigured) return;
-    const orderRef = doc(db, 'orders', orderId);
-    const updates: any = {
-      status,
-      updatedAt: Date.now()
-    };
-    if (deliveryTime) {
-      updates.deliveryTime = deliveryTime;
+    if (!isFirebaseConfigured || !functions) return;
+    try {
+      const processOrder = httpsCallable(functions, 'processOrder');
+      await processOrder({ orderId, status, deliveryTime });
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      throw error;
     }
-    await updateDoc(orderRef, updates);
   },
 
   sendChatMessage: async (orderId: string, senderId: string, text: string) => {
@@ -69,7 +68,7 @@ export const orderService = {
     return { id: snap.id, ...snap.data() } as Order;
   },
 
-  subscribeToUserOrders: (userId: string, callback: (orders: Order[]) => void) => {
+  subscribeToUserOrders: (userId: string, callback: (orders: Order[]) => void, onError?: (error: any) => void) => {
     if (!isFirebaseConfigured || !userId) return () => {};
     const q = query(
       collection(db, 'orders'),
@@ -79,10 +78,10 @@ export const orderService = {
     return onSnapshot(q, (snapshot) => {
       const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       callback(orders);
-    });
+    }, onError);
   },
 
-  subscribeToStoreOrders: (storeId: string, callback: (orders: Order[]) => void) => {
+  subscribeToStoreOrders: (storeId: string, callback: (orders: Order[]) => void, onError?: (error: any) => void) => {
     if (!isFirebaseConfigured || !storeId) return () => {};
     const q = query(
       collection(db, 'orders'),
@@ -92,16 +91,16 @@ export const orderService = {
     return onSnapshot(q, (snapshot) => {
       const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
       callback(orders);
-    });
+    }, onError);
   },
 
-  subscribeToOrder: (orderId: string, callback: (order: Order) => void) => {
+  subscribeToOrder: (orderId: string, callback: (order: Order) => void, onError?: (error: any) => void) => {
     if (!isFirebaseConfigured || !orderId) return () => {};
     const orderRef = doc(db, 'orders', orderId);
     return onSnapshot(orderRef, (snap) => {
       if (snap.exists()) {
         callback({ id: snap.id, ...snap.data() } as Order);
       }
-    });
+    }, onError);
   }
 };

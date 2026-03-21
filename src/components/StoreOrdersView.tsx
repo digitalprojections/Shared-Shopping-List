@@ -34,12 +34,24 @@ export const StoreOrdersView: React.FC<StoreOrdersViewProps> = ({ storeId, store
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [filter, setFilter] = useState<OrderStatus | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [permissionError, setPermissionError] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = orderService.subscribeToStoreOrders(storeId, (fetchedOrders) => {
-      setOrders(fetchedOrders);
-      setLoading(false);
-    });
+    const unsubscribe = orderService.subscribeToStoreOrders(
+      storeId, 
+      (fetchedOrders) => {
+        setOrders(fetchedOrders);
+        setLoading(false);
+        setPermissionError(false);
+      },
+      (error) => {
+        console.error("Error subscribing to store orders:", error);
+        if (error.code === 'permission-denied') {
+          setPermissionError(true);
+        }
+        setLoading(false);
+      }
+    );
     return () => unsubscribe();
   }, [storeId]);
 
@@ -130,7 +142,25 @@ export const StoreOrdersView: React.FC<StoreOrdersViewProps> = ({ storeId, store
 
           {/* Orders List */}
           <div className="space-y-4 pb-20">
-            {filteredOrders.length > 0 ? (
+            {permissionError ? (
+              <div className="py-20 flex flex-col items-center justify-center text-center space-y-6 bg-amber-50 rounded-[3rem] border-2 border-dashed border-amber-200 p-8">
+                <div className="w-20 h-20 bg-amber-100 rounded-[2rem] flex items-center justify-center">
+                  <AlertCircle className="w-10 h-10 text-amber-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-amber-900 uppercase tracking-tight">{t('merchant.insufficient_balance', 'Insufficient Balance')}</h3>
+                  <p className="text-sm font-medium text-amber-700 mt-2 max-w-xs mx-auto">
+                    {t('merchant.insufficient_balance_subtitle', 'You need at least 50 coins to view and process orders. Please top up your balance to continue.')}
+                  </p>
+                </div>
+                <button 
+                  onClick={onClose}
+                  className="px-8 py-4 bg-amber-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-amber-200 active:scale-95 transition-all"
+                >
+                  {t('common.back', 'Go Back')}
+                </button>
+              </div>
+            ) : filteredOrders.length > 0 ? (
               filteredOrders.map((order) => (
                 <motion.button
                   layout

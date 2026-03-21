@@ -37,6 +37,7 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({ orderId, onClo
   const [showStatusPicker, setShowStatusPicker] = useState(false);
   const [deliveryTimeInput, setDeliveryTimeInput] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   useEffect(() => {
     const unsubscribe = orderService.subscribeToOrder(orderId, (updatedOrder) => {
@@ -44,6 +45,9 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({ orderId, onClo
       if (updatedOrder.deliveryTime) {
         setDeliveryTimeInput(updatedOrder.deliveryTime);
       }
+      setLoading(false);
+    }, (error) => {
+      console.error("Error subscribing to order:", error);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -64,19 +68,23 @@ export const OrderDetailView: React.FC<OrderDetailViewProps> = ({ orderId, onClo
   };
 
   const handleUpdateStatus = async (status: OrderStatus) => {
+    setStatusError(null);
     try {
       await orderService.updateOrderStatus(orderId, status);
       setShowStatusPicker(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating status:", error);
+      setStatusError(error.message || "Failed to update status");
     }
   };
 
   const handleUpdateDeliveryTime = async () => {
+    setStatusError(null);
     try {
       await orderService.updateOrderStatus(orderId, order!.status, deliveryTimeInput);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating delivery time:", error);
+      setStatusError(error.message || "Failed to update delivery time");
     }
   };
 

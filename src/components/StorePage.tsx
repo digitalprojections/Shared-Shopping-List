@@ -127,7 +127,7 @@ export const StorePage: React.FC<StorePageProps> = ({
     }
     if (!store) return;
     try {
-      await storeService.rateStore(store.id, currentUser.uid, rating);
+      await storeService.rateStore(store.id, rating);
       setUserRating(rating);
     } catch (error) {
       console.error("Error rating store:", error);

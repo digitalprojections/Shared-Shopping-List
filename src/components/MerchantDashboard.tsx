@@ -17,9 +17,10 @@ import {
   LayoutDashboard,
   ExternalLink,
   ShieldCheck,
-  ShoppingBag
+  ShoppingBag,
+  Coins
 } from 'lucide-react';
-import { Store } from '../types';
+import { Store, AppUser } from '../types';
 import { storeService } from '../services/storeService';
 import { userService } from '../services/userService';
 import { useTranslation } from 'react-i18next';
@@ -43,14 +44,20 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
   const [viewingOrdersStore, setViewingOrdersStore] = useState<Store | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
 
   useEffect(() => {
-    if (!userId) return;
-    const unsubscribe = storeService.subscribeToMyStores(userId, (data) => {
+    const unsubStores = storeService.subscribeToMyStores(userId, (data) => {
       setStores(data);
       setLoading(false);
     });
-    return () => unsubscribe();
+    const unsubUser = userService.subscribeToUserProfile(userId, (user) => {
+      setAppUser(user);
+    });
+    return () => {
+      unsubStores();
+      unsubUser();
+    };
   }, [userId]);
 
   const handleDelete = async (storeId: string) => {
@@ -159,6 +166,19 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
           <div>
             <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">{t('merchant.pending')}</p>
             <p className="text-lg font-black text-stone-900 leading-none">{stores.filter(s => s.status === 'pending').length}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 ml-auto pr-4">
+          <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center shadow-sm">
+            <Coins className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div>
+            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">{t('common.balance', 'My Balance')}</p>
+            <p className="text-xl font-black text-indigo-600 leading-none">
+              {appUser?.coinBalance || 0}
+              <span className="text-[10px] ml-1 text-indigo-400">COINS</span>
+            </p>
           </div>
         </div>
       </div>

@@ -20,7 +20,8 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { db, isFirebaseConfigured, auth, cleanObject, storage } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { db, isFirebaseConfigured, auth, cleanObject, storage, functions } from '../lib/firebase';
 import { Store, StoreProduct } from '../types';
 
 export const storeService = {
@@ -240,47 +241,15 @@ export const storeService = {
     await batch.commit();
   },
 
-  rateStore: async (storeId: string, userId: string, rating: number) => {
-    if (!isFirebaseConfigured || !db) return;
-    
-    const storeRef = doc(db, 'stores', storeId);
-    const ratingRef = doc(db, 'stores', storeId, 'ratings', userId);
-    
-    await runTransaction(db, async (transaction) => {
-      const ratingDoc = await transaction.get(ratingRef);
-      const storeDoc = await transaction.get(storeRef);
-      
-      if (!storeDoc.exists()) throw new Error("Store does not exist!");
-      
-      const storeData = storeDoc.data() as Store;
-      const oldRating = ratingDoc.exists() ? ratingDoc.data().rating : 0;
-      
-      let newCount = storeData.ratingCount || 0;
-      let newSum = (storeData.averageRating || 0) * newCount;
-      
-      if (ratingDoc.exists()) {
-        // Update existing rating
-        newSum = newSum - oldRating + rating;
-      } else {
-        // Add new rating
-        newCount += 1;
-        newSum += rating;
-      }
-      
-      const newAverage = newSum / newCount;
-      
-      transaction.set(ratingRef, {
-        userId,
-        rating,
-        updatedAt: Date.now()
-      });
-      
-      transaction.update(storeRef, {
-        averageRating: newAverage,
-        ratingCount: newCount,
-        updatedAt: Date.now()
-      });
-    });
+  rateStore: async (storeId: string, rating: number) => {
+    if (!isFirebaseConfigured || !functions) return;
+    try {
+      const rateStoreSecure = httpsCallable(functions, 'rateStoreSecure');
+      await rateStoreSecure({ storeId, rating });
+    } catch (error) {
+      console.error("Error rating store:", error);
+      throw error;
+    }
   },
 
   getUserRating: async (storeId: string, userId: string): Promise<number | null> => {

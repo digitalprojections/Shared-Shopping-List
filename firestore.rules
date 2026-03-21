@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     // Throttling helper
-    function isNotThrottled(ms) {
+    function isNotThrottled() {
       // Temporarily open to debug permission issues
       return true;
     }
@@ -15,7 +15,7 @@ service cloud.firestore {
         resource.data.ownerId == request.auth.uid || 
         request.auth.uid in resource.data.sharedUsers
       );
-      allow create: if request.auth != null && isNotThrottled(2000);
+      allow create: if request.auth != null && isNotThrottled();
       allow update, delete: if request.auth != null && (
         resource.data.ownerId == request.auth.uid || 
         request.auth.uid in resource.data.sharedUsers ||
@@ -25,7 +25,7 @@ service cloud.firestore {
       // Items inside lists
       match /items/{itemId} {
         allow read: if request.auth != null;
-        allow create: if request.auth != null && isNotThrottled(2000);
+        allow create: if request.auth != null && isNotThrottled();
         allow update, delete: if request.auth != null;
       }
     }
@@ -48,7 +48,7 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow update: if request.auth != null && (
         (request.auth.uid == userId && 
-         isNotThrottled(2000) &&
+         isNotThrottled() &&
          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['coinBalance', 'coinBatches', 'isAdmin', 'isMerchant'])) ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true
       );
@@ -89,7 +89,7 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
       allow update: if request.auth != null && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-        (request.resource.data.isConsumed == true && resource.data.isConsumed == false && isNotThrottled(10000))
+        (request.resource.data.isConsumed == true && resource.data.isConsumed == false && isNotThrottled())
       );
     }
     // Loyalty Cards
@@ -108,7 +108,7 @@ service cloud.firestore {
     // Store Ratings
     match /stores/{storeId}/ratings/{userId} {
       allow read: if true;
-      allow write: if request.auth != null && request.auth.uid == userId;
+      allow write: if false; // Must use rateStoreSecure Cloud Function
     }
 
     // Orders
@@ -116,16 +116,21 @@ service cloud.firestore {
       allow create: if request.auth != null && request.resource.data.customerId == request.auth.uid;
       allow read: if request.auth != null && (
         resource.data.customerId == request.auth.uid || 
-        get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid
+        (get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.coinBalance >= 50)
       );
       allow update: if request.auth != null && (
-        // Store owner can update status and delivery info
-        (get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid) ||
+        // Store owner can update status only if balance >= 50 (but should use Cloud Function for status changes)
+        // We allow direct updates to chat and deliveryTime, but status is better handled via backend.
+        // However, we must allow the Cloud Function to update it.
+        // For simplicity, we restrict status updates by store owners here to force CF usage.
+        
         // Customer can cancel if pending
         (resource.data.customerId == request.auth.uid && request.resource.data.status == 'cancelled' && resource.data.status == 'pending') ||
-        // Both parties can add messages to chat
+        
+        // Both parties can add messages to chat or update non-sensitive fields
         ((resource.data.customerId == request.auth.uid || get(/databases/$(database)/documents/stores/$(resource.data.storeId)).data.ownerId == request.auth.uid) && 
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chat', 'updatedAt']))
+         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['chat', 'updatedAt', 'deliveryTime']))
       );
     }
   }

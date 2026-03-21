@@ -627,3 +627,211 @@ exports.onOrderChatNotification = firestore.document("orders/{orderId}").onUpdat
     logger.error("Error in onOrderChatNotification:", error);
   }
 });
+
+exports.processOrder = onCall({
+  enforceAppCheck: false,
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const { orderId, status, deliveryTime } = request.data;
+  if (!orderId || !status) {
+    throw new HttpsError('invalid-argument', 'Order ID and status are required.');
+  }
+
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const orderRef = db.collection('orders').doc(orderId);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const orderDoc = await transaction.get(orderRef);
+      if (!orderDoc.exists) {
+        throw new HttpsError('not-found', 'Order not found.');
+      }
+
+      const orderData = orderDoc.data();
+      const storeId = orderData.storeId;
+      
+      // Get store to verify ownership and cooldown
+      const storeDoc = await transaction.get(db.collection('stores').doc(storeId));
+      if (!storeDoc.exists) {
+        throw new HttpsError('not-found', 'Store not found.');
+      }
+      
+      const storeData = storeDoc.data();
+      if (storeData.ownerId !== uid) {
+        throw new HttpsError('permission-denied', 'You do not own this store.');
+      }
+
+      const ownerRef = db.collection('users').doc(uid);
+      const ownerDoc = await transaction.get(ownerRef);
+      const ownerData = ownerDoc.data();
+      const now = Date.now();
+
+      // Define engagement states
+      const engagedStatus = ['processing', 'out_for_delivery', 'completed'];
+      const isEngagement = engagedStatus.includes(status);
+
+      // 1. Handle Coin Consumption on Engagement
+      if (isEngagement && !orderData.engaged) {
+        if (ownerData.coinBalance < 50) {
+          throw new HttpsError('failed-precondition', 'Insufficient coins to engage in this order. (Min 50 coins required)');
+        }
+
+        // Consume 50 coins
+        let coinBatches = (ownerData.coinBatches || []).map(b => ({ ...b }));
+        const validBatches = coinBatches
+          .filter(b => b.expiresAt > now && b.remaining > 0)
+          .sort((a, b) => a.createdAt - b.createdAt);
+
+        let remainingToDeduct = 50;
+        for (const batch of validBatches) {
+          if (remainingToDeduct <= 0) break;
+          const deduct = Math.min(batch.remaining, remainingToDeduct);
+          batch.remaining -= deduct;
+          remainingToDeduct -= deduct;
+          const index = coinBatches.findIndex(b => b.id === batch.id);
+          if (index !== -1) coinBatches[index].remaining = batch.remaining;
+        }
+
+        const newBalance = coinBatches
+          .filter(b => b.expiresAt > now)
+          .reduce((sum, b) => sum + b.remaining, 0);
+
+        transaction.update(ownerRef, {
+          coinBatches: coinBatches,
+          coinBalance: newBalance,
+          lastActionAt: now
+        });
+        
+        transaction.update(orderRef, { engaged: true });
+        logger.info(`Charged 50 coins from store owner ${uid} for engaging in order ${orderId}`);
+      }
+
+      // 2. Enforce Delivery Cooldown for Completion
+      if (status === 'completed') {
+        const minCooldown = (storeData.minDeliveryTime || 0) * 60000; // minutes to ms
+        const elapsed = now - orderData.createdAt;
+        if (elapsed < minCooldown) {
+          const remainingMins = Math.ceil((minCooldown - elapsed) / 60000);
+          throw new HttpsError('failed-precondition', `Fraud prevention: Please wait ${remainingMins} more minutes before completing this delivery.`);
+        }
+      }
+
+      // 3. Update Order Status
+      const updateData = {
+        status: status,
+        updatedAt: now
+      };
+      if (deliveryTime) updateData.deliveryTime = deliveryTime;
+
+      transaction.update(orderRef, updateData);
+
+      return { success: true };
+    });
+
+    return result;
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error("Error in processOrder:", error);
+    throw new HttpsError('internal', 'An error occurred while processing the order.');
+  }
+});
+
+exports.rateStoreSecure = onCall({
+  enforceAppCheck: false,
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const { storeId, rating } = request.data;
+  if (!storeId || typeof rating !== 'number' || rating < 1 || rating > 5) {
+    throw new HttpsError('invalid-argument', 'Valid storeId and rating (1-5) are required.');
+  }
+
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const userRef = db.collection('users').doc(uid);
+  const storeRef = db.collection('stores').doc(storeId);
+  const ratingRef = storeRef.collection('ratings').doc(uid);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      const storeDoc = await transaction.get(storeRef);
+      
+      if (!userDoc.exists || !storeDoc.exists) {
+        throw new HttpsError('not-found', 'User or Store not found.');
+      }
+
+      const userData = userDoc.data();
+      const storeData = storeDoc.data();
+      const now = Date.now();
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. Check Daily Global Limit
+      if (userData.lastRatingDate === today) {
+        throw new HttpsError('resource-exhausted', 'Fraud prevention: You can only rate one store per day.');
+      }
+
+      // 2. Verify Completed Order for this Store
+      const ordersSnap = await db.collection('orders')
+        .where('customerId', '==', uid)
+        .where('storeId', '==', storeId)
+        .where('status', '==', 'completed')
+        .limit(1)
+        .get();
+
+      if (ordersSnap.empty) {
+        throw new HttpsError('failed-precondition', 'You must have at least one completed order from this store to leave a rating.');
+      }
+
+      const existingRatingDoc = await transaction.get(ratingRef);
+      const isNewRating = !existingRatingDoc.exists;
+      const oldRating = existingRatingDoc.exists ? existingRatingDoc.data().rating : 0;
+
+      // 3. Update Store Aggregates
+      let newCount = storeData.ratingCount || 0;
+      let newSum = (storeData.averageRating || 0) * newCount;
+
+      if (isNewRating) {
+        newCount += 1;
+        newSum += rating;
+      } else {
+        newSum = newSum - oldRating + rating;
+      }
+
+      const newAverage = newSum / newCount;
+
+      transaction.update(storeRef, {
+        averageRating: newAverage,
+        ratingCount: newCount,
+        updatedAt: now
+      });
+
+      // 4. Record Rating
+      transaction.set(ratingRef, {
+        rating: rating,
+        createdAt: now,
+        updatedAt: now
+      });
+
+      // 5. Update User Cooldown
+      transaction.update(userRef, {
+        lastRatingDate: today,
+        lastActionAt: now
+      });
+
+      return { success: true };
+    });
+
+    return result;
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error("Error in rateStoreSecure:", error);
+    throw new HttpsError('internal', 'An error occurred while submitting your rating.');
+  }
+});
