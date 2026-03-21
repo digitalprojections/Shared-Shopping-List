@@ -310,7 +310,10 @@ export const storeService = {
       isVerified: true,
       updatedAt: Date.now() 
     });
-    batch.update(userRef, { isMerchant: true });
+    batch.update(userRef, { 
+      isMerchant: true,
+      ownedStores: arrayUnion(storeId)
+    });
     
     await batch.commit();
   },

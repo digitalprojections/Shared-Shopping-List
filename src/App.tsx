@@ -62,6 +62,7 @@ import {
 } from 'firebase/auth';
 import { shoppingService } from './services/shoppingService';
 import { userService } from './services/userService';
+import { storeService } from './services/storeService';
 import { couponService } from './services/couponService';
 import { useTranslation, Trans } from 'react-i18next';
 import './i18n'; // Import i18n configuration
@@ -138,6 +139,7 @@ export default function App() {
   const [showUserOrdersView, setShowUserOrdersView] = useState(false);
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [salesOrders, setSalesOrders] = useState<Order[]>([]);
+  const [merchantStoreIds, setMerchantStoreIds] = useState<string[]>([]);
   const [orderTab, setOrderTab] = useState<'purchases' | 'sales'>('purchases');
   const [selectedOrderDetailId, setSelectedOrderDetailId] = useState<string | null>(null);
   const [isOrderDetailMerchant, setIsOrderDetailMerchant] = useState(false);
@@ -468,6 +470,16 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
+    if (appUser?.isMerchant && user?.uid) {
+      return storeService.subscribeToMyStores(user.uid, (stores) => {
+        setMerchantStoreIds(stores.map(s => s.id));
+      });
+    } else {
+      setMerchantStoreIds([]);
+    }
+  }, [appUser?.isMerchant, user?.uid]);
+
+  useEffect(() => {
     if (!user?.uid || !isFirebaseConfigured) {
       setPurchases([]);
       setSalesOrders([]);
@@ -483,8 +495,10 @@ export default function App() {
 
     // 2. Subscribe to orders as a merchant (if applicable)
     let unsubMerchant = () => {};
-    if (appUser?.isMerchant && appUser.ownedStores && appUser.ownedStores.length > 0) {
-      unsubMerchant = orderService.subscribeToStoresOrders(appUser.ownedStores, (orders) => {
+    const storeIdsToWatch = merchantStoreIds.length > 0 ? merchantStoreIds : (appUser?.ownedStores || []);
+    
+    if (appUser?.isMerchant && storeIdsToWatch.length > 0) {
+      unsubMerchant = orderService.subscribeToStoresOrders(storeIdsToWatch, (orders) => {
         setSalesOrders(orders.filter(o => o.status !== 'completed' && o.status !== 'cancelled'));
       });
     }
@@ -493,7 +507,7 @@ export default function App() {
       unsubCustomer();
       unsubMerchant();
     };
-  }, [user?.uid, appUser?.isMerchant, appUser?.ownedStores]);
+  }, [user?.uid, appUser?.isMerchant, appUser?.ownedStores, merchantStoreIds]);
 
   useEffect(() => {
     if (!user?.uid || !isFirebaseConfigured) return;
