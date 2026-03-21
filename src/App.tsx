@@ -1029,6 +1029,8 @@ export default function App() {
         {showDiscoverStores && (
           <DiscoverStores
             onClose={() => setShowDiscoverStores(false)}
+            currentUser={user}
+            appUser={appUser}
             onSelectStore={(id) => {
               setSelectedStoreId(id);
               setShowDiscoverStores(false);
@@ -1046,6 +1048,8 @@ export default function App() {
             onClose={() => setSelectedStoreId(null)}
             onAddProductToList={handleAddProductToList}
             activeListId={activeListId || undefined}
+            currentUser={user}
+            appUser={appUser}
           />
         )}
       </AnimatePresence>
@@ -2054,17 +2058,6 @@ function ListView({
               {isSyncing ? t('list_view.syncing') : t('list_view.sync_changes')} (1 {t('admin.coins')})
             </motion.button>
           ) : null}
-          {!isShared && !user?.isAnonymous && (
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowShare(true)}
-              className="flex items-center gap-2 px-5 py-3 bg-white border border-stone-200 rounded-2xl font-bold text-stone-700 shadow-sm hover:shadow-md transition-all"
-            >
-              <Share2 className="w-5 h-5" />
-              {t('list_view.share')}
-            </motion.button>
-          )}
           <div className="relative">
             <motion.button
               whileHover={{ scale: 1.05 }}

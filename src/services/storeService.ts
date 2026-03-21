@@ -192,6 +192,20 @@ export const storeService = {
     return { id: snap.id, ...snap.data() } as Store;
   },
 
+  subscribeToStore: (storeId: string, callback: (store: Store | null) => void) => {
+    if (!isFirebaseConfigured || !storeId) return () => {};
+    const storeRef = doc(db, 'stores', storeId);
+    return onSnapshot(storeRef, (docSnap) => {
+      if (docSnap.exists()) {
+        callback({ id: docSnap.id, ...docSnap.data() } as Store);
+      } else {
+        callback(null);
+      }
+    }, (error) => {
+      console.error("[StoreService] Error subscribing to store:", error);
+    });
+  },
+
   followStore: async (storeId: string, userId: string) => {
     if (!isFirebaseConfigured) return;
     const storeRef = doc(db, 'stores', storeId);
@@ -200,7 +214,8 @@ export const storeService = {
     const batch = writeBatch(db);
     batch.update(storeRef, {
       followers: arrayUnion(userId),
-      followersCount: increment(1)
+      followersCount: increment(1),
+      updatedAt: Date.now()
     });
     batch.set(userRef, {
       followedStores: arrayUnion(storeId)
@@ -216,7 +231,8 @@ export const storeService = {
     const batch = writeBatch(db);
     batch.update(storeRef, {
       followers: arrayRemove(userId),
-      followersCount: increment(-1)
+      followersCount: increment(-1),
+      updatedAt: Date.now()
     });
     batch.set(userRef, {
       followedStores: arrayRemove(storeId)

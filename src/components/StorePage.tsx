@@ -5,7 +5,6 @@ import {
   MapPin, 
   ShoppingBag, 
   Star, 
-  Share2, 
   ArrowLeft,
   ChevronRight,
   ChevronDown,
@@ -26,7 +25,7 @@ import {
 } from 'lucide-react';
 import { StoreOrderCheckout } from './StoreOrderCheckout';
 import { OrderDetailView } from './OrderDetailView';
-import { OrderItem, Store, StoreProduct, ListItem } from '../types';
+import { OrderItem, Store, StoreProduct, ListItem, AppUser } from '../types';
 import { storeService } from '../services/storeService';
 import { shoppingService } from '../services/shoppingService';
 import { auth } from '../lib/firebase';
@@ -40,30 +39,34 @@ interface StorePageProps {
   onClose: () => void;
   onAddProductToList?: (product: StoreProduct, storeName?: string) => void;
   activeListId?: string;
+  currentUser: any;
+  appUser: AppUser | null;
 }
 
-export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddProductToList, activeListId }) => {
+export const StorePage: React.FC<StorePageProps> = ({ 
+  storeId, 
+  onClose, 
+  onAddProductToList, 
+  activeListId,
+  currentUser,
+  appUser
+}) => {
   const { t } = useTranslation();
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<StoreProduct[]>([]);
   const [loading, setLoading] = useState(true);
-  const [following, setFollowing] = useState(false);
   const [addedItemIds, setAddedItemIds] = useState<Set<string>>(new Set());
   const [existingProductIds, setExistingProductIds] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'alpha'>('newest');
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
   const [userRating, setUserRating] = useState<number>(0);
-  const [currentUser, setCurrentUser] = useState(auth.currentUser);
   const [orderItems, setOrderItems] = useState<Map<string, OrderItem>>(new Map<string, OrderItem>());
   const [showOrderCheckout, setShowOrderCheckout] = useState(false);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(setCurrentUser);
-    return () => unsubscribe();
-  }, []);
+  
+  // auth user is now passed via props
 
   useEffect(() => {
     if (!activeListId) {
@@ -80,36 +83,37 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
   }, [activeListId]);
 
   useEffect(() => {
-    const unsubscribe = storeService.subscribeToAllStores((all) => {
-      const s = all.find(item => item.id === storeId);
+    if (!storeId) return;
+
+    const unsubscribe = storeService.subscribeToStore(storeId, (s) => {
       if (s) {
         setStore(s);
-        if (currentUser) {
-          const isFollowing = s.followers?.includes(currentUser.uid) || false;
-          setFollowing(isFollowing);
-        }
       }
       setLoading(false);
     });
 
-    if (currentUser && storeId) {
+    if (currentUser) {
       storeService.getUserRating(storeId, currentUser.uid).then(rating => {
-        if (rating) setUserRating(rating);
+        if (rating !== null) setUserRating(rating);
       });
     }
 
     return () => unsubscribe();
   }, [storeId, currentUser]);
 
+  const isFollowing = appUser?.followedStores?.includes(storeId) || false;
+
   const handleFollow = async () => {
-    if (!currentUser || !store) return;
+    if (!currentUser) {
+      alert(t('auth.login_required'));
+      return;
+    }
+    if (!store) return;
     try {
-      if (following) {
+      if (isFollowing) {
         await storeService.unfollowStore(store.id, currentUser.uid);
-        setFollowing(false);
       } else {
         await storeService.followStore(store.id, currentUser.uid);
-        setFollowing(true);
       }
     } catch (error) {
       console.error("Error toggling follow:", error);
@@ -117,7 +121,11 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
   };
 
   const handleRate = async (rating: number) => {
-    if (!currentUser || !store) return;
+    if (!currentUser) {
+      alert(t('auth.login_required'));
+      return;
+    }
+    if (!store) return;
     try {
       await storeService.rateStore(store.id, currentUser.uid, rating);
       setUserRating(rating);
@@ -563,10 +571,10 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                  onClick={handleFollow}
                  className={cn(
                    "px-6 py-2 rounded-xl font-bold text-sm transition-all",
-                   following ? "bg-stone-200 text-stone-600" : "bg-stone-900 text-white shadow-lg shadow-stone-200"
+                   isFollowing ? "bg-stone-200 text-stone-600" : "bg-stone-900 text-white shadow-lg shadow-stone-200"
                  )}
                >
-                 {following ? t('store_front.unfollow') : t('store_front.follow')}
+                 {isFollowing ? t('store_front.unfollow') : t('store_front.follow')}
                </button>
             </div>
           </div>

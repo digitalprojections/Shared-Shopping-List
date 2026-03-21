@@ -63,6 +63,7 @@ export interface AppUser {
   freeCouponClaimed?: boolean;
   fcmTokens?: string[];
   followedStores?: string[];
+  ownedStores?: string[];
 }
 
 export interface Coupon {

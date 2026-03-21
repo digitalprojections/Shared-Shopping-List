@@ -23,7 +23,9 @@ export const userService = {
         coinBalance: 0,
         coinBatches: [],
         isAdmin: false,
-        lastActionAt: 0
+        lastActionAt: 0,
+        followedStores: [],
+        ownedStores: []
       };
       await setDoc(userRef, newUser);
     } catch (error) {
@@ -42,7 +44,9 @@ export const userService = {
         coinBalance: 0,
         coinBatches: [],
         isAdmin: false,
-        lastActionAt: 0
+        lastActionAt: 0,
+        followedStores: [],
+        ownedStores: []
       };
       await setDoc(userRef, newUser);
       return newUser;
@@ -111,7 +115,7 @@ export const userService = {
       const listsSnapshot = await getDocs(listsQuery);
       
       for (const listDoc of listsSnapshot.docs) {
-        await shoppingService.deleteList(listDoc.id);
+        await shoppingService.deleteList(listDoc.id, userId);
       }
 
       // 2. Delete followed collections

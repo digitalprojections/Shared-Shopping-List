@@ -27,13 +27,14 @@ import { STORE_CATEGORIES } from '../constants/categories';
 interface DiscoverStoresProps {
   onClose: () => void;
   onSelectStore: (storeId: string) => void;
+  currentUser: any; // User | null
+  appUser: AppUser | null;
 }
 
-export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelectStore }) => {
+export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelectStore, currentUser, appUser }) => {
   const { t } = useTranslation();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userProfile, setUserProfile] = useState<AppUser | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('All');
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
@@ -56,31 +57,21 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const unsubAuth = auth.onAuthStateChanged((user) => {
-      if (!user) {
-        setUserProfile(null);
-        return;
-      }
-      const unsubProfile = userService.subscribeToUserProfile(user.uid, setUserProfile);
-      return () => unsubProfile();
-    });
-    return () => unsubAuth();
-  }, []);
+  // Use appUser from props instead of internal subscription
 
   const handleToggleFollow = async (e: React.MouseEvent, storeId: string) => {
     e.stopPropagation(); // Don't navigate to store page
-    if (!auth.currentUser) {
-      // Maybe show login prompt or toast
+    if (!currentUser) {
+      alert(t('auth.login_required'));
       return;
     }
 
-    const isFollowing = userProfile?.followedStores?.includes(storeId);
+    const isFollowing = appUser?.followedStores?.includes(storeId);
     try {
       if (isFollowing) {
-        await storeService.unfollowStore(storeId, auth.currentUser.uid);
+        await storeService.unfollowStore(storeId, currentUser.uid);
       } else {
-        await storeService.followStore(storeId, auth.currentUser.uid);
+        await storeService.followStore(storeId, currentUser.uid);
       }
     } catch (error) {
       console.error("Failed to toggle follow:", error);
@@ -255,12 +246,12 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({ onClose, onSelec
                       onClick={(e) => handleToggleFollow(e, store.id)}
                       className={cn(
                         "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
-                        userProfile?.followedStores?.includes(store.id)
+                        appUser?.followedStores?.includes(store.id)
                           ? "bg-rose-50 text-rose-600 shadow-sm"
                           : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
                       )}
                     >
-                      <Heart className={cn("w-5 h-5 transition-all", userProfile?.followedStores?.includes(store.id) && "fill-current scale-110")} />
+                      <Heart className={cn("w-5 h-5 transition-all", appUser?.followedStores?.includes(store.id) && "fill-current scale-110")} />
                     </button>
                     <div className="w-12 h-12 bg-stone-50 rounded-2xl flex items-center justify-center group-hover:bg-stone-900 group-hover:text-white transition-all">
                       <ArrowRight className="w-5 h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
