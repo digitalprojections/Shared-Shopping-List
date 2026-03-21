@@ -3,6 +3,7 @@ import { getFirestore, Firestore } from "firebase/firestore";
 import { getAuth, Auth, GoogleAuthProvider } from "firebase/auth";
 import { getFunctions, Functions } from "firebase/functions";
 import { getStorage, FirebaseStorage } from "firebase/storage";
+import { getMessaging, Messaging } from "firebase/messaging";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -19,6 +20,7 @@ let app: FirebaseApp | null = null;
 let dbInstance: Firestore | null = null;
 let authInstance: Auth | null = null;
 let functionsInstance: Functions | null = null;
+let messagingInstance: Messaging | null = null;
 
 if (isFirebaseConfigured) {
   try {
@@ -29,6 +31,11 @@ if (isFirebaseConfigured) {
     dbInstance = getFirestore(app);
     authInstance = getAuth(app);
     functionsInstance = getFunctions(app);
+    
+    // Check if browser supports messaging
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      messagingInstance = getMessaging(app);
+    }
 
     if (!firebaseConfig.projectId) {
       console.error("[Firebase] CRITICAL: Project ID is missing from environment variables!");
@@ -42,6 +49,7 @@ if (isFirebaseConfigured) {
 export const db = dbInstance as Firestore;
 export const auth = authInstance as Auth;
 export const functions = functionsInstance as Functions;
+export const messaging = messagingInstance as Messaging;
 export const storage = getStorage(app!) as FirebaseStorage;
 export const googleProvider = new GoogleAuthProvider();
 

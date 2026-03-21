@@ -1,7 +1,7 @@
 import { doc, getDoc, setDoc, updateDoc, onSnapshot, query, collection, where, getDocs, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, isFirebaseConfigured, functions, auth } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { AppUser } from '../types';
+import { AppUser, PushToken } from '../types';
 import { User, signOut } from 'firebase/auth';
 import { shoppingService } from './shoppingService';
 
@@ -143,16 +143,28 @@ export const userService = {
     }
   },
 
-  updateFcmToken: async (userId: string, token: string): Promise<void> => {
+  updateFcmToken: async (userId: string, token: string, platform: 'android' | 'ios' | 'web'): Promise<void> => {
     if (!isFirebaseConfigured || !userId) return;
     const userRef = doc(db, 'users', userId);
     try {
       const userDoc = await getDoc(userRef);
       if (userDoc.exists()) {
         const data = userDoc.data() as AppUser;
-        const tokens = data.fcmTokens || [];
-        if (!tokens.includes(token)) {
-          await setDoc(userRef, { fcmTokens: [...tokens, token] }, { merge: true });
+        let tokens = data.fcmTokens || [];
+        
+        // Check if this specific token already exists
+        const tokenExists = tokens.some(t => t.token === token);
+        
+        if (!tokenExists) {
+          const newToken: PushToken = {
+            token: token,
+            platform: platform,
+            createdAt: Date.now()
+          };
+          
+          await setDoc(userRef, { 
+            fcmTokens: [...tokens, newToken] 
+          }, { merge: true });
         }
       }
     } catch (error) {

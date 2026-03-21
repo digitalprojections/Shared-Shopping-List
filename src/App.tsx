@@ -39,6 +39,8 @@ import { Capacitor } from '@capacitor/core';
 import { App as CapApp } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { FirebaseCrashlytics } from '@capacitor-firebase/crashlytics';
+import { getToken, onMessage } from 'firebase/messaging';
+import { messaging } from './lib/firebase';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { Badge } from '@capawesome/capacitor-badge';
@@ -276,53 +278,78 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!user || !Capacitor.isNativePlatform()) return;
+    if (!user) return;
 
     const setupNotifications = async () => {
-      try {
-        let permStatus = await PushNotifications.checkPermissions();
-
-        if (permStatus.receive === 'prompt') {
-          permStatus = await PushNotifications.requestPermissions();
-        }
-
-        if (permStatus.receive !== 'granted') {
-          console.log("Push notifications permission not granted");
-          return;
-        }
-
-        await PushNotifications.register();
-
-        PushNotifications.addListener('registration', (token) => {
-          console.log('Push registration success, token: ' + token.value);
-          userService.updateFcmToken(user.uid, token.value);
-        });
-
-        PushNotifications.addListener('registrationError', (error: any) => {
-          console.error('Error on registration: ' + JSON.stringify(error));
-        });
-
-        PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          console.log('Push received: ' + JSON.stringify(notification));
-        });
-
-        PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
-          console.log('Push action performed: ' + JSON.stringify(action));
-          const listId = action.notification.data?.listId;
-          if (listId) {
-            setActiveListId(listId);
-            setSharedListId(listId);
+      // 1. NATIVE PLATFORM FLOW (Android/iOS)
+      if (Capacitor.isNativePlatform()) {
+        try {
+          let permStatus = await PushNotifications.checkPermissions();
+          if (permStatus.receive === 'prompt') {
+            permStatus = await PushNotifications.requestPermissions();
           }
-        });
-      } catch (e) {
-        console.error("Error setting up push notifications:", e);
+          if (permStatus.receive !== 'granted') return;
+
+          await PushNotifications.register();
+
+          PushNotifications.addListener('registration', (token) => {
+            console.log('Push registration success, token: ' + token.value);
+            userService.updateFcmToken(user.uid, token.value, Capacitor.getPlatform() as 'android' | 'ios' | 'web');
+          });
+
+          PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
+            const data = action.notification.data;
+            if (data?.listId) {
+              setActiveListId(data.listId);
+              setSharedListId(data.listId);
+              setShowUserOrdersView(false);
+            } else if (data?.orderId) {
+              setShowUserOrdersView(true);
+              // In a real app, you might want to auto-select or highlight the specific order
+            }
+          });
+        } catch (e) {
+          console.error("Error setting up Native notifications:", e);
+        }
+      } 
+      // 2. WEB / PWA PLATFORM FLOW (Browser)
+      else if ('serviceWorker' in navigator && messaging) {
+        try {
+          // Note: VAPID key usually required for Web Push. Replace with your actual key from Firebase Console.
+          const VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY; 
+          
+          if (!VAPID_KEY) {
+            console.warn("VITE_FIREBASE_VAPID_KEY missing in .env. Web notifications won't work.");
+            return;
+          }
+
+          const token = await getToken(messaging, { 
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: await navigator.serviceWorker.ready
+          });
+
+          if (token) {
+            console.log('Web Push registration success, token:', token);
+            userService.updateFcmToken(user.uid, token, 'web');
+          }
+
+          // Foreground message handler for Web
+          onMessage(messaging, (payload) => {
+            console.log('Web foreground message received:', payload);
+            // Optionally show a toast or custom UI here
+          });
+        } catch (e) {
+          console.error("Error setting up Web notifications:", e);
+        }
       }
     };
 
     setupNotifications();
 
     return () => {
-      PushNotifications.removeAllListeners();
+      if (Capacitor.isNativePlatform()) {
+        PushNotifications.removeAllListeners();
+      }
     };
   }, [user]);
 

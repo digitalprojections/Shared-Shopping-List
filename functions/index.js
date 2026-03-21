@@ -396,6 +396,47 @@ exports.grantPurchaseCoins = onCall({
   }
 });
 
+/**
+ * Helper to get prioritized FCM tokens for a set of user IDs.
+ * Prioritizes native tokens (android/ios) over web tokens to prevent duplicates.
+ */
+async function getPrioritizedTokens(recipientIds) {
+  const db = admin.firestore();
+  const tokens = [];
+  
+  if (!recipientIds || recipientIds.size === 0) return tokens;
+
+  const usersSnap = await db.collection('users')
+    .where(admin.firestore.FieldPath.documentId(), 'in', Array.from(recipientIds))
+    .get();
+
+  usersSnap.forEach(userDoc => {
+    const userData = userDoc.data();
+    const allTokens = userData.fcmTokens || [];
+    
+    // Fallback for legacy fcmToken field
+    if (userData.fcmToken) {
+      allTokens.push({ token: userData.fcmToken, platform: 'unknown' });
+    }
+
+    if (allTokens.length === 0) return;
+
+    // Separate tokens by platform
+    const nativeTokens = allTokens.filter(t => t.platform === 'android' || t.platform === 'ios');
+    const webTokens = allTokens.filter(t => t.platform === 'web');
+
+    // If native tokens exist, only use those (Smart Prioritization)
+    if (nativeTokens.length > 0) {
+      tokens.push(...nativeTokens.map(t => t.token));
+    } else {
+      // Otherwise, fallback to web tokens
+      tokens.push(...webTokens.map(t => t.token || t)); // Handle both object and legacy string formats
+    }
+  });
+
+  return tokens;
+}
+
 exports.onListUpdateNotification = firestore.document("lists/{listId}").onUpdate(async (change, context) => {
   const newValue = change.after.data();
   const previousValue = change.before.data();
@@ -417,19 +458,7 @@ exports.onListUpdateNotification = firestore.document("lists/{listId}").onUpdate
 
   if (recipientIds.size === 0) return;
 
-  const tokens = [];
-  const usersSnap = await db.collection('users')
-    .where(admin.firestore.FieldPath.documentId(), 'in', Array.from(recipientIds))
-    .get();
-
-  usersSnap.forEach(userDoc => {
-    const userData = userDoc.data();
-    if (userData.fcmTokens && Array.isArray(userData.fcmTokens)) {
-      tokens.push(...userData.fcmTokens);
-    } else if (userData.fcmToken) {
-      tokens.push(userData.fcmToken);
-    }
-  });
+  const tokens = await getPrioritizedTokens(recipientIds);
 
   if (tokens.length === 0) return;
 
@@ -493,20 +522,7 @@ exports.onOrderCreatedNotification = firestore.document("orders/{orderId}").onCr
       return;
     }
 
-    // 2. Get the owner's FCM tokens
-    const ownerDoc = await db.collection('users').doc(ownerId).get();
-    if (!ownerDoc.exists) {
-      logger.error(`Owner ${ownerId} not found for store ${storeId}`);
-      return;
-    }
-
-    const ownerData = ownerDoc.data();
-    const tokens = [];
-    if (ownerData.fcmTokens && Array.isArray(ownerData.fcmTokens)) {
-      tokens.push(...ownerData.fcmTokens);
-    } else if (ownerData.fcmToken) {
-      tokens.push(ownerData.fcmToken);
-    }
+    const tokens = await getPrioritizedTokens(new Set([ownerId]));
 
     if (tokens.length === 0) {
       logger.info(`No FCM tokens for owner ${ownerId}`);
@@ -582,16 +598,7 @@ exports.onOrderChatNotification = firestore.document("orders/{orderId}").onUpdat
 
     if (!recipientId || recipientId === lastMessage.senderId) return;
 
-    const recipientDoc = await db.collection('users').doc(recipientId).get();
-    if (!recipientDoc.exists) return;
-
-    const recipientData = recipientDoc.data();
-    const tokens = [];
-    if (recipientData.fcmTokens && Array.isArray(recipientData.fcmTokens)) {
-      tokens.push(...recipientData.fcmTokens);
-    } else if (recipientData.fcmToken) {
-      tokens.push(recipientData.fcmToken);
-    }
+    const tokens = await getPrioritizedTokens(new Set([recipientId]));
 
     if (tokens.length === 0) return;
 

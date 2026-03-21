@@ -52,6 +52,12 @@ export interface CoinBatch {
   type: 'reward' | 'purchase' | 'coupon';
 }
 
+export interface PushToken {
+  token: string;
+  platform: 'android' | 'ios' | 'web';
+  createdAt: number;
+}
+
 export interface AppUser {
   uid: string;
   coinBalance: number;
@@ -61,7 +67,7 @@ export interface AppUser {
   preferences?: string[];
   lastActionAt?: number;
   freeCouponClaimed?: boolean;
-  fcmTokens?: string[];
+  fcmTokens?: PushToken[]; // Updated from string[] to PushToken[]
   followedStores?: string[];
   ownedStores?: string[];
 }
