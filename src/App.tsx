@@ -73,6 +73,7 @@ import { LoyaltyCardsModal } from './components/LoyaltyCardsModal';
 import { LoyaltyCardsRow } from './components/LoyaltyCardsRow';
 import { DiscoverStores } from './components/DiscoverStores';
 import { StorePage } from './components/StorePage';
+import { OtherAppsView } from './components/OtherAppsView';
 import { StoreProduct } from './types';
 import { APP_CONFIG } from './config';
 
@@ -126,6 +127,7 @@ export default function App() {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [selectedLoyaltyCard, setSelectedLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showOtherApps, setShowOtherApps] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // --- Version Control & Auto-Update Logic ---
@@ -134,11 +136,32 @@ export default function App() {
       const lastVersion = localStorage.getItem('app_version');
       const currentVersion = APP_CONFIG.VERSION;
 
+      // Also check native version on mobile for a double-layer of protection
+      let nativeBuildId = '';
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const info = await CapApp.getInfo();
+          nativeBuildId = `${info.version}(${info.build})`;
+          const lastNativeBuildId = localStorage.getItem('app_native_build');
+
+          if (lastNativeBuildId && lastNativeBuildId !== nativeBuildId) {
+            console.log(`[VersionControl] Native update detected: ${lastNativeBuildId} -> ${nativeBuildId}`);
+            localStorage.setItem('app_native_build', nativeBuildId);
+            localStorage.setItem('app_version', currentVersion); // Sync JS version
+            await forceClearCache({ clearStorage: false, reload: true });
+            return; // Exit after reload
+          }
+          localStorage.setItem('app_native_build', nativeBuildId);
+        } catch (e) {
+          console.warn("Failed to get native app info", e);
+        }
+      }
+
+      // Fallback/Web check using the manual config constant
       if (lastVersion && lastVersion !== currentVersion) {
-        console.log(`[VersionControl] Update detected: ${lastVersion} -> ${currentVersion}`);
-        // Perform soft reset (clear caches/SW, reload, but keep localStorage data)
-        await forceClearCache({ clearStorage: false, reload: true });
+        console.log(`[VersionControl] JS update detected: ${lastVersion} -> ${currentVersion}`);
         localStorage.setItem('app_version', currentVersion);
+        await forceClearCache({ clearStorage: false, reload: true });
       } else if (!lastVersion) {
         localStorage.setItem('app_version', currentVersion);
       }
@@ -860,6 +883,17 @@ export default function App() {
                       {t('user_menu.clear_cache')}
                     </button>
 
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        setShowOtherApps(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
+                    >
+                      <LayoutGrid className="w-4 h-4" />
+                      {t('user_menu.other_apps')}
+                    </button>
+
                     {!user?.isAnonymous && (
                       <button
                         onClick={() => {
@@ -907,6 +941,7 @@ export default function App() {
                 installPrompt={installPrompt}
                 onInstall={handleInstallApp}
                 onShowDiscoverStores={() => setShowDiscoverStores(true)}
+                onShowOtherApps={() => setShowOtherApps(true)}
               />
             ) : (
               <ListView
@@ -998,6 +1033,11 @@ export default function App() {
               setSelectedStoreId(id);
               setShowDiscoverStores(false);
             }}
+          />
+        )}
+        {showOtherApps && (
+          <OtherAppsView
+            onClose={() => setShowOtherApps(false)}
           />
         )}
         {selectedStoreId && (
@@ -1275,7 +1315,8 @@ function Dashboard({
   lists,
   installPrompt,
   onInstall,
-  onShowDiscoverStores
+  onShowDiscoverStores,
+  onShowOtherApps
 }: {
   userId: string,
   onSelectList: (id: string) => void,
@@ -1284,7 +1325,8 @@ function Dashboard({
   lists: ShoppingList[],
   installPrompt: any,
   onInstall: () => void,
-  onShowDiscoverStores: () => void
+  onShowDiscoverStores: () => void,
+  onShowOtherApps: () => void
 }) {
   const { t } = useTranslation();
   const [isCreating, setIsCreating] = useState(false);
@@ -1327,20 +1369,24 @@ function Dashboard({
     // Alternative for Web
     if (!Capacitor.isNativePlatform()) {
       try {
-        window.open('https://created.link', '_blank');
+        // Use integrated webview instead of window.open
+        // window.open('https://created.link', '_blank');
         const grantRewardedCoin = httpsCallable(functions, 'grantRewardedCoin');
         const result = await grantRewardedCoin({ amount: 1 });
         const data = result.data as { success: boolean; error?: string };
         if (data.success) {
-          alert(t('dashboard.reward_success'));
+          // alert(t('dashboard.reward_success'));
+          console.log("Visit reward granted");
         } else {
-          alert(data.error || t('dashboard.reward_fail'));
+          // alert(data.error || t('dashboard.reward_fail'));
+          console.log("Visit reward fail:", data.error);
         }
       } catch (error) {
         console.error("Error rewarding dev visit:", error);
       } finally {
         setIsAdLoading(false);
       }
+      onShowOtherApps();
       return;
     }
 

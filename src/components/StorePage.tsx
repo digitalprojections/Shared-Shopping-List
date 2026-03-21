@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
@@ -24,9 +24,12 @@ import {
   History,
   Search
 } from 'lucide-react';
-import { Store, StoreProduct, ListItem } from '../types';
+import { StoreOrderCheckout } from './StoreOrderCheckout';
+import { OrderDetailView } from './OrderDetailView';
+import { OrderItem, Store, StoreProduct, ListItem } from '../types';
 import { storeService } from '../services/storeService';
 import { shoppingService } from '../services/shoppingService';
+import { auth } from '../lib/firebase';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../lib/utils';
 import { StoreWorkingHours } from './StoreWorkingHours';
@@ -50,6 +53,17 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'newest' | 'alpha'>('newest');
   const [selectedProduct, setSelectedProduct] = useState<StoreProduct | null>(null);
+  const [userRating, setUserRating] = useState<number>(0);
+  const [currentUser, setCurrentUser] = useState(auth.currentUser);
+  const [orderItems, setOrderItems] = useState<Map<string, OrderItem>>(new Map<string, OrderItem>());
+  const [showOrderCheckout, setShowOrderCheckout] = useState(false);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(setCurrentUser);
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (!activeListId) {
@@ -66,22 +80,51 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
   }, [activeListId]);
 
   useEffect(() => {
-    const fetchStore = async () => {
-      try {
-        // We'll add getStoreById to storeService or use a subscription
-        const storeRef = await storeService.subscribeToAllStores((all) => {
-          const s = all.find(item => item.id === storeId);
-          if (s) setStore(s);
-          setLoading(false);
-        });
-        return () => storeRef();
-      } catch (error) {
-        console.error("Error fetching store:", error);
-        setLoading(false);
+    const unsubscribe = storeService.subscribeToAllStores((all) => {
+      const s = all.find(item => item.id === storeId);
+      if (s) {
+        setStore(s);
+        if (currentUser) {
+          const isFollowing = s.followers?.includes(currentUser.uid) || false;
+          setFollowing(isFollowing);
+        }
       }
-    };
-    fetchStore();
-  }, [storeId]);
+      setLoading(false);
+    });
+
+    if (currentUser && storeId) {
+      storeService.getUserRating(storeId, currentUser.uid).then(rating => {
+        if (rating) setUserRating(rating);
+      });
+    }
+
+    return () => unsubscribe();
+  }, [storeId, currentUser]);
+
+  const handleFollow = async () => {
+    if (!currentUser || !store) return;
+    try {
+      if (following) {
+        await storeService.unfollowStore(store.id, currentUser.uid);
+        setFollowing(false);
+      } else {
+        await storeService.followStore(store.id, currentUser.uid);
+        setFollowing(true);
+      }
+    } catch (error) {
+      console.error("Error toggling follow:", error);
+    }
+  };
+
+  const handleRate = async (rating: number) => {
+    if (!currentUser || !store) return;
+    try {
+      await storeService.rateStore(store.id, currentUser.uid, rating);
+      setUserRating(rating);
+    } catch (error) {
+      console.error("Error rating store:", error);
+    }
+  };
 
   useEffect(() => {
     if (store) {
@@ -97,7 +140,83 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
     }
   }, [store, sortBy]);
 
+  const handleAddToCart = (product: StoreProduct, quantity: number = 1) => {
+    setOrderItems(prev => {
+      const next = new Map<string, OrderItem>(prev);
+      const existing = next.get(product.id);
+      if (existing) {
+        if (existing.quantity + quantity <= 0) {
+          next.delete(product.id);
+        } else {
+          next.set(product.id, { ...existing, quantity: existing.quantity + quantity });
+        }
+      } else if (quantity > 0) {
+        next.set(product.id, {
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: quantity,
+          imageUrl: product.imageUrl
+        });
+      }
+      return next;
+    });
+  };
+
+  const cartTotal = useMemo(() => {
+    let total = 0;
+    orderItems.forEach((item) => {
+      total += item.price * item.quantity;
+    });
+    return total;
+  }, [orderItems]);
+
+  const cartCount = useMemo(() => {
+    let count = 0;
+    orderItems.forEach(item => count += item.quantity);
+    return count;
+  }, [orderItems]);
+
+  const handleUpdateQuantity = (id: string, delta: number) => {
+    setOrderItems(prev => {
+      const next = new Map<string, OrderItem>(prev);
+      const item = next.get(id);
+      if (item) {
+        const newQty = item.quantity + delta;
+        if (newQty <= 0) {
+          next.delete(id);
+        } else {
+          next.set(id, { ...item, quantity: newQty });
+        }
+      }
+      return next;
+    });
+  };
+
+  const handleRemoveItem = (id: string) => {
+    setOrderItems(prev => {
+      const next = new Map<string, OrderItem>(prev);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const handleOrderSuccess = (orderId: string) => {
+    setActiveOrderId(orderId);
+    setOrderItems(new Map());
+    setShowOrderCheckout(false);
+    setShowOrderDetails(true);
+  };
+
+  const handleOrderAdd = (product: StoreProduct) => {
+    handleAddToCart(product, 1);
+  };
+
   const handleAdd = (product: StoreProduct) => {
+    if (store?.directOrderEnabled) {
+      handleOrderAdd(product);
+      return;
+    }
     if (onAddProductToList) {
       onAddProductToList(product, store?.name);
       setAddedItemIds(prev => new Set(prev).add(product.id));
@@ -122,7 +241,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
         animate={{ opacity: 1, scale: 1 }}
         onClick={() => setSelectedProduct(product)}
         className={cn(
-          "group bg-stone-50 rounded-[2rem] p-4 sm:p-6 hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/5 transition-all flex h-full relative overflow-hidden ring-1 ring-stone-100 hover:ring-indigo-100 cursor-pointer",
+          "group bg-stone-50 rounded-[2rem] p-5 sm:p-7 hover:bg-white hover:shadow-2xl hover:shadow-indigo-900/5 transition-all flex h-full relative overflow-hidden ring-1 ring-stone-100 hover:ring-indigo-100 cursor-pointer",
           viewMode === 'grid' ? "flex-col gap-4" : "flex-row items-center gap-6"
         )}
       >
@@ -260,12 +379,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                    {t('store_front.out_of_stock')}
                  </span>
                )}
-               {selectedProduct.likesCount > 0 && (
-                 <span className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 shadow-xl flex items-center gap-1.5">
-                   <Heart className="w-3.5 h-3.5 fill-current" />
-                   {selectedProduct.likesCount}
-                 </span>
-               )}
+               {/* Likes removed as per user request */}
             </div>
           </div>
 
@@ -314,14 +428,6 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
             )}
 
             <div className="flex items-center gap-4 pt-4">
-               <button className="flex-1 py-4 bg-stone-50 hover:bg-stone-100 rounded-2xl flex items-center justify-center gap-2 text-stone-600 font-bold transition-all active:scale-95 border border-stone-100">
-                  <Heart className="w-5 h-5" />
-                  <span className="text-sm uppercase tracking-widest">{t('store.like', 'Like')}</span>
-               </button>
-               <button className="flex-1 py-4 bg-stone-50 hover:bg-stone-100 rounded-2xl flex items-center justify-center gap-2 text-stone-600 font-bold transition-all active:scale-95 border border-stone-100">
-                  <Share2 className="w-5 h-5" />
-                  <span className="text-sm uppercase tracking-widest">{t('store.share', 'Share')}</span>
-               </button>
             </div>
           </div>
 
@@ -396,12 +502,6 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex gap-2">
-            <button className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/30 transition-all active:scale-90 shadow-xl">
-              <Share2 className="w-6 h-6" />
-            </button>
-            <button className="p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/30 transition-all active:scale-90 shadow-xl">
-              <Heart className="w-6 h-6" />
-            </button>
           </div>
         </div>
 
@@ -428,12 +528,12 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
               <div className="flex items-center gap-4 text-stone-400 font-bold text-sm">
                  <div className="flex items-center gap-1">
                    <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                   <span className="text-stone-900">4.8</span>
-                   <span className="font-medium">(120+)</span>
+                   <span className="text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</span>
+                   <span className="font-medium">({store.ratingCount || 0})</span>
                  </div>
                  <span>•</span>
                  <div className="flex items-center gap-1 uppercase tracking-widest text-[10px]">
-                   {store.category}
+                   {t(`merchant.categories.${store.category?.toLowerCase() || 'grocery'}`)}
                  </div>
               </div>
             </div>
@@ -443,7 +543,7 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto no-scrollbar pb-12">
-        <div className="px-8 space-y-8">
+        <div className="px-4 sm:px-8 space-y-8">
           
           {/* Stats Bar */}
           <div className="flex items-center justify-between bg-stone-50 rounded-3xl p-4 border border-stone-100">
@@ -454,13 +554,13 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
             <div className="text-center flex-1 border-r border-stone-200">
               <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.rating_label')}</p>
               <div className="flex items-center justify-center gap-0.5">
-                <p className="text-lg font-black text-stone-900">4.8</p>
+                <p className="text-lg font-black text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</p>
                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
               </div>
             </div>
             <div className="text-center flex-1">
                <button 
-                 onClick={() => setFollowing(!following)}
+                 onClick={handleFollow}
                  className={cn(
                    "px-6 py-2 rounded-xl font-bold text-sm transition-all",
                    following ? "bg-stone-200 text-stone-600" : "bg-stone-900 text-white shadow-lg shadow-stone-200"
@@ -469,6 +569,32 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
                  {following ? t('store_front.unfollow') : t('store_front.follow')}
                </button>
             </div>
+          </div>
+
+          {/* Rating Widget */}
+          <div className="bg-amber-50 rounded-3xl p-6 border border-amber-100 flex flex-col items-center gap-4">
+            <h4 className="text-sm font-black text-amber-900 uppercase tracking-widest">{t('store_front.rate_this_store', 'Rate this Store')}</h4>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => handleRate(star)}
+                  className="transition-all active:scale-90"
+                >
+                  <Star 
+                    className={cn(
+                      "w-8 h-8",
+                      star <= (userRating || Math.round(store.averageRating || 0)) 
+                        ? "text-amber-400 fill-amber-400" 
+                        : "text-amber-200"
+                    )} 
+                  />
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider">
+              {userRating > 0 ? t('store_front.thanks_for_rating', 'Thanks for your feedback!') : t('store_front.tap_to_rate', 'Tap a star to rate')}
+            </p>
           </div>
 
           {/* About */}
@@ -630,6 +756,41 @@ export const StorePage: React.FC<StorePageProps> = ({ storeId, onClose, onAddPro
           </div>
         </div>
       </div>
+
+      {/* Checkout Footer */}
+      <AnimatePresence>
+        {cartCount > 0 && (
+          <motion.div
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            exit={{ y: 100 }}
+            className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 bg-white border-t border-stone-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40 safe-bottom"
+          >
+            <div className="max-w-xl mx-auto flex items-center justify-between gap-6">
+              <div>
+                <p className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] mb-1">{t('store.order_total', 'Order Total')}</p>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-black text-stone-900">
+                    <span className="text-xs text-indigo-500 mr-1">{t('common.currency_symbol')}</span>
+                    {cartTotal.toFixed(2)}
+                  </span>
+                  <span className="text-xs text-stone-400 font-bold uppercase tracking-widest bg-stone-50 px-3 py-1 rounded-full">
+                    {t('store.items_count', '{{count}} Items', { count: cartCount })}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOrderCheckout(true)}
+                className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3"
+              >
+                <ShoppingBag className="w-5 h-5" />
+                <span className="uppercase tracking-widest">{t('store.place_order_btn', 'Next: Checkout')}</span>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
     </div>
   );

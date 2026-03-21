@@ -16,7 +16,7 @@ export async function forceClearCache(options: {
   try {
     console.log("forceClearCache: Starting clean up...", options);
 
-    // 1. Clear Storage (Optional)
+    // 1. Clear Storage (Optional - LocalStorage / SessionStorage)
     if (options.clearStorage) {
       localStorage.clear();
       sessionStorage.clear();
@@ -34,8 +34,8 @@ export async function forceClearCache(options: {
       await Promise.all(registrations.map(r => r.unregister()));
     }
 
-    // 4. Clear IndexedDB
-    if ('indexedDB' in window) {
+    // 4. Clear IndexedDB (Optional)
+    if (options.clearStorage && 'indexedDB' in window) {
       const dbs = await window.indexedDB.databases();
       for (const db of dbs) {
         if (db.name) {

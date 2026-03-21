@@ -74,10 +74,17 @@
     "reward_fail": "Failed to get reward. Try again later.",
     "ad_error": "Failed to load or show ad. Please try again later.",
     "support_dev": "Support Developer",
-    "visit_apps": "Visit created.link (+1 🪙)",
+    "visit_apps": "Other Apps (+1 🪙)",
     "nearby_stores": "Nearby Stores",
     "discover_local": "Discover local products",
     "discover_products": "Discover local products"
+  },
+  "other_apps": {
+    "title": "Designer Apps",
+    "subtitle": "Explore more tools by the developer",
+    "back": "Back",
+    "loading": "Loading catalog...",
+    "error": "Failed to load apps. Please check your connection."
   },
   "list_view": {
     "delete_collection": "Delete Collection (1 {{coin}})",
@@ -289,7 +296,12 @@
     },
     "hours_from": "Open From",
     "hours_to": "Close At",
-    "closed": "Closed"
+    "closed": "Closed",
+    "direct_order_label": "Enable Direct Orders",
+    "direct_order_desc": "Allow customers to place orders directly through the app.",
+    "direct_order_disclaimer_title": "Direct Order Responsibility",
+    "direct_order_disclaimer_text": "This functionality is for convenience only. As the store owner, you are in full control of and solely responsible for completing all orders. Communication and transactions are purely between you and the customer. The app facilitates the connection but does not manage fulfillment or payments.",
+    "direct_order_acknowledgement": "I acknowledge that I am solely responsible for all direct orders and their completion."
   },
   "product_manager": {
     "inventory_title": "Product Inventory",
@@ -335,7 +347,8 @@
     "manage_submissions": "Manage Submissions",
     "clear_cache": "Fix App / Clear Cache",
     "delete_account": "Delete Account",
-    "anonymous_traveler": "Anonymous Traveler"
+    "anonymous_traveler": "Anonymous Traveler",
+    "other_apps": "Other Apps"
   },
   "delete_account_modal": {
     "title": "Delete Account?",
@@ -419,7 +432,11 @@
     "item_added": "Item added to your shopping list!",
     "verified_badge": "Verified Merchant",
     "followers_label": "Followers",
+    "followers_count": "{{count}} Followers",
     "rating_label": "Rating",
+    "rating_count": "({{count}} ratings)",
+    "rate_this_store": "Rate this store",
+    "thank_you_rating": "Thanks for your rating!",
     "info_title": "Information",
     "location_label": "Location",
     "hours_label": "Opening Hours",

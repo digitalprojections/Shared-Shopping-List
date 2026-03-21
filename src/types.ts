@@ -62,6 +62,7 @@ export interface AppUser {
   lastActionAt?: number;
   freeCouponClaimed?: boolean;
   fcmTokens?: string[];
+  followedStores?: string[];
 }
 
 export interface Coupon {
@@ -107,6 +108,10 @@ export interface Store {
   themeColor?: string;
   bannerUrl?: string;
   logoUrl?: string;
+  followers?: string[];
+  averageRating?: number;
+  ratingCount?: number;
+  directOrderEnabled?: boolean;
 }
 
 export const DAYS_OF_WEEK = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -132,4 +137,37 @@ export interface StoreProduct {
   imageUrl?: string;
   createdAt: number;
   updatedAt: number;
+}
+
+export type OrderStatus = 'pending' | 'confirmed' | 'processing' | 'out_for_delivery' | 'completed' | 'cancelled';
+
+export interface OrderItem {
+  productId: string;
+  name: string;
+  price: number;
+  quantity: number;
+  imageUrl?: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  text: string;
+  createdAt: number;
+}
+
+export interface Order {
+  id: string;
+  storeId: string;
+  storeName: string;
+  customerId: string;
+  customerName: string;
+  items: OrderItem[];
+  totalAmount: number;
+  status: OrderStatus;
+  deliveryTime?: string;
+  notes?: string;
+  createdAt: number;
+  updatedAt: number;
+  chat?: ChatMessage[];
 }

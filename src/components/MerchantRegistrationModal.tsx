@@ -54,6 +54,8 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [shake, setShake] = useState(false);
+  const [directOrderEnabled, setDirectOrderEnabled] = useState(initialStore?.directOrderEnabled || false);
+  const [disclaimerAccepted, setDisclaimerAccepted] = useState(initialStore?.directOrderEnabled || false);
 
   // Structured Working Hours
   const [schedules, setSchedules] = useState<Record<DayKey, DailySchedule>>(() => {
@@ -202,6 +204,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
       contactPhone: contactPhone.trim(),
       website: website.trim(),
       themeColor,
+      directOrderEnabled: directOrderEnabled && disclaimerAccepted,
       createdAt: openingDate ? new Date(openingDate).getTime() : Date.now()
     };
 
@@ -238,9 +241,9 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+        className="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[95vh] sm:max-h-[90vh]"
       >
-        <div className="p-8 pb-4 shrink-0 border-b border-stone-50">
+        <div className="p-5 sm:p-8 pb-4 shrink-0 border-b border-stone-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
@@ -278,7 +281,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
             </motion.div>
           ) : (
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
-              <div className="flex-1 overflow-y-auto no-scrollbar p-8 pt-6 space-y-6">
+              <div className="flex-1 overflow-y-auto no-scrollbar p-5 sm:p-8 pt-6 space-y-6">
                 {error && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -370,7 +373,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
                         {t('merchant.category', 'Category')}
@@ -417,16 +420,16 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     </label>
                     <div className="bg-stone-50 rounded-[2rem] p-4 border border-stone-100 space-y-3">
                       {DAYS_OF_WEEK.map((day) => (
-                        <div key={day} className="flex items-center gap-4">
+                        <div key={day} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4">
                           <button
                             type="button"
                             onClick={() => handleDayChange(day, { isOpen: !schedules[day].isOpen })}
                             className={cn(
-                              "w-24 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-center",
+                              "w-full sm:w-24 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-center",
                               schedules[day].isOpen ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "bg-white text-stone-300 border border-stone-100"
                             )}
                           >
-                            {t(`merchant.weekdays.${day}`).substring(0, 3)}
+                            {t(`merchant.weekdays.${day}`)}
                           </button>
                           
                           {schedules[day].isOpen ? (
@@ -455,7 +458,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
                         {t('merchant.contact_phone')}
@@ -504,10 +507,75 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                         ))}
                       </div>
                   </div>
+
+                  <div className="space-y-4 pt-4 border-t border-stone-100">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <label className="text-sm font-bold text-stone-900 block">
+                          {t('merchant.direct_order_label')}
+                        </label>
+                        <p className="text-xs text-stone-500">
+                          {t('merchant.direct_order_desc')}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!directOrderEnabled) {
+                            // Turning on requires disclaimer
+                            setDirectOrderEnabled(true);
+                          } else {
+                            setDirectOrderEnabled(false);
+                            setDisclaimerAccepted(false);
+                          }
+                        }}
+                        className={cn(
+                          "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
+                          directOrderEnabled ? "bg-emerald-600" : "bg-stone-200"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                            directOrderEnabled ? "translate-x-5" : "translate-x-0"
+                          )}
+                        />
+                      </button>
+                    </div>
+
+                    {directOrderEnabled && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="bg-emerald-50/50 rounded-2xl p-4 sm:p-5 space-y-4"
+                      >
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+                            {t('merchant.direct_order_disclaimer_title')}
+                          </h4>
+                          <p className="text-xs text-emerald-700/80 leading-relaxed font-medium">
+                            {t('merchant.direct_order_disclaimer_text')}
+                          </p>
+                        </div>
+                        
+                        <label className="flex items-start gap-3 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={disclaimerAccepted}
+                            onChange={(e) => setDisclaimerAccepted(e.target.checked)}
+                            className="mt-1 w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-emerald-300 transition-colors"
+                          />
+                          <span className="text-xs text-emerald-900 font-bold leading-snug group-hover:text-emerald-700 transition-colors">
+                            {t('merchant.direct_order_acknowledgement')}
+                          </span>
+                        </label>
+                      </motion.div>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="px-8 py-6 border-t border-stone-50 bg-white shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
+              <div className="px-5 sm:px-8 py-4 sm:py-6 border-t border-stone-50 bg-white shrink-0 shadow-[0_-10px_30px_rgba(0,0,0,0.02)]">
                 <motion.button
                   animate={shake ? { x: [-5, 5, -5, 5, 0] } : {}}
                   transition={{ duration: 0.4 }}
