@@ -12,7 +12,9 @@
     "loading": "Loading...",
     "error": "An error occurred",
     "clear_cache_confirm": "Clear all local data and reload?",
-    "feature_unavailable": "Feature unavailable in this version."
+    "feature_unavailable": "Feature unavailable in this version.",
+    "your_store": "Your Store",
+    "stores_found": "{{count}} Stores Found"
   },
   "app": {
     "loading": "Loading your lists...",
@@ -158,7 +160,9 @@
   "auth": {
     "login_required": "Please sign in to proceed",
     "signing_in": "Signing in...",
-    "login_prompt": "Login to unlock all features"
+    "login_prompt": "Login to unlock all features",
+    "login_failed": "Login failed. Please try again.",
+    "already_in_use_message": "That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account."
   },
   "admin": {
     "title": "Admin Console",
@@ -250,8 +254,8 @@
     "store_theme": "Store Theme",
     "desc_placeholder": "Tell users what you sell...",
     "map_link": "Map Location Link",
-    "map_link_placeholder": "Paste Google Maps link here...",
-    "map_link_help": "Paste a Google Maps link to automatically set coordinates.",
+    "map_link_placeholder": "Paste map location link here (e.g. from Google or OSM)...",
+    "map_link_help": "Paste a map link to automatically set coordinates.",
     "local_store": "Local Store",
     "verified": "Verified Merchant",
     "status": {
@@ -362,7 +366,8 @@
     "confirm": "This action is permanent. All your lists, items, and profile information will be deleted forever.",
     "button": "Delete Everything",
     "reauth_required": "For security, please sign out and sign back in before deleting your account.",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "delete_fail": "Failed to delete account"
   },
   "footer": {
     "privacy_policy": "Privacy Policy"
@@ -501,7 +506,8 @@
     "loading": "Finding stores near you...",
     "no_results": "No stores matching your search",
     "miles_away": "{{count}} miles away",
-    "footer": "Showing stores open within 10 miles of your current location."
+    "footer": "Showing stores open within 10 miles of your current location.",
+    "map_title": "Nearby Stores Map"
   },
   "onboarding": {
     "skip": "Skip",
@@ -519,6 +525,10 @@
       "smart_desc": "Manage multiple lists for home, work, or parties. Simple, powerful, and completely free.",
       "loyalty_title": "Loyalty Cards",
       "loyalty_desc": "Keep all your point cards in one place. Instant barcode access at checkout keeps your wallet light and organized.",
+      "replication_title": "Card Replication",
+      "replication_desc": "Digitize your physical loyalty cards in seconds. Replicate your entire wallet into your phone with our smart scanner.",
+      "merchant_title": "For Store Owners",
+      "merchant_desc": "List your menu, showcase your products, and receive delivery or reservation requests directly from the app.",
       "interests_title": "Your Interests",
       "interests_desc": "Select categories you're interested in to get personalized store suggestions."
     }

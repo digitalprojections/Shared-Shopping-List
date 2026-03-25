@@ -332,7 +332,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                   
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-stone-400 uppercase tracking-widest px-1">
-                      {t('merchant.map_link', 'Map Location Link (Google Maps)')}
+                      {t('merchant.map_link', 'Map Location Link')}
                     </label>
                     <div className="flex gap-2">
                        <input
@@ -340,7 +340,7 @@ export const MerchantRegistrationModal: React.FC<MerchantRegistrationModalProps>
                         value={mapLink}
                         onChange={(e) => parseMapLink(e.target.value)}
                         className="flex-1 px-4 py-3 sm:py-4 bg-white border-2 border-transparent focus:border-emerald-500 focus:bg-white rounded-2xl outline-none transition-all font-medium text-sm shadow-sm"
-                        placeholder="Paste Google Maps link..."
+                        placeholder={t('merchant.map_link_placeholder', 'Paste map location link...')}
                       />
                       <button
                         type="button"

@@ -623,11 +623,11 @@ export default function App() {
       console.error("Google login error:", err);
       if (err.code === 'auth/credential-already-in-use') {
         await signOut(auth);
-        setError("That Google account already has a ListShare profile. We've logged you out of your temporary guest session. Please click 'Sign in with Google' again to access your main account.");
+        setError(t('auth.already_in_use_message'));
       } else if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled' || err.code === '12501') {
         // Ignored (User cancelled)
       } else {
-        setError(err.message || "Login failed. Please try again.");
+        setError(err.message || t('auth.login_failed'));
       }
     } finally {
       setLoading(false);
@@ -648,12 +648,12 @@ export default function App() {
           setError(t('delete_account_modal.reauth_required'));
           setShowDeleteConfirm(false);
         } else {
-          setError(result.error || 'Failed to delete account');
+          setError(result.error || t('delete_account_modal.delete_fail'));
         }
       }
     } catch (err: any) {
       console.error("Delete account error:", err);
-      setError(err.message || 'Failed to delete account');
+      setError(err.message || t('delete_account_modal.delete_fail'));
     } finally {
       setIsDeleting(false);
     }
@@ -721,12 +721,12 @@ export default function App() {
               {t('app.sign_in_google')}
             </motion.button>
 
-            <button
+            {/* <button
               onClick={handleAnonymously}
               className="w-full py-4 text-stone-400 font-bold hover:text-stone-600 transition-colors text-sm"
             >
               {t('app.continue_guest')}
-            </button>
+            </button> */}
           </div>
 
           {error && (
@@ -808,7 +808,8 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-      <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
+      {!showDiscoverStores && (
+        <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -994,8 +995,9 @@ export default function App() {
           </div>
         </div>
       </header>
+      )}
 
-      {user && (
+      {user && !showDiscoverStores && (
         <LoyaltyCardsRow
           userId={user.uid}
           onCardClick={(card) => {
@@ -1009,10 +1011,30 @@ export default function App() {
         />
       )}
 
-      <main className="scroll-container px-4 pt-6 pb-8 md:px-8">
-        <div className="max-w-5xl mx-auto">
+      <main className={cn(
+        "scroll-container",
+        !showDiscoverStores && "px-4 pt-6 pb-8 md:px-8"
+      )}>
+        <div className={cn(
+          !showDiscoverStores && "max-w-5xl mx-auto",
+          showDiscoverStores && "w-full h-full"
+        )}>
           <AnimatePresence mode="wait">
-            {!activeListId ? (
+            {showDiscoverStores ? (
+              <DiscoverStores
+                onClose={() => setShowDiscoverStores(false)}
+                currentUser={user}
+                appUser={appUser}
+                onSelectStore={(id) => {
+                  setSelectedStoreId(id);
+                  setShowDiscoverStores(false);
+                }}
+                onShowMerchantDashboard={() => {
+                  setShowDiscoverStores(false);
+                  setShowMerchantDashboard(true);
+                }}
+              />
+            ) : !activeListId ? (
               <Dashboard
                 userId={user?.uid || ''}
                 onSelectList={handleSelectList}
@@ -1129,26 +1151,6 @@ export default function App() {
               setSelectedOrderDetailId(null);
               setIsOrderDetailMerchant(false);
             }}
-          />
-        )}
-        {showDiscoverStores && (
-          <DiscoverStores
-            onClose={() => setShowDiscoverStores(false)}
-            currentUser={user}
-            appUser={appUser}
-            onSelectStore={(id) => {
-              setSelectedStoreId(id);
-              setShowDiscoverStores(false);
-            }}
-            onShowMerchantDashboard={() => {
-              setShowDiscoverStores(false);
-              setShowMerchantDashboard(true);
-            }}
-          />
-        )}
-        {showUserOrdersView && (
-          <UserOrdersView
-            onClose={() => setShowUserOrdersView(false)}
           />
         )}
         {showOtherApps && (

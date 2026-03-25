@@ -8,7 +8,10 @@ import {
   ArrowRight, 
   CheckCircle2,
   Sparkles,
-  Ticket
+  Ticket,
+  Scan,
+  Store,
+  Utensils
 } from 'lucide-react';
 
 interface OnboardingProps {
@@ -64,6 +67,25 @@ const slides = [
     accent: "bg-rose-500"
   },
   {
+    title: "onboarding.slides.replication_title",
+    description: "onboarding.slides.replication_desc",
+    icon: <Scan className="w-16 h-16 text-emerald-500" />,
+    color: "from-emerald-50 to-teal-50",
+    accent: "bg-emerald-500"
+  },
+  {
+    title: "onboarding.slides.merchant_title",
+    description: "onboarding.slides.merchant_desc",
+    icon: (
+      <div className="relative">
+        <Store className="w-16 h-16 text-indigo-500" />
+        <Utensils className="w-8 h-8 text-indigo-400 absolute -bottom-2 -right-2 bg-white rounded-lg p-1 shadow-sm" />
+      </div>
+    ),
+    color: "from-indigo-50 to-blue-50",
+    accent: "bg-indigo-500"
+  },
+  {
     title: "onboarding.slides.interests_title",
     description: "onboarding.slides.interests_desc",
     icon: <Sparkles className="w-16 h-16 text-amber-500" />,
@@ -104,17 +126,8 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
     <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-between overflow-hidden">
       <div className={`absolute inset-0 bg-gradient-to-b ${slides[currentSlide].color} transition-colors duration-700 opacity-50`} />
       
-      {/* Top Section - Skip */}
-      <div className="w-full p-6 flex justify-end relative z-10 min-h-[5rem]">
-        {!isSelectionSlide && (
-          <button 
-            onClick={onFinish}
-            className="text-gray-500 font-medium text-sm hover:text-gray-800 transition-colors"
-          >
-            {t('onboarding.skip')}
-          </button>
-        )}
-      </div>
+      {/* Top Section - Spacing (Skip removed as per request) */}
+      <div className="w-full p-6 flex justify-end relative z-10 min-h-[5rem]" />
 
       {/* Slide Content */}
       <div className="flex-1 w-full max-w-lg flex items-center justify-center p-8 relative z-10">

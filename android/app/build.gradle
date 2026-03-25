@@ -15,14 +15,11 @@ def getVersionCode = { ->
 
 def getVersionName = { ->
     try {
-        def stdout = new ByteArrayOutputStream()
-        exec {
-            commandLine 'git', 'describe', '--tags', '--always'
-            standardOutput = stdout
-        }
-        return stdout.toString().trim()
+        def packageJsonFile = file('../../package.json')
+        def packageJson = new groovy.json.JsonSlurper().parseText(packageJsonFile.text)
+        return packageJson.version
     } catch (ignored) {
-        return "1.0"
+        return "1.0.0"
     }
 }
 
