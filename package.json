@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "build:mobile": "vite build --mode mobile",
+    "build:android": "npm run build:mobile && npx cap sync android",
+    "open:android": "npx cap open android",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
   },
