@@ -202,7 +202,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
         <MapContainer
           center={userLocation || [0, 0]}
           zoom={userLocation ? 14 : 2}
-          className="w-full h-full grayscale-[0.2] group-hover:opacity-100 transition-opacity duration-700 z-0"
+          className="w-full h-full grayscale-[0.2] group-hover:opacity-100 duration-700 z-0"
           zoomControl={false}
         >
           <TileLayer

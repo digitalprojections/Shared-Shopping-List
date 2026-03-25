@@ -693,7 +693,7 @@ exports.processOrder = onCall({
           .filter(b => b.expiresAt > now && b.remaining > 0)
           .sort((a, b) => a.createdAt - b.createdAt);
 
-        let remainingToDeduct = 50;
+        let remainingToDeduct = 10;
         for (const batch of validBatches) {
           if (remainingToDeduct <= 0) break;
           const deduct = Math.min(batch.remaining, remainingToDeduct);
