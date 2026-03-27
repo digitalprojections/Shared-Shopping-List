@@ -43,13 +43,20 @@ export interface UserSuggestion {
   count: number;
 }
 
-export interface CoinBatch {
+export interface FuelBatch {
   id: string;
-  amount: number;
-  remaining: number;
-  expiresAt: number;
-  createdAt: number;
-  type: 'reward' | 'purchase' | 'coupon';
+  a: number; // amount
+  r: number; // remaining
+  ea: number; // expiresAt
+  ca: number; // createdAt
+  t: 'reward' | 'purchase' | 'coupon'; // type
+  
+  // Legacy
+  amount?: number;
+  remaining?: number;
+  expiresAt?: number;
+  createdAt?: number;
+  type?: string;
 }
 
 export interface PushToken {
@@ -60,22 +67,32 @@ export interface PushToken {
 
 export interface AppUser {
   uid: string;
-  coinBalance: number;
-  coinBatches?: CoinBatch[];
+  fl: number; // fuelLevel
+  ldrd?: string; // lastDailyRewardDay
+  ldra?: number; // lastDailyRewardAt
+  laa?: number; // lastActionAt
   isAdmin?: boolean;
   isMerchant?: boolean;
   preferences?: string[];
-  lastActionAt?: number;
-  freeCouponClaimed?: boolean;
-  fcmTokens?: PushToken[]; // Updated from string[] to PushToken[]
   followedStores?: string[];
   ownedStores?: string[];
+  fcmTokens?: PushToken[];
+
+  // Legacy fields (transitional)
+  fuelLevel?: number;
+  fuelBatches?: FuelBatch[];
+  coinBalance?: number;
+  coinBatches?: any[];
+  lastActionAt?: number;
+  lastDailyRewardDay?: string;
+  lastDailyRewardAt?: number;
+  freeGiftClaimed?: boolean;
 }
 
 export interface Coupon {
   id: string; // Document ID is the code
   code: string;
-  coinsAmount: number;
+  fuelAmount: number;
   isConsumed: boolean;
   consumedBy: string | null;
   createdAt: number;

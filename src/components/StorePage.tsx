@@ -42,6 +42,7 @@ interface StorePageProps {
   activeListId?: string;
   currentUser: any;
   appUser: AppUser | null;
+  followedStoreIds: string[];
 }
 
 export const StorePage: React.FC<StorePageProps> = ({ 
@@ -50,7 +51,8 @@ export const StorePage: React.FC<StorePageProps> = ({
   onAddProductToList, 
   activeListId,
   currentUser,
-  appUser
+  appUser,
+  followedStoreIds = []
 }) => {
   const { t } = useTranslation();
   const [store, setStore] = useState<Store | null>(null);
@@ -113,7 +115,7 @@ export const StorePage: React.FC<StorePageProps> = ({
     return () => unsubscribe();
   }, [storeId, currentUser]);
 
-  const isFollowing = appUser?.followedStores?.includes(storeId) || false;
+  const isFollowing = followedStoreIds.includes(storeId);
   const isOwner = store?.ownerId === currentUser?.uid;
 
   const handleFollow = async () => {

@@ -12,7 +12,7 @@ import {
   MoreVertical,
   LogOut,
   ShoppingBag,
-  Coins,
+  Fuel,
   Ticket,
   Crown,
   History,
@@ -74,7 +74,8 @@ import { Onboarding } from './components/Onboarding';
 import { MerchantRegistrationModal } from './components/MerchantRegistrationModal';
 import { MerchantDashboard } from './components/MerchantDashboard';
 import { AdminStoreManager } from './components/AdminStoreManager';
-import { CoinStoreModal } from './components/CoinStoreModal';
+import { RefuelModal } from './components/RefuelModal';
+import { FuelGauge } from './components/FuelGauge';
 import { LoyaltyCardsModal } from './components/LoyaltyCardsModal';
 import { LoyaltyCardsRow } from './components/LoyaltyCardsRow';
 import { DiscoverStores } from './components/DiscoverStores';
@@ -82,6 +83,7 @@ import { StorePage } from './components/StorePage';
 import { OtherAppsView } from './components/OtherAppsView';
 import { UserOrdersView } from './components/UserOrdersView';
 import { OrderDetailView } from './components/OrderDetailView';
+import { DailyRewardModal } from './components/DailyRewardModal';
 import { StoreProduct, Order } from './types';
 import { orderService } from './services/orderService';
 import { APP_CONFIG } from './config';
@@ -121,8 +123,8 @@ export default function App() {
   const [sharedPermission, setSharedPermission] = useState<Permission>('read');
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [lists, setLists] = useState<ShoppingList[]>([]);
-  const [showRedeemModal, setShowRedeemModal] = useState(false);
-  const [showCoinHistoryModal, setShowCoinHistoryModal] = useState(false);
+  const [showRefuelModal, setShowRefuelModal] = useState(false);
+  const [showFuelHistoryModal, setShowFuelHistoryModal] = useState(false);
   const shareProcessed = useRef(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -144,7 +146,26 @@ export default function App() {
   const [orderTab, setOrderTab] = useState<'purchases' | 'sales'>('purchases');
   const [selectedOrderDetailId, setSelectedOrderDetailId] = useState<string | null>(null);
   const [isOrderDetailMerchant, setIsOrderDetailMerchant] = useState(false);
+  const [showDailyReward, setShowDailyReward] = useState(false);
+  const [followedStoreIds, setFollowedStoreIds] = useState<string[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // --- Daily Reward Check ---
+  useEffect(() => {
+    if (!appUser || !user) return;
+    
+    const today = new Date().toISOString().split('T')[0];
+    const lastClaimed = appUser.lastDailyRewardDay || '';
+    
+    // If not claimed today AND not already showing
+    if (lastClaimed !== today) {
+      // Small delay to let the app load first
+      const timer = setTimeout(() => {
+        setShowDailyReward(true);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [!!appUser, appUser?.lastDailyRewardDay, user?.uid]); // Depend on !!appUser to trigger when loaded from null
 
   // --- Version Control & Auto-Update Logic ---
   useEffect(() => {
@@ -464,11 +485,32 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      return userService.subscribeToUserProfile(user.uid, setAppUser);
+      const unsubProfile = userService.subscribeToUserProfile(user.uid, setAppUser);
+      const unsubFollowing = userService.subscribeToFollowing(user.uid, setFollowedStoreIds);
+      
+      return () => {
+        unsubProfile();
+        unsubFollowing();
+      };
     } else {
       setAppUser(null);
+      setFollowedStoreIds([]);
     }
   }, [user]);
+
+  // Migration logic for followedStores (one-time)
+  useEffect(() => {
+    if (appUser && user && appUser.followedStores && appUser.followedStores.length > 0) {
+      const migrate = async () => {
+        console.log("[Migration] Moving legacy follows to subcollection...");
+        for (const storeId of appUser.followedStores!) {
+          await storeService.followStore(storeId, user.uid);
+        }
+        // CF or next update will clear the field
+      };
+      migrate();
+    }
+  }, [appUser?.uid, appUser?.followedStores?.length]);
 
   useEffect(() => {
     if (appUser?.isMerchant && user?.uid) {
@@ -608,6 +650,9 @@ export default function App() {
             console.log("Signing in with native credential...");
             await signInWithCredential(auth, credential);
           }
+        } else {
+          // No credential means cancelled or failed without error
+          setLoading(false);
         }
       } else {
         // Web flow
@@ -619,8 +664,12 @@ export default function App() {
           await signInWithPopup(auth, googleProvider);
         }
       }
+      // Note: We DO NOT set loading(false) here on success.
+      // We let onAuthStateChanged handle it to avoid flickering the login screen
+      // before the user state is fully updated.
     } catch (err: any) {
       console.error("Google login error:", err);
+      setLoading(false);
       if (err.code === 'auth/credential-already-in-use') {
         await signOut(auth);
         setError(t('auth.already_in_use_message'));
@@ -629,8 +678,6 @@ export default function App() {
       } else {
         setError(err.message || t('auth.login_failed'));
       }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -832,16 +879,18 @@ export default function App() {
           <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 justify-end">
             {appUser && (
               <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-                <CoinDisplay
-                  balance={appUser.coinBalance}
-                  onClick={() => setShowCoinHistoryModal(true)}
+                <FuelGauge
+                  level={appUser.fuelLevel || 0}
+                  onClick={() => setShowFuelHistoryModal(true)}
+                  className="!h-10 !py-1 !px-3"
+                  showLabel={false}
                 />
                 <div className="flex items-center gap-1.5 sm:gap-2">
                   {appUser && !appUser.freeCouponClaimed && (
                     <motion.button
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => setShowRedeemModal(true)}
+                      onClick={() => setShowRefuelModal(true)}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-200 animate-pulse shrink-0"
                       title={t('redeem_modal.free_title')}
                     >
@@ -852,17 +901,17 @@ export default function App() {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowStoreModal(true)}
+                    onClick={() => setShowRefuelModal(true)}
                     className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-colors shadow-sm shrink-0"
-                    title="Buy Coins"
+                    title={t('fuel.refuel_title')}
                   >
-                    <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('store.title')}</span>
+                    <Fuel className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('fuel.tab_buy')}</span>
                   </motion.button>
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowRedeemModal(true)}
+                    onClick={() => setShowRefuelModal(true)}
                     className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm shrink-0"
                     title="Redeem Coupon"
                   >
@@ -1025,6 +1074,7 @@ export default function App() {
                 onClose={() => setShowDiscoverStores(false)}
                 currentUser={user}
                 appUser={appUser}
+                followedStoreIds={followedStoreIds}
                 onSelectStore={(id) => {
                   setSelectedStoreId(id);
                   setShowDiscoverStores(false);
@@ -1086,11 +1136,20 @@ export default function App() {
       </footer>
 
       <AnimatePresence>
-        {showRedeemModal && user && (
+        {showDailyReward && (
+          <DailyRewardModal
+            onClose={() => setShowDailyReward(false)}
+            onClaimed={(amount) => {
+              // Fuel level is updated via Firestore snapshot automatically
+              console.log(`Daily reward of ${amount} claimed!`);
+            }}
+          />
+        )}
+        {showRefuelModal && user && (
           <RedeemModal
             userId={user.uid}
             appUser={appUser}
-            onClose={() => setShowRedeemModal(false)}
+            onClose={() => setShowRefuelModal(false)}
           />
         )}
         {showLoyaltyModal && user && (
@@ -1105,17 +1164,18 @@ export default function App() {
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {showCoinHistoryModal && appUser && (
-          <CoinHistoryModal
-            batches={appUser.coinBatches || []}
-            onClose={() => setShowCoinHistoryModal(false)}
+        {showFuelHistoryModal && appUser && (
+          <FuelHistoryModal
+            batches={appUser.fuelBatches || []}
+            onClose={() => setShowFuelHistoryModal(false)}
           />
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {showStoreModal && (
-          <CoinStoreModal
-            onClose={() => setShowStoreModal(false)}
+        {showRefuelModal && appUser && (
+          <RefuelModal
+            currentFuel={appUser.fuelLevel || 0}
+            onClose={() => setShowRefuelModal(false)}
           />
         )}
         {showMerchantModal && user && (
@@ -1166,6 +1226,7 @@ export default function App() {
             activeListId={activeListId || undefined}
             currentUser={user}
             appUser={appUser}
+            followedStoreIds={followedStoreIds}
           />
         )}
       </AnimatePresence>
@@ -1272,26 +1333,7 @@ export default function App() {
   );
 }
 
-function CoinDisplay({ balance, onClick }: { balance: number, onClick?: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={onClick ? { scale: 1.05, backgroundColor: '#fffbeb' } : {}}
-      whileTap={onClick ? { scale: 0.95 } : {}}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-3 sm:py-1.5 border rounded-full shadow-sm transition-colors",
-        onClick ? "cursor-pointer bg-white border-amber-200 hover:border-amber-400" : "bg-amber-50 border-amber-100"
-      )}
-    >
-      <Coins className="w-4 h-4 text-amber-600" />
-      <span className="text-sm font-bold text-amber-900">{balance}</span>
-    </motion.div>
-  );
-}
-
-function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose: () => void }) {
+function FuelHistoryModal({ batches, onClose }: { batches: any[], onClose: () => void }) {
   const { t } = useTranslation();
   const now = Date.now();
   const sortedBatches = [...batches].sort((a, b) => b.createdAt - a.createdAt);
@@ -1311,10 +1353,10 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
-              <Coins className="w-6 h-6 text-amber-600" />
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
+              <Fuel className="w-6 h-6 text-emerald-600" />
             </div>
-            <h3 className="text-2xl font-bold text-stone-900">{t('coins.history_title')}</h3>
+            <h3 className="text-2xl font-bold text-stone-900 uppercase tracking-tight">{t('coins.history_title')}</h3>
           </div>
           <button
             onClick={onClose}
@@ -1336,15 +1378,15 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
                       "p-4 rounded-2xl border-2 transition-all flex items-center justify-between",
                       isExpired
                         ? "bg-stone-50 border-stone-100 opacity-60"
-                        : "bg-white border-amber-100 shadow-sm"
+                        : "bg-white border-emerald-100 shadow-sm"
                     )}
                   >
                     <div className="flex items-center gap-4">
                       <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center",
-                        isExpired ? "bg-stone-200" : "bg-amber-100"
+                        isExpired ? "bg-stone-200" : "bg-emerald-100"
                       )}>
-                        {isExpired ? <Clock className="w-5 h-5 text-stone-400" /> : <Coins className="w-5 h-5 text-amber-600" />}
+                        {isExpired ? <Clock className="w-5 h-5 text-stone-400" /> : <Fuel className="w-5 h-5 text-emerald-600" />}
                       </div>
                       <div>
                         <p className="font-bold text-stone-900">
@@ -1358,11 +1400,6 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
                         </p>
                       </div>
                     </div>
-                    {isExpired && (
-                      <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 bg-stone-100 px-2 py-1 rounded-lg">
-                        {t('coins.expired')}
-                      </span>
-                    )}
                   </div>
                 );
               })}
@@ -1376,10 +1413,6 @@ function CoinHistoryModal({ batches, onClose }: { batches: CoinBatch[], onClose:
             </div>
           )}
         </div>
-
-        <p className="text-center text-xs text-stone-400 font-medium pt-2">
-          {t('coins.consumed_info')}
-        </p>
       </motion.div>
     </motion.div>
   );
@@ -1860,7 +1893,7 @@ function Dashboard({
                     <div>
                       <span className="block font-bold text-stone-900 leading-tight">
                         {Capacitor.isNativePlatform()
-                          ? t('dashboard.get_free_coins')
+                          ? t('dashboard.get_free_fuel')
                           : t('dashboard.support_dev')}
                       </span>
                       <span className="text-xs text-stone-500">
@@ -2134,8 +2167,8 @@ function ListView({
   const handleSync = async () => {
     if (!user || !appUser || isSyncing) return;
 
-    if (appUser.coinBalance <= 0) {
-      alert(t('list_view.insufficient_coins'));
+    if (appUser.fuelLevel <= 0) {
+      alert(t('list_view.insufficient_fuel'));
       return;
     }
 
@@ -2264,7 +2297,7 @@ function ListView({
               className="flex items-center gap-2 px-5 py-3 bg-emerald-600 text-white rounded-2xl font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 disabled:opacity-50 transition-all"
             >
               <RefreshCw className={cn("w-5 h-5", isSyncing && "animate-spin")} />
-              {isSyncing ? t('list_view.syncing') : t('list_view.sync_changes')} (1 {t('admin.coins')})
+              {isSyncing ? t('list_view.syncing') : t('list_view.sync_changes')}
             </motion.button>
           ) : null}
           <div className="relative">
@@ -2307,7 +2340,7 @@ function ListView({
                         className="w-full px-5 py-4 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 flex items-center gap-3 transition-colors border-b border-stone-50"
                       >
                         <Trash2 className="w-5 h-5" />
-                        {t('list_view.delete_collection', { coin: t('admin.coin') })}
+                        {t('list_view.delete_collection')}
                       </button>
                     )}
                     <button
@@ -2661,7 +2694,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
     if (!code.trim() || !isValidPattern) return;
     setLoading(true);
     setMsg(null);
-    const res = await couponService.redeemCoupon(userId, code);
+    const res = await couponService.redeemFuelCoupon(userId, code);
     setLoading(false);
     if (res.success) {
       setMsg({ text: res.message, type: 'success' });
@@ -2687,8 +2720,8 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
-              <Ticket className="w-6 h-6 text-amber-600" />
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
+              <Ticket className="w-6 h-6 text-emerald-600" />
             </div>
             <h3 className="text-2xl font-bold text-stone-900">{t('redeem_modal.title')}</h3>
           </div>
@@ -2725,7 +2758,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
                   "w-full px-6 py-5 rounded-2xl border-2 transition-all font-mono text-xl tracking-wider uppercase",
                   isValidPattern
                     ? "border-emerald-200 bg-emerald-50/30 focus:border-emerald-400 focus:bg-white text-emerald-700"
-                    : "border-stone-100 bg-stone-50 focus:border-amber-400 focus:bg-white text-stone-900"
+                    : "border-stone-100 bg-stone-50 focus:border-emerald-400 focus:bg-white text-stone-900"
                 )}
               />
               <AnimatePresence>
@@ -2748,7 +2781,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
             className={cn(
               "w-full py-5 rounded-2xl font-bold shadow-xl transition-all flex items-center justify-center gap-3",
               isValidPattern
-                ? "bg-amber-600 text-white shadow-amber-600/20 hover:bg-amber-700 active:scale-[0.98]"
+                ? "bg-emerald-600 text-white shadow-emerald-600/20 hover:bg-emerald-700 active:scale-[0.98]"
                 : "bg-stone-100 text-stone-400 shadow-none cursor-not-allowed"
             )}
           >
@@ -2784,7 +2817,7 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
           {t('redeem_modal.info')}
         </p>
 
-        {appUser && !appUser.freeCouponClaimed && (
+        {appUser && !appUser.freeGiftClaimed && (
           <div className="pt-4 border-t border-stone-100">
             <FreeGiftCard appUser={appUser} />
           </div>
@@ -2797,19 +2830,19 @@ function RedeemModal({ userId, onClose, appUser }: { userId: string, onClose: ()
 function FreeGiftCard({ appUser }: { appUser: AppUser | null }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [claimed, setClaimed] = useState(appUser?.freeCouponClaimed || false);
+  const [claimed, setClaimed] = useState(appUser?.freeGiftClaimed || false);
 
   useEffect(() => {
-    if (appUser?.freeCouponClaimed) {
+    if (appUser?.freeGiftClaimed) {
       setClaimed(true);
     }
-  }, [appUser?.freeCouponClaimed]);
+  }, [appUser?.freeGiftClaimed]);
 
   const handleClaim = async () => {
     if (loading || claimed) return;
     setLoading(true);
     try {
-      const result = await couponService.claimFreeWebCoupon();
+      const result = await couponService.claimFreeFuelGift();
       if (result.success) {
         setClaimed(true);
       } else {
@@ -2908,7 +2941,7 @@ function CouponGenerator() {
                 amount === val ? "bg-amber-500 text-stone-900" : "bg-white/5 hover:bg-white/10"
               )}
             >
-              {val} {t('admin.coins')}
+              {val} {t('admin.fuel_units')}
             </button>
           ))}
         </div>

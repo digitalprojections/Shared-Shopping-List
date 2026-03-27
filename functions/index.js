@@ -5,11 +5,10 @@ const admin = require("firebase-admin");
 
 admin.initializeApp();
 
-exports.consumeCoin = onCall({
-  // Enforce authentication
-  enforceAppCheck: false, // Set to true if App Check is enabled
+exports.consumeFuel = onCall({
+  // Enforce App Check if needed
+  enforceAppCheck: false,
 }, async (request) => {
-  // Check if user is authenticated
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
   }
@@ -29,26 +28,26 @@ exports.consumeCoin = onCall({
       const userData = userDoc.data();
       const now = Date.now();
 
-      // Anti-abuse: 1-second cooldown (reduced from 2s for better UX with multi-actions)
+      // Anti-abuse: 1-second cooldown
       if (userData.lastActionAt && (now - userData.lastActionAt < 1000)) {
         throw new HttpsError('resource-exhausted', 'Please wait 1 second between actions.');
       }
 
-      // Filter valid batches and sort by creation time (FIFO)
-      let coinBatches = (userData.coinBatches || [])
-        .map(b => ({ ...b })); // Deep copy for mutation in transaction
+      // Filter valid fuel batches and sort by creation time (FIFO)
+      let fuelBatches = (userData.fuelBatches || userData.coinBatches || [])
+        .map(b => ({ ...b }));
 
-      const validBatches = coinBatches
+      const validBatches = fuelBatches
         .filter(b => b.expiresAt > now && b.remaining > 0)
         .sort((a, b) => a.createdAt - b.createdAt);
 
-      const currentBalance = validBatches.reduce((sum, b) => sum + b.remaining, 0);
+      const currentLevel = validBatches.reduce((sum, b) => sum + b.remaining, 0);
 
-      if (currentBalance < amountToConsume) {
-        throw new HttpsError('failed-precondition', 'Insufficient coins.');
+      if (currentLevel < amountToConsume) {
+        throw new HttpsError('failed-precondition', 'Insufficient fuel.');
       }
 
-      // Consume coins across multiple batches if needed
+      // Consume fuel across multiple batches if needed
       let remainingToDeduct = amountToConsume;
       for (const batch of validBatches) {
         if (remainingToDeduct <= 0) break;
@@ -57,36 +56,38 @@ exports.consumeCoin = onCall({
         batch.remaining -= deduct;
         remainingToDeduct -= deduct;
         
-        // Find the batch in the original array and update it
-        const index = coinBatches.findIndex(b => b.id === batch.id);
+        const index = fuelBatches.findIndex(b => b.id === batch.id);
         if (index !== -1) {
-          coinBatches[index].remaining = batch.remaining;
+          fuelBatches[index].remaining = batch.remaining;
         }
       }
 
-      // Recalculate total balance
-      const newBalance = coinBatches
+      // Recalculate total fuel level
+      const newLevel = fuelBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
 
       transaction.update(userRef, {
-        coinBatches: coinBatches,
-        coinBalance: newBalance,
+        fuelBatches: fuelBatches,
+        fuelLevel: newLevel,
+        // Keep legacy fields for backward compatibility during transition if needed
+        coinBatches: fuelBatches,
+        coinBalance: newLevel,
         lastActionAt: now
       });
       
-      logger.info(`Consumed ${amountToConsume} coins for user ${uid}. New balance: ${newBalance}`);
+      logger.info(`Consumed ${amountToConsume} fuel for user ${uid}. New level: ${newLevel}`);
     });
 
     return { success: true };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
-    logger.error("Error in consumeCoin:", error);
-    throw new HttpsError('internal', 'An internal error occurred while consuming coins.');
+    logger.error("Error in consumeFuel:", error);
+    throw new HttpsError('internal', 'An internal error occurred while consuming fuel.');
   }
 });
 
-exports.grantRewardedCoin = onCall({
+exports.grantRewardedFuel = onCall({
   enforceAppCheck: false,
   cors: true,
 }, async (request) => {
@@ -122,7 +123,6 @@ exports.grantRewardedCoin = onCall({
       }
 
       const requestedAmount = (request.data && request.data.amount) ? Number(request.data.amount) : 1;
-      // Safety cap: allow up to 20 coins per reward to match user settings
       const rewardAmount = Math.max(1, Math.min(requestedAmount, 20));
       const newBatch = {
         id: `reward_${now}`,
@@ -132,31 +132,33 @@ exports.grantRewardedCoin = onCall({
         type: 'reward'
       };
 
-      const updatedBatches = [...(userData.coinBatches || []), newBatch];
-      const totalBalance = updatedBatches
+      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
 
       transaction.update(userRef, {
+        fuelBatches: updatedBatches,
+        fuelLevel: totalLevel,
         coinBatches: updatedBatches,
-        coinBalance: totalBalance,
+        coinBalance: totalLevel,
         lastAdAt: now,
         lastAdDay: today,
         adCount: adCount + 1
       });
 
-      logger.info(`Rewarded coin granted to user ${uid}. New balance: ${totalBalance}`);
+      logger.info(`Rewarded fuel granted to user ${uid}. New level: ${totalLevel}`);
     });
 
     return { success: true };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
-    logger.error("Error in grantRewardedCoin:", error);
-    throw new HttpsError('internal', 'An internal error occurred while granting reward.');
+    logger.error("Error in grantRewardedFuel:", error);
+    throw new HttpsError('internal', 'An internal error occurred while granting fuel reward.');
   }
 });
 
-exports.redeemCoupon = onCall({
+exports.redeemFuelCoupon = onCall({
   enforceAppCheck: false,
   cors: true,
 }, async (request) => {
@@ -199,15 +201,15 @@ exports.redeemCoupon = onCall({
       const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
       const newBatch = {
         id: `coupon_${Math.random().toString(36).substring(7)}`,
-        amount: couponData.coinsAmount,
-        remaining: couponData.coinsAmount,
+        amount: couponData.fuelAmount || couponData.coinsAmount,
+        remaining: couponData.fuelAmount || couponData.coinsAmount,
         createdAt: now,
         expiresAt: expiresAt,
         type: 'coupon'
       };
 
-      const updatedBatches = [...(userData.coinBatches || []), newBatch];
-      const totalBalance = updatedBatches
+      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
 
@@ -218,23 +220,25 @@ exports.redeemCoupon = onCall({
       });
 
       transaction.update(userRef, {
+        fuelBatches: updatedBatches,
+        fuelLevel: totalLevel,
         coinBatches: updatedBatches,
-        coinBalance: totalBalance,
+        coinBalance: totalLevel,
         lastActionAt: now
       });
 
-      return { coins: couponData.coinsAmount };
+      return { fuel: newBatch.amount };
     });
 
-    return { success: true, message: `Successfully redeemed ${result.coins} coins!`, coins: result.coins };
+    return { success: true, message: `Successfully redeemed ${result.fuel} fuel!`, fuel: result.fuel };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
-    logger.error("Error in redeemCoupon:", error);
+    logger.error("Error in redeemFuelCoupon:", error);
     throw new HttpsError('internal', error.message || 'Error redeeming coupon.');
   }
 });
 
-exports.claimFreeWebCoupon = onCall({
+exports.claimFreeFuelGift = onCall({
   enforceAppCheck: false,
   cors: true,
 }, async (request) => {
@@ -246,8 +250,7 @@ exports.claimFreeWebCoupon = onCall({
   const db = admin.firestore();
   const userRef = db.collection('users').doc(uid);
   
-  // We use a specific code prefix to make it identifiable in history
-  const couponCode = `FREE-WEB-${uid.substring(0, 8).toUpperCase()}`;
+  const couponCode = `FREE-FUEL-${uid.substring(0, 8).toUpperCase()}`;
   const couponRef = db.collection('coupons').doc(couponCode);
 
   try {
@@ -258,8 +261,8 @@ exports.claimFreeWebCoupon = onCall({
       }
 
       const userData = userDoc.data();
-      if (userData.freeCouponClaimed) {
-        throw new HttpsError('already-exists', 'You have already claimed your free gift.');
+      if (userData.freeGiftClaimed) {
+        throw new HttpsError('already-exists', 'You have already claimed your free fuel gift.');
       }
 
       const now = Date.now();
@@ -275,15 +278,14 @@ exports.claimFreeWebCoupon = onCall({
         type: 'coupon'
       };
 
-      const updatedBatches = [...(userData.coinBatches || []), newBatch];
-      const totalBalance = updatedBatches
+      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
 
-      // Create the coupon record as consumed
       transaction.set(couponRef, {
         code: couponCode,
-        coinsAmount: giftAmount,
+        fuelAmount: giftAmount,
         isConsumed: true,
         consumedBy: uid,
         consumedAt: now,
@@ -291,24 +293,26 @@ exports.claimFreeWebCoupon = onCall({
       });
 
       transaction.update(userRef, {
+        fuelBatches: updatedBatches,
+        fuelLevel: totalLevel,
         coinBatches: updatedBatches,
-        coinBalance: totalBalance,
-        freeCouponClaimed: true,
+        coinBalance: totalLevel,
+        freeGiftClaimed: true,
         lastActionAt: now
       });
 
-      return { coins: giftAmount };
+      return { fuel: giftAmount };
     });
 
-    return { success: true, message: `Successfully claimed ${result.coins} free coins!`, coins: result.coins };
+    return { success: true, message: `Successfully claimed ${result.fuel} free fuel!`, fuel: result.fuel };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
-    logger.error("Error in claimFreeWebCoupon:", error);
+    logger.error("Error in claimFreeFuelGift:", error);
     throw new HttpsError('internal', error.message || 'Error claiming free gift.');
   }
 });
 
-exports.grantPurchaseCoins = onCall({
+exports.grantPurchaseFuel = onCall({
   enforceAppCheck: false,
 }, async (request) => {
   if (!request.auth) {
@@ -320,21 +324,25 @@ exports.grantPurchaseCoins = onCall({
     throw new HttpsError('invalid-argument', 'Product ID is required.');
   }
 
-  // Backend source of truth for coin amounts
-  const COIN_MAP = {
+  const FUEL_MAP = {
+    'fuel_50': 50,
+    'fuel_200': 200,
+    'fuel_500': 500,
+    'fuel_1000': 1000,
+    'fuel_1200': 1200,
+    'fuel_50_test': 50,
+    // Legacy support for coin IDs
     'coins_50': 50,
     'coins_200': 200,
     'coins_500': 500,
     'coins_1000': 1000,
-    'coins_1200': 1200,
-    'coins_50_test': 50 // For sandbox testing
+    'coins_1200': 1200
   };
 
-  let amount = COIN_MAP[productId];
+  let amount = FUEL_MAP[productId];
   
-  // Dynamic parsing fallback if not in map
   if (!amount) {
-    const match = productId.match(/coins_(\d+)/);
+    const match = productId.match(/(?:fuel|coins)_(\d+)/);
     if (match && match[1]) {
       amount = parseInt(match[1], 10);
     }
@@ -344,15 +352,12 @@ exports.grantPurchaseCoins = onCall({
     throw new HttpsError('invalid-argument', `Unknown product identifier: ${productId}`);
   }
 
-  // NOTE: In a production app, you MUST verify the purchaseToken with Google/Apple/RevenueCat API here.
-  // For now, we assume the frontend sent a valid purchase notification from RevenueCat.
-  
   const uid = request.auth.uid;
   const db = admin.firestore();
   const userRef = db.collection('users').doc(uid);
 
   try {
-    const result = await db.runTransaction(async (transaction) => {
+    await db.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists) {
         throw new HttpsError('not-found', 'User profile not found.');
@@ -361,7 +366,6 @@ exports.grantPurchaseCoins = onCall({
       const userData = userDoc.data();
       const now = Date.now();
 
-      // Purchases NEVER expire (set to 100 years for accounting simplicity)
       const expiresAt = now + (100 * 365 * 24 * 60 * 60 * 1000); 
       
       const newBatch = {
@@ -374,24 +378,26 @@ exports.grantPurchaseCoins = onCall({
         productId: productId
       };
 
-      const updatedBatches = [...(userData.coinBatches || []), newBatch];
-      const totalBalance = updatedBatches
+      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
 
       transaction.update(userRef, {
+        fuelBatches: updatedBatches,
+        fuelLevel: totalLevel,
         coinBatches: updatedBatches,
-        coinBalance: totalBalance,
+        coinBalance: totalLevel,
         lastActionAt: now
       });
 
-      logger.info(`Purchased coins (${amount}) granted to user ${uid}.`);
+      logger.info(`Purchased fuel (${amount}) granted to user ${uid}.`);
     });
 
     return { success: true };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
-    logger.error("Error in grantPurchaseCoins:", error);
+    logger.error("Error in grantPurchaseFuel:", error);
     throw new HttpsError('internal', 'An internal error occurred while granting purchase.');
   }
 });
@@ -681,41 +687,69 @@ exports.processOrder = onCall({
       const engagedStatus = ['processing', 'out_for_delivery', 'completed'];
       const isEngagement = engagedStatus.includes(status);
 
-      // 1. Handle Coin Consumption on Engagement
-      if (isEngagement && !orderData.engaged) {
-        if (ownerData.coinBalance < 50) {
-          throw new HttpsError('failed-precondition', 'Insufficient coins to engage in this order. (Min 50 coins required)');
+        // Handle Fuel Consumption on Engagement
+        if (isEngagement && !orderData.engaged) {
+          const fuelLevel = ownerData.fl || ownerData.fuelLevel || ownerData.coinBalance || 0;
+          if (fuelLevel < 50) {
+            throw new HttpsError('failed-precondition', 'Insufficient fuel to engage in this order. (Min 50 fuel required)');
+          }
+
+          // 1. Get batches from subcollection AND legacy array
+          const subSnap = await ownerRef.collection('fuel_batches').where('ea', '>', now).get();
+          let fuelBatches = [];
+          subSnap.forEach(doc => fuelBatches.push({ ...doc.data(), _path: doc.ref }));
+          
+          // Add legacy batches if they exist
+          const legacyBatches = ownerData.fuelBatches || ownerData.coinBatches || [];
+          if (legacyBatches.length > 0) {
+            legacyBatches.forEach(b => {
+              // Convert to short keys if needed
+              fuelBatches.push({
+                id: b.id,
+                a: b.amount,
+                r: b.remaining,
+                ca: b.createdAt,
+                ea: b.expiresAt,
+                t: b.type
+              });
+            });
+          }
+
+          const validBatches = fuelBatches
+            .filter(b => b.ea > now && b.r > 0)
+            .sort((a, b) => a.ca - b.ca);
+
+          let remainingToDeduct = 50; 
+          for (const batch of validBatches) {
+            if (remainingToDeduct <= 0) break;
+            const deduct = Math.min(batch.r, remainingToDeduct);
+            batch.r -= deduct;
+            remainingToDeduct -= deduct;
+            
+            // If it was already in subcollection, update it
+            if (batch._path) {
+              transaction.update(batch._path, { r: batch.r });
+            } else {
+              // If it was legacy, it will be saved in step 2
+              const newBatchRef = ownerRef.collection('fuel_batches').doc(batch.id || `migrated_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`);
+              transaction.set(newBatchRef, { ...batch, _path: undefined });
+            }
+          }
+
+          const newLevel = validBatches.reduce((sum, b) => sum + b.r, 0);
+
+          transaction.update(ownerRef, {
+            fl: newLevel,
+            laa: now,
+            fuelBatches: admin.firestore.FieldValue.delete(),
+            coinBatches: admin.firestore.FieldValue.delete(),
+            fuelLevel: admin.firestore.FieldValue.delete(),
+            coinBalance: admin.firestore.FieldValue.delete()
+          });
+          
+          transaction.update(orderRef, { engaged: true });
+          logger.info(`Charged 50 fuel from store owner ${uid}. New level: ${newLevel}`);
         }
-
-        // Consume 50 coins
-        let coinBatches = (ownerData.coinBatches || []).map(b => ({ ...b }));
-        const validBatches = coinBatches
-          .filter(b => b.expiresAt > now && b.remaining > 0)
-          .sort((a, b) => a.createdAt - b.createdAt);
-
-        let remainingToDeduct = 10;
-        for (const batch of validBatches) {
-          if (remainingToDeduct <= 0) break;
-          const deduct = Math.min(batch.remaining, remainingToDeduct);
-          batch.remaining -= deduct;
-          remainingToDeduct -= deduct;
-          const index = coinBatches.findIndex(b => b.id === batch.id);
-          if (index !== -1) coinBatches[index].remaining = batch.remaining;
-        }
-
-        const newBalance = coinBatches
-          .filter(b => b.expiresAt > now)
-          .reduce((sum, b) => sum + b.remaining, 0);
-
-        transaction.update(ownerRef, {
-          coinBatches: coinBatches,
-          coinBalance: newBalance,
-          lastActionAt: now
-        });
-        
-        transaction.update(orderRef, { engaged: true });
-        logger.info(`Charged 50 coins from store owner ${uid} for engaging in order ${orderId}`);
-      }
 
       // 2. Enforce Delivery Cooldown for Completion
       if (status === 'completed') {
@@ -830,10 +864,61 @@ exports.rateStoreSecure = onCall({
         updatedAt: now
       });
 
-      // 5. Update User Cooldown
+      // 5. Implicit Fuel Consumption (1 unit)
+      const fuelLevel = userData.fl || userData.fuelLevel || userData.coinBalance || 0;
+      if (fuelLevel < 1) {
+        throw new HttpsError('failed-precondition', 'Insufficient fuel to submit rating.');
+      }
+
+      // 1. Get batches from subcollection AND legacy array
+      const subSnap = await userRef.collection('fuel_batches').where('ea', '>', now).get();
+      let fuelBatches = [];
+      subSnap.forEach(doc => fuelBatches.push({ ...doc.data(), _path: doc.ref }));
+      
+      const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
+      if (legacyBatches.length > 0) {
+        legacyBatches.forEach(b => {
+          fuelBatches.push({
+            id: b.id,
+            a: b.amount,
+            r: b.remaining,
+            ca: b.createdAt,
+            ea: b.expiresAt,
+            t: b.type
+          });
+        });
+      }
+
+      const validBatches = fuelBatches
+        .filter(b => b.ea > now && b.r > 0)
+        .sort((a, b) => a.ca - b.ca);
+
+      let remainingToDeduct = 1;
+      for (const batch of validBatches) {
+        if (remainingToDeduct <= 0) break;
+        const deduct = Math.min(batch.r, remainingToDeduct);
+        batch.r -= deduct;
+        remainingToDeduct -= deduct;
+        
+        if (batch._path) {
+          transaction.update(batch._path, { r: batch.r });
+        } else {
+          const newBatchRef = userRef.collection('fuel_batches').doc(batch.id || `migrated_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`);
+          transaction.set(newBatchRef, { ...batch, _path: undefined });
+        }
+      }
+
+      const newLevel = validBatches.reduce((sum, b) => sum + b.r, 0);
+
+      // 6. Update User Cooldown and Fuel
       transaction.update(userRef, {
         lastRatingDate: today,
-        lastActionAt: now
+        laa: now,
+        fl: newLevel,
+        fuelBatches: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete(),
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete()
       });
 
       return { success: true };
@@ -844,5 +929,90 @@ exports.rateStoreSecure = onCall({
     if (error instanceof HttpsError) throw error;
     logger.error("Error in rateStoreSecure:", error);
     throw new HttpsError('internal', 'An error occurred while submitting your rating.');
+  }
+});
+
+exports.grantDailyFuelReward = onCall({
+  enforceAppCheck: false,
+  cors: true,
+}, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'The function must be called while authenticated.');
+  }
+
+  const uid = request.auth.uid;
+  const db = admin.firestore();
+  const userRef = db.collection('users').doc(uid);
+
+  try {
+    const result = await db.runTransaction(async (transaction) => {
+      const userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) {
+        throw new HttpsError('not-found', 'User profile not found.');
+      }
+
+      const userData = userDoc.data();
+      const now = Date.now();
+      const today = new Date().toISOString().split('T')[0];
+
+      // Check if already claimed today
+      if (userData.lastDailyRewardDay === today) {
+        return { success: false, alreadyClaimed: true };
+      }
+
+      const rewardAmount = 1;
+      const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
+      const batchId = `daily_${now}`;
+      
+      const newBatch = {
+        id: batchId,
+        a: rewardAmount, // amount
+        r: rewardAmount, // remaining
+        ca: now, // createdAt
+        ea: expiresAt, // expiresAt
+        t: 'reward' // type
+      };
+
+      // 1. Write the new batch to storage subcollection
+      const batchRef = userRef.collection('fuel_batches').doc(batchId);
+      transaction.set(batchRef, newBatch);
+
+      // 2. Query all valid batches to calculate current level
+      // Note: We can't query in a transaction easily without fetching all docs.
+      // For now, we fetch all non-expired batches.
+      const batchesSnap = await userRef.collection('fuel_batches')
+        .where('ea', '>', now)
+        .get();
+      
+      let totalLevel = rewardAmount; // Start with the new one
+      batchesSnap.forEach(doc => {
+        const b = doc.data();
+        if (b.id !== batchId) {
+          totalLevel += (b.r || 0);
+        }
+      });
+
+      // 3. Update main document with summary and metadata
+      // Also cleanup old arrays if they exist (Migration-on-the-fly)
+      transaction.update(userRef, {
+        fl: totalLevel, // Short key for fuelLevel
+        ldrd: today, // lastDailyRewardDay
+        ldra: now, // lastDailyRewardAt
+        laa: now, // lastActionAt
+        fuelBatches: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete(),
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete()
+      });
+
+      logger.info(`Daily reward granted. New level: ${totalLevel}`);
+      return { success: true, amount: rewardAmount };
+    });
+
+    return result;
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    logger.error("Error in grantDailyFuelReward:", error);
+    throw new HttpsError('internal', 'An error occurred while granting daily reward.');
   }
 });

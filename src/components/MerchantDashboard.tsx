@@ -18,7 +18,7 @@ import {
   ExternalLink,
   ShieldCheck,
   ShoppingBag,
-  Coins
+  Fuel
 } from 'lucide-react';
 import { Store, AppUser } from '../types';
 import { storeService } from '../services/storeService';
@@ -64,10 +64,9 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
     if (!window.confirm(t('merchant.delete_confirm_q'))) return;
     setProcessingId(storeId);
     try {
-      // Deduct 1 coin for deletion
-      const result = await userService.consumeCoin(userId, 1);
+      const result = await userService.consumeFuel(userId, 1);
       if (!result.success) {
-        alert(result.error || t('common.insufficient_coins', 'Insufficient coins to perform this action.'));
+        alert(result.error || t('list_view.insufficient_fuel', 'Low Fuel'));
         return;
       }
       await storeService.deleteStore(storeId);
@@ -171,13 +170,13 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
 
         <div className="flex items-center gap-3 ml-auto pr-4">
           <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center shadow-sm">
-            <Coins className="w-5 h-5 text-indigo-600" />
+            <Fuel className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">{t('common.balance', 'My Balance')}</p>
+            <p className="text-[10px] font-black text-stone-300 uppercase leading-none mb-1">{t('common.fuel_level', 'Fuel Level')}</p>
             <p className="text-xl font-black text-indigo-600 leading-none">
-              {appUser?.coinBalance || 0}
-              <span className="text-[10px] ml-1 text-indigo-400">COINS</span>
+              {appUser?.fuelLevel || 0}
+              <span className="text-[10px] ml-1 text-indigo-400">UNITS</span>
             </p>
           </div>
         </div>
@@ -187,7 +186,7 @@ export const MerchantDashboard: React.FC<MerchantDashboardProps> = ({ userId, on
       <main className="flex-1 overflow-y-auto p-6 no-scrollbar bg-stone-50/50">
         <div className="w-full space-y-10">
           
-          <AnimatePresence mode="popLayout text-stone-900">
+          <AnimatePresence mode="popLayout">
             {loading ? (
               <motion.div 
                 initial={{ opacity: 0 }}

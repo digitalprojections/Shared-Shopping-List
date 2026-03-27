@@ -34,11 +34,11 @@ export const loyaltyService = {
   addCard: async (userId: string, card: Omit<LoyaltyCard, 'id' | 'createdAt' | 'ownerId'>) => {
     if (!isFirebaseConfigured) return null;
     
-    // Consume 1 coin
+    // Consume fuel
     const { userService } = await import('./userService');
-    const consumption = await userService.consumeCoin(userId);
+    const consumption = await userService.consumeFuel(userId);
     if (!consumption.success) {
-      throw new Error(consumption.error || 'Insufficient coins');
+      throw new Error(consumption.error || 'Insufficient fuel');
     }
     
     const docRef = await addDoc(collection(db, 'loyalty_cards'), {
@@ -49,21 +49,28 @@ export const loyaltyService = {
     return docRef.id;
   },
 
-  updateCard: async (cardId: string, updates: Partial<LoyaltyCard>) => {
-    if (!isFirebaseConfigured) return;
-    await updateDoc(doc(db, 'loyalty_cards', cardId), updates);
+  updateCard: async (userId: string, cardId: string, updates: Partial<LoyaltyCard>) => {
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
+      await updateDoc(doc(db, 'loyalty_cards', cardId), {
+        ...updates,
+        updatedAt: Date.now()
+      });
+    }
   },
 
   deleteCard: async (userId: string, cardId: string) => {
-    if (!isFirebaseConfigured) return;
-    
-    // Consume 1 coin
-    const { userService } = await import('./userService');
-    const consumption = await userService.consumeCoin(userId);
-    if (!consumption.success) {
-      throw new Error(consumption.error || 'Insufficient coins');
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) {
+        throw new Error(consumption.error || 'Insufficient fuel');
+      }
+      
+      await deleteDoc(doc(db, 'loyalty_cards', cardId));
     }
-    
-    await deleteDoc(doc(db, 'loyalty_cards', cardId));
   }
 };

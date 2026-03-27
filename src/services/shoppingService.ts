@@ -111,9 +111,9 @@ export const shoppingService = {
 
   createList: async (userId: string, name: string, color: string) => {
     if (isFirebaseConfigured) {
-      const consumption = await userService.consumeCoin(userId);
+      const consumption = await userService.consumeFuel(userId);
       if (!consumption.success) {
-        throw new Error(consumption.error || 'Failed to consume coin');
+        throw new Error(consumption.error || 'Insufficient fuel');
       }
 
       const newList: Omit<ShoppingList, 'id'> = {
@@ -136,9 +136,9 @@ export const shoppingService = {
 
   deleteList: async (listId: string, userId: string) => {
     if (isFirebaseConfigured) {
-      const consumption = await userService.consumeCoin(userId, 1);
+      const consumption = await userService.consumeFuel(userId, 1);
       if (!consumption.success) {
-        throw new Error(consumption.error || 'Failed to consume coin');
+        throw new Error(consumption.error || 'Insufficient fuel');
       }
 
       await deleteDoc(doc(db, 'lists', listId));
@@ -156,6 +156,9 @@ export const shoppingService = {
 
   updateListIcon: async (listId: string, icon: string, userId: string) => {
     if (isFirebaseConfigured) {
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
       await updateDoc(doc(db, 'lists', listId), { 
         icon, 
         lastUpdatedBy: userId,
@@ -189,9 +192,9 @@ export const shoppingService = {
     boughtDiff: number = 0
   ) => {
     if (isFirebaseConfigured && listId && userId) {
-      const consumption = await userService.consumeCoin(userId);
+      const consumption = await userService.consumeFuel(userId);
       if (!consumption.success) {
-        throw new Error(consumption.error || 'Failed to consume coin');
+        throw new Error(consumption.error || 'Insufficient fuel');
       }
 
       const batch = writeBatch(db);
@@ -249,8 +252,14 @@ export const shoppingService = {
   },
 
   // Sharing
-  createShareLink: async (listId: string, permission: Permission, type: 'list' | 'collection' = 'list') => {
+  createShareLink: async (listId: string, permission: Permission, type: 'list' | 'collection' = 'list', userId?: string) => {
     if (!isFirebaseConfigured) return;
+    
+    if (userId) {
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+    }
+
     const docRef = await addDoc(collection(db, 'shares'), {
       listId,
       type,
@@ -263,6 +272,9 @@ export const shoppingService = {
 
   joinList: async (listId: string, userId: string) => {
     if (!isFirebaseConfigured) return;
+    const consumption = await userService.consumeFuel(userId);
+    if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
     await updateDoc(doc(db, 'lists', listId), {
       sharedUsers: arrayUnion(userId)
     });
@@ -270,6 +282,9 @@ export const shoppingService = {
 
   joinCollection: async (ownerId: string, followerId: string) => {
     if (!isFirebaseConfigured) return;
+    const consumption = await userService.consumeFuel(followerId);
+    if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
     const docId = `${followerId}_${ownerId}`;
     await setDoc(doc(db, 'followed_collections', docId), {
       followerId,
@@ -287,14 +302,22 @@ export const shoppingService = {
     });
   },
 
-  toggleShareActive: async (shareId: string, isActive: boolean) => {
+  toggleShareActive: async (shareId: string, isActive: boolean, userId?: string) => {
     if (isFirebaseConfigured) {
+      if (userId) {
+        const consumption = await userService.consumeFuel(userId);
+        if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+      }
       await updateDoc(doc(db, 'shares', shareId), { isActive });
     }
   },
 
-  deleteShare: async (shareId: string) => {
+  deleteShare: async (shareId: string, userId?: string) => {
     if (isFirebaseConfigured) {
+      if (userId) {
+        const consumption = await userService.consumeFuel(userId);
+        if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+      }
       await deleteDoc(doc(db, 'shares', shareId));
     }
   },

@@ -114,9 +114,9 @@ const CenterMapOnUser: React.FC<{ location: [number, number] | null }> = ({ loca
 interface DiscoverStoresProps {
   onClose: () => void;
   onSelectStore: (storeId: string) => void;
-  onShowMerchantDashboard: () => void;
   currentUser: any; // User | null
   appUser: AppUser | null;
+  followedStoreIds: string[];
 }
 
 export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
@@ -124,7 +124,8 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
   onSelectStore,
   onShowMerchantDashboard,
   currentUser,
-  appUser
+  appUser,
+  followedStoreIds = []
 }) => {
   const { t } = useTranslation();
   const [stores, setStores] = useState<Store[]>([]);
@@ -176,7 +177,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
       return;
     }
 
-    const isFollowing = appUser?.followedStores?.includes(storeId);
+    const isFollowing = followedStoreIds.includes(storeId);
     try {
       if (isFollowing) {
         await storeService.unfollowStore(storeId, currentUser.uid);
@@ -441,12 +442,12 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
                           onClick={(e) => handleToggleFollow(e, store.id)}
                           className={cn(
                             "w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all",
-                            appUser?.followedStores?.includes(store.id)
+                            followedStoreIds.includes(store.id)
                               ? "bg-rose-50 text-rose-600 shadow-sm"
                               : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
                           )}
                         >
-                          <Heart className={cn("w-4 h-4 sm:w-5 sm:h-5 transition-all", appUser?.followedStores?.includes(store.id) && "fill-current scale-110")} />
+                          <Heart className={cn("w-4 h-4 sm:w-5 sm:h-5 transition-all", followedStoreIds.includes(store.id) && "fill-current scale-110")} />
                         </button>
                       )}
                       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-stone-50 rounded-2xl flex items-center justify-center group-hover:bg-stone-900 group-hover:text-white transition-all">

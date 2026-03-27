@@ -36,7 +36,8 @@ export const iapService = {
 
   getPackages: async (): Promise<PurchasesPackage[]> => {
     if (!Capacitor.isNativePlatform()) return [];
-
+    
+    // These are the technical IDs in Google Play / App Store (keeping for now to avoid breaking existing setups)
     const productIds = ['coins_50', 'coins_200', 'coins_500', 'coins_1000', 'coins_1200'];
 
     try {
@@ -109,9 +110,9 @@ export const iapService = {
 
       console.log('IAP: Purchase successful, calling backend...', customerInfo);
 
-      // Call backend to update coins
-      const grantPurchaseCoins = httpsCallable(functions, 'grantPurchaseCoins');
-      await grantPurchaseCoins({
+      // Call backend to update fuel
+      const grantPurchaseFuel = httpsCallable(functions, 'grantPurchaseFuel');
+      await grantPurchaseFuel({
         productId: pack.product.identifier,
         purchaseToken: customerInfo.originalAppUserId
       });
@@ -126,18 +127,18 @@ export const iapService = {
     }
   },
 
-  getCoinsForProduct: (identifier: string): number => {
+  getFuelForProduct: (identifier: string): number => {
     // Explicit mapping for known product IDs
-    const COIN_MAP: Record<string, number> = {
+    const FUEL_MAP: Record<string, number> = {
       'coins_50': 50,
       'coins_200': 200,
       'coins_500': 500,
       'coins_1200': 1200
     };
 
-    if (COIN_MAP[identifier]) return COIN_MAP[identifier];
+    if (FUEL_MAP[identifier]) return FUEL_MAP[identifier];
 
-    // Dynamic parsing for IDs like "coins_100" or "link.created.sharedlist.coins_100"
+    // Dynamic parsing for IDs like "coins_100" (the underlying IAP IDs still use "coins")
     const match = identifier.match(/coins_(\d+)/);
     if (match && match[1]) {
       return parseInt(match[1], 10);

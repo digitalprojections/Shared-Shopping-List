@@ -150,21 +150,16 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
         delete submissionData.saleEnd;
       }
 
-      const coinCost = getCalculatedCost();
-
-      if (auth.currentUser) {
-        const result = await userService.consumeCoin(auth.currentUser.uid, coinCost);
-        if (!result.success) {
-          alert(result.error || t('common.insufficient_coins', 'Insufficient coins to perform this action.'));
-          setIsSubmitting(false);
-          return;
-        }
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        setIsSubmitting(false);
+        return;
       }
 
       if (editingProduct) {
-        await storeService.updateProduct(editingProduct.id, submissionData);
+        await storeService.updateProduct(editingProduct.id, submissionData, userId);
       } else {
-        await storeService.addProduct(store.id, submissionData);
+        await storeService.addProduct(store.id, submissionData, userId);
       }
       resetForm();
     } catch (error: any) {
@@ -177,15 +172,12 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
 
   const handleDelete = async (product: StoreProduct) => {
     if (!window.confirm(t('product_manager.delete_confirm'))) return;
+    
+    const userId = auth.currentUser?.uid;
+    if (!userId) return;
+
     try {
-      if (auth.currentUser) {
-        const result = await userService.consumeCoin(auth.currentUser.uid, 1);
-        if (!result.success) {
-          alert(result.error || t('common.insufficient_coins', 'Insufficient coins to perform this action.'));
-          return;
-        }
-      }
-      await storeService.deleteProduct(product.id, product.imageUrl);
+      await storeService.deleteProduct(product.id, userId, product.imageUrl);
     } catch (error: any) {
       console.error("Error deleting product:", error);
       alert(error.message || "Error deleting product");
@@ -311,7 +303,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
               className="h-full flex items-center gap-2 px-6 bg-emerald-500 text-stone-900 font-black rounded-2xl hover:bg-emerald-400 active:scale-95 transition-all shadow-lg shadow-emerald-500/20 text-sm uppercase tracking-wider"
             >
               <Plus className="w-5 h-5 stroke-[3px]" />
-              <span className="hidden sm:inline">{t('product_manager.add_product')} (1-30 {t('admin.coin')})</span>
+              <span className="hidden sm:inline">{t('product_manager.add_product')}</span>
             </button>
           </div>
         </div>
@@ -467,7 +459,10 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                         </button>
                       </div>
                       <button
-                        onClick={() => storeService.updateProduct(product.id, { inStock: !product.inStock })}
+                        onClick={() => {
+                          const uid = auth.currentUser?.uid;
+                          if (uid) storeService.updateProduct(product.id, { inStock: !product.inStock }, uid);
+                        }}
                         className={cn(
                           "w-12 h-12 rounded-2xl flex items-center justify-center transition-all border-2",
                           product.inStock 
@@ -659,7 +654,7 @@ export const ProductManager: React.FC<ProductManagerProps> = ({ store, onClose }
                     className="w-full py-6 bg-emerald-600 text-white font-black rounded-[2.5rem] shadow-2xl shadow-emerald-200 hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-50 disabled:scale-100"
                   >
                     {isSubmitting ? <Loader2 className="w-7 h-7 animate-spin" /> : <Save className="w-7 h-7" />}
-                    <span className="text-xl uppercase tracking-[0.15em]">{editingProduct ? t('product_manager.update_btn') : t('product_manager.add_inventory_btn')} ({getCalculatedCost()} {getCalculatedCost() === 1 ? t('admin.coin') : t('admin.coins')})</span>
+                    <span className="text-xl uppercase tracking-[0.15em]">{editingProduct ? t('product_manager.update_btn') : t('product_manager.add_inventory_btn')}</span>
                   </button>
                 </div>
               </form>

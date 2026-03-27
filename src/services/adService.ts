@@ -38,11 +38,11 @@ export const adService = {
           
           if (rewardReceived) {
             try {
-              const grantRewardedCoin = httpsCallable(functions, 'grantRewardedCoin');
-              const result = await grantRewardedCoin({ amount: rewardAmount });
+              const grantRewardedFuel = httpsCallable(functions, 'grantRewardedFuel');
+              const result = await grantRewardedFuel({ amount: rewardAmount });
               resolve(result.data as { success: boolean; error?: string });
             } catch (err: any) {
-              resolve({ success: false, error: err.message || 'Failed to grant reward' });
+              resolve({ success: false, error: err.message || 'Failed to grant fuel reward' });
             }
           } else {
             resolve({ success: false, error: 'Ad dismissed before completion' });

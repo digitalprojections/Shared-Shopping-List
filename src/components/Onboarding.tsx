@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
-  Coins, 
+  Fuel, 
   Layout, 
   ShoppingBag, 
   ArrowRight, 
@@ -41,7 +41,7 @@ const slides = [
   {
     title: "onboarding.slides.control_title",
     description: "onboarding.slides.control_desc",
-    icon: <Coins className="w-16 h-16 text-sky-500" />,
+    icon: <Fuel className="w-16 h-16 text-sky-500" />,
     color: "from-sky-50 to-indigo-50",
     accent: "bg-sky-500"
   },

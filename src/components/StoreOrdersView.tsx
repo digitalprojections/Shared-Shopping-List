@@ -138,9 +138,9 @@ export const StoreOrdersView: React.FC<StoreOrdersViewProps> = ({ storeId, store
                   <AlertCircle className="w-10 h-10 text-amber-600" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-black text-amber-900 uppercase tracking-tight">{t('merchant.insufficient_balance', 'Insufficient Balance')}</h3>
+                  <h3 className="text-xl font-black text-amber-900 uppercase tracking-tight">{t('merchant.insufficient_balance', 'Low Fuel')}</h3>
                   <p className="text-sm font-medium text-amber-700 mt-2 max-w-xs mx-auto">
-                    {t('merchant.insufficient_balance_subtitle', 'You need at least 50 coins to view and process orders. Please top up your balance to continue.')}
+                    {t('merchant.insufficient_balance_subtitle', 'You need at least 50 fuel units to view and process orders. Please refuel your tank to continue.')}
                   </p>
                 </div>
                 <button 

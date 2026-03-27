@@ -12,7 +12,7 @@ import { db, isFirebaseConfigured } from '../lib/firebase';
 import { Coupon, AppUser } from '../types';
 
 export const couponService = {
-  generateCoupon: async (coinsAmount: number): Promise<string | null> => {
+  generateCoupon: async (fuelAmount: number): Promise<string | null> => {
     if (!isFirebaseConfigured) return null;
     
     // Generate a code like SHOP-XXXX-YYYY
@@ -23,7 +23,7 @@ export const couponService = {
     const couponRef = doc(db, 'coupons', code);
     const coupon: Omit<Coupon, 'id'> = {
       code,
-      coinsAmount,
+      fuelAmount,
       isConsumed: false,
       consumedBy: null,
       createdAt: Date.now()
@@ -33,20 +33,20 @@ export const couponService = {
     return code;
   },
 
-  redeemCoupon: async (userId: string, code: string): Promise<{ success: boolean; message: string; coins?: number }> => {
+  redeemFuelCoupon: async (userId: string, code: string): Promise<{ success: boolean; message: string; fuel?: number }> => {
     if (!isFirebaseConfigured) return { success: false, message: 'Firebase not configured' };
     
     try {
       const { httpsCallable } = await import('firebase/functions');
       const { functions } = await import('../lib/firebase');
       
-      const redeemCouponFn = httpsCallable<{ code: string }, { success: boolean; message: string; coins: number }>(functions, 'redeemCoupon');
-      const result = await redeemCouponFn({ code });
+      const redeemFuelCouponFn = httpsCallable<{ code: string }, { success: boolean; message: string; fuel: number }>(functions, 'redeemFuelCoupon');
+      const result = await redeemFuelCouponFn({ code });
       
       return { 
         success: result.data.success, 
         message: result.data.message, 
-        coins: result.data.coins 
+        fuel: result.data.fuel 
       };
     } catch (error: any) {
       console.error("Error redeeming coupon:", error);
@@ -57,20 +57,20 @@ export const couponService = {
     }
   },
 
-  claimFreeWebCoupon: async (): Promise<{ success: boolean; message: string; coins?: number }> => {
+  claimFreeFuelGift: async (): Promise<{ success: boolean; message: string; fuel?: number }> => {
     if (!isFirebaseConfigured) return { success: false, message: 'Firebase not configured' };
     
     try {
       const { httpsCallable } = await import('firebase/functions');
       const { functions } = await import('../lib/firebase');
       
-      const claimFn = httpsCallable<void, { success: boolean; message: string; coins: number }>(functions, 'claimFreeWebCoupon');
+      const claimFn = httpsCallable<void, { success: boolean; message: string; fuel: number }>(functions, 'claimFreeFuelGift');
       const result = await claimFn();
       
       return { 
         success: result.data.success, 
         message: result.data.message, 
-        coins: result.data.coins 
+        fuel: result.data.fuel 
       };
     } catch (error: any) {
       console.error("Error claiming free gift:", error);

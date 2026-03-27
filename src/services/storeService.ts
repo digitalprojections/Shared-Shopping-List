@@ -88,68 +88,84 @@ export const storeService = {
     return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Store;
   },
 
-  updateStore: async (storeId: string, data: Partial<Store>) => {
-    if (!isFirebaseConfigured) return;
-    const storeRef = doc(db, 'stores', storeId);
-    await updateDoc(storeRef, cleanObject({
-      ...data,
-      updatedAt: Date.now()
-    }));
+  updateStore: async (storeId: string, data: Partial<Store>, userId: string) => {
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
+      const storeRef = doc(db, 'stores', storeId);
+      await updateDoc(storeRef, cleanObject({
+        ...data,
+        updatedAt: Date.now()
+      }));
+    }
   },
 
   // Products
-  addProduct: async (storeId: string, productData: Partial<StoreProduct>) => {
-    if (!isFirebaseConfigured) return;
-    const product: Omit<StoreProduct, 'id'> = {
-      storeId,
-      name: productData.name || 'New Product',
-      description: productData.description || '',
-      price: productData.price || 0,
-      currency: productData.currency || 'USD',
-      inStock: productData.inStock ?? true,
-      category: productData.category || 'General',
-      likesCount: 0,
-      saleStart: productData.saleStart ?? null,
-      saleEnd: productData.saleEnd ?? null,
-      imageUrl: productData.imageUrl || '',
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-    return await addDoc(collection(db, 'store_products'), product);
-  },
+  addProduct: async (storeId: string, productData: Partial<StoreProduct>, userId: string) => {
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
 
-  updateProduct: async (productId: string, data: Partial<StoreProduct>) => {
-    if (!isFirebaseConfigured) return;
-    const productRef = doc(db, 'store_products', productId);
-    await updateDoc(productRef, cleanObject({
-      ...data,
-      updatedAt: Date.now()
-    }));
-  },
-
-  deleteProduct: async (productId: string, imageUrl?: string) => {
-    if (!isFirebaseConfigured) return;
-    
-    // 1. Delete image from storage if it exists
-    if (imageUrl && storage) {
-      try {
-        // Firebase Storage URLs contain the full path between /o/ and ?alt=
-        // Example: .../o/images%2FstoreId%2FfileName.jpg?alt=media...
-        const decodedUrl = decodeURIComponent(imageUrl);
-        const pathMatch = decodedUrl.match(/\/o\/(.*?)\?/);
-        const pathPart = pathMatch ? pathMatch[1] : null;
-        
-        if (pathPart) {
-          const imageRef = ref(storage, pathPart);
-          await deleteObject(imageRef);
-          console.log("[StoreService] Product image deleted from storage:", pathPart);
-        }
-      } catch (error) {
-        console.error("[StoreService] Failed to delete product image:", error);
-      }
+      const product: Omit<StoreProduct, 'id'> = {
+        storeId,
+        name: productData.name || 'New Product',
+        description: productData.description || '',
+        price: productData.price || 0,
+        currency: productData.currency || 'USD',
+        inStock: productData.inStock ?? true,
+        category: productData.category || 'General',
+        likesCount: 0,
+        saleStart: productData.saleStart ?? null,
+        saleEnd: productData.saleEnd ?? null,
+        imageUrl: productData.imageUrl || '',
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      return await addDoc(collection(db, 'store_products'), product);
     }
+  },
 
-    await deleteDoc(doc(db, 'store_products', productId));
+  updateProduct: async (productId: string, data: Partial<StoreProduct>, userId: string) => {
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
+      const productRef = doc(db, 'store_products', productId);
+      await updateDoc(productRef, cleanObject({
+        ...data,
+        updatedAt: Date.now()
+      }));
+    }
+  },
+
+  deleteProduct: async (productId: string, userId: string, imageUrl?: string) => {
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
+      // 1. Delete image from storage if it exists
+      if (imageUrl && storage) {
+        try {
+          const decodedUrl = decodeURIComponent(imageUrl);
+          const pathMatch = decodedUrl.match(/\/o\/(.*?)\?/);
+          const pathPart = pathMatch ? pathMatch[1] : null;
+          
+          if (pathPart) {
+            const imageRef = ref(storage, pathPart);
+            await deleteObject(imageRef);
+          }
+        } catch (error) {
+          console.error("[StoreService] Failed to delete product image:", error);
+        }
+      }
+
+      await deleteDoc(doc(db, 'store_products', productId));
+    }
   },
 
   subscribeToStoreProducts: (storeId: string, callback: (products: StoreProduct[]) => void) => {
@@ -208,37 +224,52 @@ export const storeService = {
   },
 
   followStore: async (storeId: string, userId: string) => {
-    if (!isFirebaseConfigured) return;
-    const storeRef = doc(db, 'stores', storeId);
-    const userRef = doc(db, 'users', userId);
-    
-    const batch = writeBatch(db);
-    batch.update(storeRef, {
-      followers: arrayUnion(userId),
-      followersCount: increment(1),
-      updatedAt: Date.now()
-    });
-    batch.set(userRef, {
-      followedStores: arrayUnion(storeId)
-    }, { merge: true });
-    await batch.commit();
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
+      const storeRef = doc(db, 'stores', storeId);
+      const followingRef = doc(db, 'users', userId, 'following', storeId);
+      
+      const batch = writeBatch(db);
+      // We remove the followers array from store to save bandwidth
+      batch.update(storeRef, {
+        followersCount: increment(1),
+        updatedAt: Date.now()
+      });
+      // Store follows in a subcollection
+      batch.set(followingRef, {
+        createdAt: Date.now()
+      });
+      await batch.commit();
+    }
   },
 
   unfollowStore: async (storeId: string, userId: string) => {
-    if (!isFirebaseConfigured) return;
-    const storeRef = doc(db, 'stores', storeId);
-    const userRef = doc(db, 'users', userId);
-    
-    const batch = writeBatch(db);
-    batch.update(storeRef, {
-      followers: arrayRemove(userId),
-      followersCount: increment(-1),
-      updatedAt: Date.now()
-    });
-    batch.set(userRef, {
-      followedStores: arrayRemove(storeId)
-    }, { merge: true });
-    await batch.commit();
+    if (isFirebaseConfigured) {
+      const { userService } = await import('./userService');
+      const consumption = await userService.consumeFuel(userId);
+      if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
+
+      const storeRef = doc(db, 'stores', storeId);
+      const followingRef = doc(db, 'users', userId, 'following', storeId);
+      
+      const batch = writeBatch(db);
+      batch.update(storeRef, {
+        followersCount: increment(-1),
+        updatedAt: Date.now()
+      });
+      batch.delete(followingRef);
+      await batch.commit();
+    }
+  },
+
+  isFollowingStore: async (storeId: string, userId: string): Promise<boolean> => {
+    if (!isFirebaseConfigured || !userId || !storeId) return false;
+    const followingRef = doc(db, 'users', userId, 'following', storeId);
+    const snap = await getDoc(followingRef);
+    return snap.exists();
   },
 
   rateStore: async (storeId: string, rating: number) => {

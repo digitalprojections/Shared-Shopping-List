@@ -20,10 +20,13 @@ export const userService = {
       console.log("Creating NEW User Profile for:", userId);
       const newUser: AppUser = {
         uid: userId,
-        coinBalance: 0,
-        coinBatches: [],
+        fl: 0,
+        ldrd: '',
+        ldra: 0,
+        laa: Date.now(),
         isAdmin: false,
-        lastActionAt: 0,
+        isMerchant: false,
+        preferences: [],
         followedStores: [],
         ownedStores: []
       };
@@ -41,10 +44,13 @@ export const userService = {
     if (!userDoc.exists()) {
       const newUser: AppUser = {
         uid: userId,
-        coinBalance: 0,
-        coinBatches: [],
+        fl: 0,
+        ldrd: '',
+        ldra: 0,
+        laa: Date.now(),
         isAdmin: false,
-        lastActionAt: 0,
+        isMerchant: false,
+        preferences: [],
         followedStores: [],
         ownedStores: []
       };
@@ -64,13 +70,19 @@ export const userService = {
       if (doc.exists()) {
         const data = doc.data() as AppUser;
         const now = Date.now();
-        const effectiveBalance = (data.coinBatches || [])
-          .filter(b => b.expiresAt > now)
-          .reduce((sum, b) => sum + b.remaining, 0);
+        
+        // Map short keys to long names for UI consumption (transitional)
+        const fuelLevel = data.fl ?? data.fuelLevel ?? (data.coinBalance || 0);
+        const lastActionAt = data.laa ?? data.lastActionAt ?? now;
+        const lastDailyRewardDay = data.ldrd ?? data.lastDailyRewardDay ?? '';
+        const lastDailyRewardAt = data.ldra ?? data.lastDailyRewardAt ?? 0;
         
         callback({
           ...data,
-          coinBalance: effectiveBalance
+          fuelLevel,
+          lastActionAt,
+          lastDailyRewardDay,
+          lastDailyRewardAt
         });
       } else {
         // If profile doesn't exist, trigger creation
@@ -82,23 +94,39 @@ export const userService = {
     });
   },
 
-  calculateEffectiveBalance: (user: AppUser): number => {
-    const now = Date.now();
-    return (user.coinBatches || [])
-      .filter(b => b.expiresAt > now)
-      .reduce((sum, b) => sum + b.remaining, 0);
+  subscribeToFollowing: (userId: string, callback: (storeIds: string[]) => void) => {
+    if (!isFirebaseConfigured || !userId) return () => {};
+    const followingRef = collection(db, 'users', userId, 'following');
+    return onSnapshot(followingRef, (snapshot) => {
+      const storeIds = snapshot.docs.map(doc => doc.id);
+      callback(storeIds);
+    }, (error) => {
+      console.error("Error subscribing to following list:", error);
+    });
   },
 
-  consumeCoin: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {
+  calculateEffectiveFuel: (user: AppUser): number => {
+    // If we have the short key fl, use it directly (summary field)
+    if (user.fl !== undefined) return user.fl;
+    
+    // Legacy calculation
+    const now = Date.now();
+    const fuelBatches = user.fuelBatches || user.coinBatches || [];
+    return fuelBatches
+      .filter((b: any) => b.ea ? b.ea > now : b.expiresAt > now)
+      .reduce((sum: number, b: any) => sum + (b.r ?? (b.remaining || 0)), 0);
+  },
+
+  consumeFuel: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {
     if (!isFirebaseConfigured) return { success: true };
 
     try {
-      const consumeCoinFn = httpsCallable<{ userId: string; amount: number }, { success: boolean }>(functions, 'consumeCoin');
-      const result = await consumeCoinFn({ userId, amount });
+      const consumeFuelFn = httpsCallable<{ userId: string; amount: number }, { success: boolean }>(functions, 'consumeFuel');
+      const result = await consumeFuelFn({ userId, amount });
       return { success: result.data.success };
     } catch (error: any) {
-      console.error("Error consuming coin via Cloud Function:", error);
-      const message = error.message || 'Error consuming coin';
+      console.error("Error consuming fuel via Cloud Function:", error);
+      const message = error.message || 'Error consuming fuel';
       return { success: false, error: message };
     }
   },
@@ -179,6 +207,19 @@ export const userService = {
       await updateDoc(userRef, { preferences });
     } catch (error) {
       console.error("Error updating preferences:", error);
+    }
+  },
+
+  claimDailyFuelReward: async (): Promise<{ success: boolean; amount?: number; alreadyClaimed?: boolean; error?: string }> => {
+    if (!isFirebaseConfigured) return { success: false, error: 'Firebase not configured' };
+    
+    try {
+      const claimFn = httpsCallable<void, { success: boolean; amount: number; alreadyClaimed?: boolean }>(functions, 'grantDailyFuelReward');
+      const result = await claimFn();
+      return result.data;
+    } catch (error: any) {
+      console.error("Error claiming daily reward:", error);
+      return { success: false, error: error.message || 'Failed to claim daily reward' };
     }
   }
 };

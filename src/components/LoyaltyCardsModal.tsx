@@ -249,7 +249,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
     e.preventDefault();
     if (!activeCard || !newCard.provider || !newCard.cardNumber) return;
 
-    await loyaltyService.updateCard(activeCard.id, {
+    await loyaltyService.updateCard(userId, activeCard.id, {
       name: newCard.name || newCard.provider,
       provider: newCard.provider,
       cardNumber: newCard.cardNumber,
@@ -276,7 +276,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
     
     if (window.confirm(t('loyalty.remove_confirm'))) {
       try {
-        await loyaltyService.deleteCard(userId, id);
+    await loyaltyService.deleteCard(userId, id);
         if (initialCard) {
           onClose();
         } else {
@@ -477,7 +477,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                           className="flex-1 py-4 rounded-2xl bg-rose-50 text-rose-600 font-bold text-sm hover:bg-rose-100 transition-colors flex items-center justify-center gap-2"
                          >
                            <Trash2 className="w-4 h-4" />
-                           {t('loyalty.remove_card', { coin: t('admin.coin') })}
+                           {t('loyalty.remove_card')}
                          </button>
                        </div>
                     </div>
@@ -603,7 +603,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                     className="flex items-center gap-1.5 text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg"
                    >
                      <Plus className="w-3.5 h-3.5" />
-                     {t('loyalty.add_new', { coin: t('admin.coin') })}
+                     {t('loyalty.add_new')}
                    </button>
                 </div>
 
