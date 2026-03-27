@@ -148,10 +148,10 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({ onClose, onC
               >
                 <div>
                   <h2 className="text-3xl font-black text-stone-900 tracking-tight mb-2">
-                    {t('reward.daily_prize_title', 'Daily Prize!')}
+                    {t('reward.daily_prize_title')}
                   </h2>
                   <p className="text-stone-500 font-medium px-4">
-                    {t('reward.daily_prize_desc', 'Your daily fuel boost is ready. Keep moving!')}
+                    {t('reward.daily_prize_desc')}
                   </p>
                 </div>
 
@@ -162,7 +162,7 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({ onClose, onC
                       <span className="text-lg text-emerald-400 opacity-60 uppercase tracking-widest">%</span>
                     </div>
                     <span className="text-[10px] font-black text-stone-300 uppercase tracking-[0.3em] mt-1">
-                      {t('reward.fuel_reward', 'FUEL REWARD')}
+                      {t('reward.fuel_reward')}
                     </span>
                   </div>
                 </div>
@@ -188,7 +188,7 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({ onClose, onC
                       </motion.div>
                     ) : (
                       <>
-                        {t('reward.claim_now', 'Claim Now')}
+                        {t('reward.claim_now')}
                         <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                       </>
                     )}
@@ -210,10 +210,10 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({ onClose, onC
                   <Gift className="w-10 h-10 text-emerald-600" />
                 </motion.div>
                 <h3 className="text-2xl font-black text-stone-900 mb-2">
-                  {t('reward.claimed_title', 'Fuel Boosted!')}
+                  {t('reward.claimed_title')}
                 </h3>
                 <p className="text-emerald-600 font-bold">
-                  {t('reward.claimed_desc', '1% Fuel added to your tank.')}
+                  {t('reward.claimed_desc')}
                 </p>
               </motion.div>
             )}
@@ -226,7 +226,7 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({ onClose, onC
             onClick={onClose}
             className="text-stone-300 hover:text-stone-400 text-xs font-black uppercase tracking-[0.25em] transition-colors"
           >
-            {t('common.close', 'Dismiss')}
+            {t('common.close')}
           </button>
         </div>
       </motion.div>

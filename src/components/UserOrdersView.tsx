@@ -90,8 +90,8 @@ export const UserOrdersView: React.FC<UserOrdersViewProps> = ({ onClose }) => {
             <ArrowLeft className="w-6 h-6" />
           </button>
           <div className="flex-1 text-center">
-            <h2 className="font-black text-stone-900 uppercase tracking-tight text-xl">{t('order.my_orders', 'My Orders')}</h2>
-            <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mt-0.5">{t('order.track_purchases', 'Track your recent purchases')}</p>
+            <h2 className="font-black text-stone-900 uppercase tracking-tight text-xl">{t('order.my_orders')}</h2>
+            <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest mt-0.5">{t('order.track_purchases')}</p>
           </div>
           <div className="w-12" />
         </div>
@@ -108,7 +108,7 @@ export const UserOrdersView: React.FC<UserOrdersViewProps> = ({ onClose }) => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t('order.search_orders', 'Search by store or ID...')}
+                placeholder={t('order.search_orders')}
                 className="w-full bg-white border border-stone-100 rounded-2xl py-4 pl-12 pr-4 text-sm font-medium outline-none focus:ring-4 focus:ring-indigo-50 shadow-sm transition-all"
               />
             </div>
@@ -186,8 +186,8 @@ export const UserOrdersView: React.FC<UserOrdersViewProps> = ({ onClose }) => {
                   <ShoppingBag className="w-10 h-10 text-stone-300" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-stone-900 uppercase tracking-tight">{t('order.no_orders', 'No orders found')}</h3>
-                  <p className="text-sm font-medium text-stone-400 mt-1">{t('order.no_orders_subtitle', 'Start shopping at our partner stores!')}</p>
+                  <h3 className="text-lg font-black text-stone-900 uppercase tracking-tight">{t('order.no_orders')}</h3>
+                  <p className="text-sm font-medium text-stone-400 mt-1">{t('order.no_orders_subtitle')}</p>
                 </div>
               </div>
             )}

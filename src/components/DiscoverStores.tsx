@@ -114,6 +114,7 @@ const CenterMapOnUser: React.FC<{ location: [number, number] | null }> = ({ loca
 interface DiscoverStoresProps {
   onClose: () => void;
   onSelectStore: (storeId: string) => void;
+  onShowMerchantDashboard: () => void;
   currentUser: any; // User | null
   appUser: AppUser | null;
   followedStoreIds: string[];
@@ -197,7 +198,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
   });
 
   return (
-    <div className="flex flex-col h-screen w-full bg-stone-50 overflow-hidden relative">
+    <div className="flex flex-col h-full w-full bg-stone-50 overflow-hidden relative">
       {/* Map Section (Upper Half) */}
       <div className="h-[45%] w-full relative shrink-0 bg-stone-100 group overflow-hidden">
         <MapContainer
@@ -344,7 +345,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
         </div>
 
         {/* List Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-8 pt-4 space-y-4 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pt-4 space-y-2 no-scrollbar">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <div className="w-10 h-10 border-4 border-stone-100 border-t-stone-900 rounded-full animate-spin" />
@@ -358,7 +359,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
               <p className="text-stone-400 font-bold uppercase tracking-widest text-[10px]">{t('discover_stores.no_results')}</p>
             </div>
           ) : (
-            <div className="grid gap-4 w-full pb-10">
+            <div className="grid gap-2 w-full pb-10">
               {filteredStores.map((store, index) => {
                 const isOwnStore = currentUser && store.ownerId === currentUser.uid;
                 const storeNumber = index + 1;
@@ -369,7 +370,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
                     layout
                     onClick={() => onSelectStore(store.id)}
                     className={cn(
-                      "p-3.5 sm:p-5 bg-white border rounded-[2.2rem] shadow-sm hover:shadow-2xl hover:shadow-stone-200/50 transition-all cursor-pointer group flex items-center justify-between gap-3 sm:gap-6 w-full overflow-hidden relative",
+                      "p-2 sm:p-3.5 bg-white border rounded-3xl shadow-sm hover:shadow-2xl hover:shadow-stone-200/50 transition-all cursor-pointer group flex items-center justify-between gap-3 sm:gap-6 w-full overflow-hidden relative",
                       isOwnStore ? "border-emerald-500 bg-emerald-50/10 shadow-lg shadow-emerald-500/5" : "border-stone-50"
                     )}
                   >
@@ -386,17 +387,17 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
 
                     <div className="flex items-center gap-3 sm:gap-5 min-w-0 flex-1 pl-2">
                       <div className={cn(
-                        "w-12 h-12 sm:w-16 sm:h-16 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-500",
+                        "w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-105 duration-500",
                         store.category === 'Grocery' ? "bg-emerald-50 text-emerald-600" :
                           store.category === 'Pharmacy' ? "bg-rose-50 text-rose-600" :
                             store.category === 'Apparel' ? "bg-indigo-50 text-indigo-600" :
                               "bg-stone-50 text-stone-600"
                       )}>
-                        <ShoppingBag className="w-6 h-6 sm:w-7 sm:h-7" />
+                        <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1">
-                          <h4 className="font-black text-stone-900 text-base sm:text-lg truncate tracking-tight">{store.name}</h4>
+                          <h4 className="font-black text-stone-900 text-sm sm:text-base truncate tracking-tight">{store.name}</h4>
                           <div className="flex items-center gap-1.5">
                             {isOwnStore && (
                               <span className="px-2 py-0.5 bg-emerald-500 text-white text-[8px] font-black uppercase tracking-widest rounded-lg underline decoration-white/30">
@@ -410,7 +411,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2.5 sm:gap-3 text-[10px] sm:text-xs font-bold text-stone-400">
+                        <div className="flex items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px] font-bold text-stone-400">
                           <div className="flex items-center gap-1 text-amber-500">
                             <Star className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
                             <span>{store.averageRating?.toFixed(1) || '0.0'}</span>
@@ -432,7 +433,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
                             e.stopPropagation();
                             onShowMerchantDashboard();
                           }}
-                          className="h-10 sm:h-12 px-4 sm:px-6 bg-emerald-500 text-white rounded-2xl flex items-center gap-2 font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+                          className="h-9 sm:h-10 px-4 sm:px-6 bg-emerald-500 text-white rounded-2xl flex items-center gap-2 font-black text-[9px] sm:text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
                         >
                           <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           <span className="hidden xs:inline">{t('merchant.settings')}</span>
@@ -441,7 +442,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
                         <button
                           onClick={(e) => handleToggleFollow(e, store.id)}
                           className={cn(
-                            "w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center transition-all",
+                            "w-9 h-9 sm:w-10 sm:h-10 rounded-2xl flex items-center justify-center transition-all",
                             followedStoreIds.includes(store.id)
                               ? "bg-rose-50 text-rose-600 shadow-sm"
                               : "bg-stone-50 text-stone-400 hover:bg-stone-100 hover:text-stone-600"
@@ -450,8 +451,8 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
                           <Heart className={cn("w-4 h-4 sm:w-5 sm:h-5 transition-all", followedStoreIds.includes(store.id) && "fill-current scale-110")} />
                         </button>
                       )}
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-stone-50 rounded-2xl flex items-center justify-center group-hover:bg-stone-900 group-hover:text-white transition-all">
-                        <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-stone-50 rounded-2xl flex items-center justify-center group-hover:bg-stone-900 group-hover:text-white transition-all">
+                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 translate-x-0 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </div>
                   </motion.div>
@@ -463,7 +464,7 @@ export const DiscoverStores: React.FC<DiscoverStoresProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="px-8 py-5 bg-white border-t border-stone-50 flex items-center justify-between shrink-0 rounded-b-[2.5rem]">
+      <div className="px-6 py-4 bg-white border-t border-stone-50 flex items-center justify-between shrink-0 rounded-b-[2.5rem]">
         <div className="flex items-center gap-2.5">
           <Clock className="w-4 h-4 text-stone-300" />
           <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest leading-none">

@@ -124,7 +124,7 @@ export const StoreOrdersView: React.FC<StoreOrdersViewProps> = ({ storeId, store
                       : "bg-white text-stone-400 border-stone-100 hover:border-stone-200"
                   )}
                 >
-                  {s === 'all' ? t('common.all', 'All') : getStatusLabel(s as OrderStatus)}
+                  {s === 'all' ? t('common.all') : getStatusLabel(s as OrderStatus)}
                 </button>
               ))}
             </div>
@@ -147,7 +147,7 @@ export const StoreOrdersView: React.FC<StoreOrdersViewProps> = ({ storeId, store
                   onClick={onClose}
                   className="px-8 py-4 bg-amber-600 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-amber-200 active:scale-95 transition-all"
                 >
-                  {t('common.back', 'Go Back')}
+                  {t('common.back')}
                 </button>
               </div>
             ) : filteredOrders.length > 0 ? (

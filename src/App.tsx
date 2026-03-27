@@ -67,10 +67,11 @@ import { getOrderStatusColor } from './lib/orderUtils';
 import { couponService } from './services/couponService';
 import { useTranslation, Trans } from 'react-i18next';
 import './i18n'; // Import i18n configuration
-import { ShoppingList, ListItem, ShareLink, Permission, AppUser, CoinBatch, LoyaltyCard } from './types';
+import { ShoppingList, ListItem, ShareLink, Permission, AppUser, FuelBatch, LoyaltyCard } from './types';
 import { cn, forceClearCache } from './lib/utils';
 import { EmojiPicker } from './components/EmojiPicker';
 import { Onboarding } from './components/Onboarding';
+import { CommunityTips } from './components/CommunityTips';
 import { MerchantRegistrationModal } from './components/MerchantRegistrationModal';
 import { MerchantDashboard } from './components/MerchantDashboard';
 import { AdminStoreManager } from './components/AdminStoreManager';
@@ -148,6 +149,7 @@ export default function App() {
   const [isOrderDetailMerchant, setIsOrderDetailMerchant] = useState(false);
   const [showDailyReward, setShowDailyReward] = useState(false);
   const [followedStoreIds, setFollowedStoreIds] = useState<string[]>([]);
+  const [isAuthInitialized, setIsAuthInitialized] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // --- Daily Reward Check ---
@@ -438,6 +440,7 @@ export default function App() {
         localStorage.removeItem('ss_cached_user');
       }
       setUser(u);
+      setIsAuthInitialized(true);
       setLoading(false);
     }, (err) => {
       console.error("Auth state change error:", err);
@@ -445,6 +448,7 @@ export default function App() {
       if (!localStorage.getItem('ss_cached_user')) {
         setError(t('app.network_error'));
       }
+      setIsAuthInitialized(true);
       setLoading(false);
     });
 
@@ -474,6 +478,7 @@ export default function App() {
     // stop loading to show the current state (either cached user or welcome).
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
+      setIsAuthInitialized(true);
     }, 6000);
 
     return () => {
@@ -606,24 +611,6 @@ export default function App() {
     }
   }, [user]);
 
-  const handleAnonymously = async () => {
-    try {
-      console.log("Starting Anonymous Login...");
-      setLoading(true);
-
-      await signInAnonymously(auth);
-      // Note: We DO NOT set loading(false) here on success.
-      // onAuthStateChanged will handle it.
-    } catch (err: any) {
-      console.error("Anonymous login error:", err);
-      setLoading(false);
-      if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-        setError(t('app.auth_err_not_enabled'));
-      } else {
-        setError(err.message);
-      }
-    }
-  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -640,26 +627,16 @@ export default function App() {
             result.credential.accessToken
           );
 
-          if (user && user.isAnonymous) {
-            console.log("Linking native credential to anonymous user...");
-            await linkWithCredential(user, credential);
-          } else {
-            console.log("Signing in with native credential...");
-            await signInWithCredential(auth, credential);
-          }
+          console.log("Signing in with native credential...");
+          await signInWithCredential(auth, credential);
         } else {
           // No credential means cancelled or failed without error
           setLoading(false);
         }
       } else {
         // Web flow
-        if (user && user.isAnonymous) {
-          console.log("Linking anonymous user with Google (Web)...");
-          await linkWithPopup(user, googleProvider);
-        } else {
-          console.log("Signing in with Google (Web)...");
-          await signInWithPopup(auth, googleProvider);
-        }
+        console.log("Signing in with Google (Web)...");
+        await signInWithPopup(auth, googleProvider);
       }
       // Note: We DO NOT set loading(false) here on success.
       // We let onAuthStateChanged handle it to avoid flickering the login screen
@@ -703,7 +680,7 @@ export default function App() {
     }
   };
 
-  if (loading) {
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-stone-50">
         <motion.div
@@ -725,7 +702,9 @@ export default function App() {
     );
   }
 
-  if (!isFirebaseConfigured || error || (!user && !loading)) {
+  // Only show the Welcome/Error screen if auth has finished initializing AND there's no user.
+  // This prevents the Welcome screen from flickering before onAuthStateChanged fires.
+  if (!isFirebaseConfigured || error || (isAuthInitialized && !user && !loading)) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center p-6 text-stone-900 selection:bg-emerald-100">
         <motion.div
@@ -764,13 +743,12 @@ export default function App() {
               </svg>
               {t('app.sign_in_google')}
             </motion.button>
-
-            {/* <button
-              onClick={handleAnonymously}
+            <button
+              onClick={() => setError(null)}
               className="w-full py-4 text-stone-400 font-bold hover:text-stone-600 transition-colors text-sm"
             >
-              {t('app.continue_guest')}
-            </button> */}
+              {t('common.cancel')}
+            </button>
           </div>
 
           {error && (
@@ -810,7 +788,7 @@ export default function App() {
             targetListId = newListId;
             setActiveListId(newListId);
           } else {
-            alert(t('list_view.insufficient_coins'));
+            alert(t('list_view.insufficient_fuel'));
             return;
           }
         } catch (error: any) {
@@ -852,8 +830,7 @@ export default function App() {
           />
         )}
       </AnimatePresence>
-      {!showDiscoverStores && (
-        <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
+      <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <motion.div
               initial={{ opacity: 0, x: -20 }}
@@ -874,10 +851,10 @@ export default function App() {
             </motion.div>
 
             <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 justify-end">
-              {appUser && (
+              {user && (
                 <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 px-0.5">
                   <FuelGauge
-                    level={appUser.fuelLevel || 0}
+                    level={appUser?.fuelLevel || 0}
                     onClick={() => setShowFuelHistoryModal(true)}
                     className="!h-10 !py-1 !px-3"
                     showLabel={false}
@@ -900,7 +877,7 @@ export default function App() {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setShowRefuelModal(true)}
                       className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-colors shadow-sm shrink-0"
-                      title={t('fuel.refuel_title')}
+                      title={t('fuel.tab_buy')}
                     >
                       <Fuel className="w-4 h-4 sm:w-5 sm:h-5" />
                       <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('fuel.tab_buy')}</span>
@@ -910,10 +887,10 @@ export default function App() {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setShowRefuelModal(true)}
                       className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm shrink-0"
-                      title="Redeem Coupon"
+                      title={t('fuel.redeem_coupon')}
                     >
                       <Ticket className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">Redeem</span>
+                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('fuel.tab_redeem')}</span>
                     </motion.button>
                   </div>
                 </div>
@@ -953,7 +930,7 @@ export default function App() {
                     >
                       <div className="px-4 py-2 border-b border-stone-100 mb-1">
                         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                          {user?.isAnonymous ? t('app.continue_guest') : t('user_menu.profile')}
+                          {t('user_menu.profile')}
                         </p>
                         <p className="text-sm font-bold text-stone-900 truncate">
                           {user?.displayName || user?.email || t('user_menu.anonymous_traveler')}
@@ -971,18 +948,16 @@ export default function App() {
                         {t('app.sign_out')}
                       </button>
 
-                      {!user?.isAnonymous && (
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            setShowMerchantDashboard(true);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors text-left font-bold"
-                        >
-                          <ShoppingBag className="w-4 h-4" />
-                          {appUser?.isMerchant ? t('user_menu.manage_stores') : t('user_menu.register_store')}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowMerchantDashboard(true);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors text-left font-bold"
+                      >
+                        <ShoppingBag className="w-4 h-4" />
+                        {appUser?.isMerchant ? t('user_menu.manage_stores') : t('user_menu.register_store')}
+                      </button>
 
                       {appUser?.isAdmin && (
                         <button
@@ -1022,18 +997,16 @@ export default function App() {
                         {t('user_menu.other_apps')}
                       </button>
 
-                      {!user?.isAnonymous && (
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            setShowDeleteConfirm(true);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          {t('user_menu.delete_account')}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowDeleteConfirm(true);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {t('user_menu.delete_account')}
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -1041,7 +1014,6 @@ export default function App() {
             </div>
           </div>
         </header>
-      )}
 
       {user && !showDiscoverStores && (
         <LoyaltyCardsRow
@@ -1058,12 +1030,12 @@ export default function App() {
       )}
 
       <main className={cn(
-        "scroll-container",
-        !showDiscoverStores && "px-4 pt-6 pb-8 md:px-8"
+        "flex-1 min-h-0",
+        !showDiscoverStores && "scroll-container px-4 pt-4 pb-8 md:px-8"
       )}>
         <div className={cn(
-          !showDiscoverStores && "max-w-5xl mx-auto",
-          showDiscoverStores && "w-full h-full"
+          "h-full",
+          !showDiscoverStores && "max-w-5xl mx-auto"
         )}>
           <AnimatePresence mode="wait">
             {showDiscoverStores ? (
@@ -1353,7 +1325,7 @@ function FuelHistoryModal({ batches, onClose }: { batches: any[], onClose: () =>
             <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
               <Fuel className="w-6 h-6 text-emerald-600" />
             </div>
-            <h3 className="text-2xl font-bold text-stone-900 uppercase tracking-tight">{t('coins.history_title')}</h3>
+            <h3 className="text-2xl font-bold text-stone-900 uppercase tracking-tight">{t('fuel.history_title')}</h3>
           </div>
           <button
             onClick={onClose}
@@ -1393,7 +1365,7 @@ function FuelHistoryModal({ batches, onClose }: { batches: any[], onClose: () =>
                           </span>
                         </p>
                         <p className="text-xs font-bold text-stone-400 uppercase tracking-widest mt-0.5">
-                          {isExpired ? t('coins.expired') : t('coins.expires')}: {new Date(batch.expiresAt).toLocaleDateString()}
+                          {isExpired ? t('fuel.expired') : t('fuel.expires')}: {new Date(batch.expiresAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -1406,7 +1378,7 @@ function FuelHistoryModal({ batches, onClose }: { batches: any[], onClose: () =>
               <div className="w-16 h-16 bg-stone-100 rounded-full flex items-center justify-center mx-auto">
                 <History className="w-8 h-8 text-stone-300" />
               </div>
-              <p className="text-stone-500 font-medium">{t('coins.no_coins')}</p>
+              <p className="text-stone-500 font-medium">{t('fuel.no_fuel_history')}</p>
             </div>
           )}
         </div>
@@ -1497,6 +1469,9 @@ function Dashboard({
   const [showMerchantModal, setShowMerchantModal] = useState(false);
   const [editingListId, setEditingListId] = useState<string | null>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(true);
+  const [showCommunityTip, setShowCommunityTip] = useState(() => {
+    return localStorage.getItem('hide_community_tip') !== 'true';
+  });
   const [isPending, setIsPending] = useState(false);
   const [isAdLoading, setIsAdLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'yours' | 'shared'>('all');
@@ -1533,8 +1508,8 @@ function Dashboard({
       try {
         // Use integrated webview instead of window.open
         // window.open('https://created.link', '_blank');
-        const grantRewardedCoin = httpsCallable(functions, 'grantRewardedCoin');
-        const result = await grantRewardedCoin({ amount: 1 });
+        const grantDailyFuelReward = httpsCallable(functions, 'grantDailyFuelReward');
+        const result = await grantDailyFuelReward();
         const data = result.data as { success: boolean; error?: string };
         if (data.success) {
           // alert(t('dashboard.reward_success'));
@@ -1668,6 +1643,16 @@ function Dashboard({
             onInstall={onInstall}
             onClose={() => setShowInstallBanner(false)}
           />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showCommunityTip && (
+          <div className="mb-8">
+            <CommunityTips onClose={() => {
+              setShowCommunityTip(false);
+              localStorage.setItem('hide_community_tip', 'true');
+            }} />
+          </div>
         )}
       </AnimatePresence>
 

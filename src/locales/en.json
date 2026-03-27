@@ -14,7 +14,14 @@
     "clear_cache_confirm": "Clear all local data and reload?",
     "feature_unavailable": "Feature unavailable in this version.",
     "your_store": "Your Store",
-    "stores_found": "{{count}} Stores Found"
+    "stores_found": "{{count}} Stores Found",
+    "close": "Close",
+    "all": "All",
+    "back": "Back",
+    "grid": "Grid",
+    "list": "List",
+    "business": "Business",
+    "fuel_level": "Fuel Level"
   },
   "app": {
     "loading": "Loading your lists...",
@@ -56,7 +63,8 @@
     "units_short": "U",
     "refuel_title": "Fuel Station",
     "refuel_subtitle": "Keep your tank full to sync",
-    "tab_buy": "Refill",
+    "tab_buy": "Buy",
+    "tab_redeem": "Redeem",
     "tab_free": "Free Fuel",
     "watch_ad": "Watch to Refuel",
     "ad_reward_desc": "Get fuel units",
@@ -66,7 +74,16 @@
     "success": "Refueled!",
     "success_subtitle": "Your tank is now replenished",
     "ad_failed": "Failed to refuel via ad",
-    "gift_failed": "Gift not available"
+    "gift_failed": "Gift not available",
+    "redeem_coupon": "Redeem Coupon"
+  },
+  "reward": {
+    "daily_prize_title": "Daily Prize!",
+    "daily_prize_desc": "Your daily fuel boost is ready. Keep moving!",
+    "fuel_reward": "FUEL REWARD",
+    "claim_now": "Claim Now",
+    "claimed_title": "Fuel Boosted!",
+    "claimed_desc": "1% Fuel added to your tank."
   },
   "dashboard": {
     "title": "Your Collections",
@@ -385,6 +402,16 @@
     "deleting": "Deleting...",
     "delete_fail": "Failed to delete account"
   },
+  "tips": {
+    "did_you_know": "Did you know?",
+    "tip_stores": "You can follow your favorite local shops to see their latest menu and special offers!",
+    "tip_orders": "Shared-Shopping-List isn't just for lists—you can place orders directly with neighborhood stores!",
+    "tip_merchants": "Invite your favorite local merchant to list their products here for free!",
+    "tip_community": "Finding and ordering from nearby shops helps strengthen your neighborhood economy.",
+    "spread_word": "Spread the Word!",
+    "appeal": "Loving the app? Share it with your neighbors and local shop owners to help our community grow!",
+    "share_button": "Share App"
+  },
   "footer": {
     "privacy_policy": "Privacy Policy"
   },
@@ -479,6 +506,11 @@
     "search_placeholder": "Search stores or products..."
   },
   "order": {
+    "my_orders": "My Orders",
+    "track_purchases": "Track your recent purchases",
+    "search_orders": "Search by store or ID...",
+    "no_orders": "No orders found",
+    "no_orders_subtitle": "Start shopping at our partner stores!",
     "status": {
       "pending": "Pending",
       "confirmed": "Confirmed",
