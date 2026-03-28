@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Shield,
   Trash2,
-  Settings
+  Settings,
+  Database
 } from 'lucide-react';
 import { Store } from '../types';
 import { storeService } from '../services/storeService';
@@ -21,9 +22,10 @@ import { MerchantRegistrationModal } from './MerchantRegistrationModal';
 
 interface AdminStoreManagerProps {
   onClose: () => void;
+  onShowAdminDatabaseManager?: () => void;
 }
 
-export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose }) => {
+export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose, onShowAdminDatabaseManager }) => {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'pending' | 'all' | 'stale'>('pending');
   const [stores, setStores] = useState<Store[]>([]);
@@ -144,28 +146,44 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
         className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden"
       >
         {/* Header */}
-        <div className="p-8 border-b border-stone-100 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
-              <Shield className="w-6 h-6 text-amber-600" />
+        <div className="p-4 sm:p-8 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 relative">
+          <div className="flex items-center gap-3 sm:gap-4 pr-10 sm:pr-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-amber-50 rounded-2xl flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-stone-900 tracking-tight">
+              <h2 className="text-xl sm:text-2xl font-black text-stone-900 tracking-tight leading-tight">
                 {t('admin.manage_stores', 'Store Management')}
               </h2>
-              <p className="text-stone-400 text-sm font-medium">{t('admin.moderate_subtitle')}</p>
+              <p className="text-stone-400 text-xs sm:text-sm font-medium">{t('admin.moderate_subtitle', 'Moderate and verify applications')}</p>
             </div>
           </div>
+          
           <button
             onClick={onClose}
-            className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+            className="absolute top-4 right-4 sm:static sm:p-3 p-2 hover:bg-stone-100 rounded-full transition-colors group shrink-0"
           >
-            <X className="w-6 h-6 text-stone-400" />
+            <X className="w-5 h-5 sm:w-6 sm:h-6 text-stone-400 group-hover:text-stone-600" />
           </button>
+
+          {onShowAdminDatabaseManager && (
+            <div className="flex items-center gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
+              <button
+                onClick={() => {
+                  onClose();
+                  onShowAdminDatabaseManager();
+                }}
+                className="w-full sm:w-auto px-4 py-2 sm:py-2 bg-indigo-50 text-indigo-600 font-bold text-sm rounded-xl hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <Database className="w-4 h-4" />
+                Database Manager
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
-        <div className="px-8 pt-4 flex gap-8 border-b border-stone-100 shrink-0">
+        <div className="px-4 sm:px-8 pt-4 flex gap-6 sm:gap-8 border-b border-stone-100 shrink-0 overflow-x-auto no-scrollbar">
           <button
             onClick={() => setActiveTab('pending')}
             className={cn(
@@ -205,7 +223,7 @@ export const AdminStoreManager: React.FC<AdminStoreManagerProps> = ({ onClose })
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 no-scrollbar">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
               <div className="w-10 h-10 border-4 border-stone-100 border-t-amber-500 rounded-full animate-spin" />

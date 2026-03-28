@@ -228,7 +228,17 @@
     "generate_coupon": "Generate Fuel Coupon",
     "generate_another": "Generate Another",
     "fuel": "Fuel",
-    "fuel_units": "Fuel Units"
+    "fuel_units": "Fuel Units",
+    "moderate_subtitle": "Moderate and verify applications",
+    "stale_images_tab": "Stale Images",
+    "delete_stale_confirm": "Are you sure you want to delete this stale image?",
+    "delete_all_stale_confirm": "Delete ALL stale images?",
+    "no_stale_data": "System Clean!",
+    "no_stale_desc": "No stale images found in storage.",
+    "stale_count": "Stale Files",
+    "stale_hint": "These files occupy space but are not linked to any store or product.",
+    "delete_all_stale": "Flush All",
+    "database_manager": "Database Manager"
   },
   "merchant": {
     "dashboard": "My Stores",

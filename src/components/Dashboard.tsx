@@ -19,7 +19,8 @@ import {
   X,
   Crown,
   Copy,
-  Link as LinkIcon
+  LinkIcon,
+  Database
 } from 'lucide-react';
 import { ShoppingList, AppUser, Order } from '../types';
 import { cn } from '../lib/utils';

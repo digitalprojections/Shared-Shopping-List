@@ -92,16 +92,22 @@ const BwipBarcode: React.FC<{ value: string, format: string, scale?: number, hei
     else if (format === 'CODABAR') bcid = 'rationalizedCodabar';
 
     const renderBarcode = (id: string, text: string) => {
-      bwipjs.toCanvas(canvasRef.current!, {
+      const is2D = id === 'qrcode' || id === 'datamatrix' || id === 'pdf417';
+      const options: any = {
         bcid: id,
         text: text,
-        alttext: text,
         scale: scale,
-        height: (id === 'qrcode' || id === 'datamatrix' || id === 'pdf417') ? 0 : height,
-        includetext: true,
-        textxalign: 'center',
         backgroundcolor: 'FFFFFF',
-      });
+      };
+
+      if (!is2D) {
+        options.height = height;
+        options.includetext = true;
+        options.textxalign = 'center';
+        options.alttext = text;
+      }
+
+      bwipjs.toCanvas(canvasRef.current!, options);
     };
 
     try {

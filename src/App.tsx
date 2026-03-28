@@ -75,6 +75,7 @@ import { CommunityTips } from './components/CommunityTips';
 import { MerchantRegistrationModal } from './components/MerchantRegistrationModal';
 import { MerchantDashboard } from './components/MerchantDashboard';
 import { AdminStoreManager } from './components/AdminStoreManager';
+import { AdminDatabaseManager } from './components/AdminDatabaseManager';
 import { RefuelModal } from './components/RefuelModal';
 import { FuelGauge } from './components/FuelGauge';
 import { LoyaltyCardsModal } from './components/LoyaltyCardsModal';
@@ -142,6 +143,7 @@ export default function App() {
   const [showMerchantModal, setShowMerchantModal] = useState(false);
   const [showMerchantDashboard, setShowMerchantDashboard] = useState(false);
   const [showAdminManager, setShowAdminManager] = useState(false);
+  const [showAdminDatabaseManager, setShowAdminDatabaseManager] = useState(false);
   const [showDiscoverStores, setShowDiscoverStores] = useState(false);
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [selectedLoyaltyCard, setSelectedLoyaltyCard] = useState<LoyaltyCard | null>(null);
@@ -838,189 +840,189 @@ export default function App() {
         )}
       </AnimatePresence>
       <header className="flex-none bg-white/80 backdrop-blur-md border-b border-stone-200/60 px-4 py-3 md:px-8 safe-top z-40 relative">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3 cursor-pointer"
-              onClick={() => {
-                setActiveListId(null);
-                setSharedListId(null);
-                window.history.replaceState({}, '', window.location.pathname);
-              }}
-            >
-              <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/10 overflow-hidden shrink-0">
-                <img src={`${import.meta.env.BASE_URL}logo.png`} alt="L" className="w-full h-full object-contain" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600 hidden xs:block">
-                ListShare
-              </h1>
-            </motion.div>
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-3 cursor-pointer"
+            onClick={() => {
+              setActiveListId(null);
+              setSharedListId(null);
+              window.history.replaceState({}, '', window.location.pathname);
+            }}
+          >
+            <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/10 overflow-hidden shrink-0">
+              <img src={`${import.meta.env.BASE_URL}logo.png`} alt="L" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-stone-900 to-stone-600 hidden xs:block">
+              ListShare
+            </h1>
+          </motion.div>
 
-            <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 justify-end">
-              {user && (
-                <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 px-0.5">
-                  <FuelGauge
-                    level={appUser?.fuelLevel || 0}
-                    onClick={() => setShowFuelHistoryModal(true)}
-                    className="!h-10 !py-1 !px-3"
-                    showLabel={false}
+          <div className="flex items-center gap-1 sm:gap-2 flex-1 min-w-0 justify-end">
+            {user && (
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 px-0.5">
+                <FuelGauge
+                  level={appUser?.fuelLevel || 0}
+                  onClick={() => setShowFuelHistoryModal(true)}
+                  className="!h-10 !py-1 !px-3"
+                  showLabel={false}
+                />
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  {appUser && !appUser.freeCouponClaimed && (
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setShowRedeemModal(true)}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-200 animate-pulse shrink-0"
+                      title={t('redeem_modal.free_title')}
+                    >
+                      <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </motion.button>
+                  )}
+
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowRefuelModal(true)}
+                    className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-colors shadow-sm shrink-0"
+                    title={t('fuel.tab_buy')}
+                  >
+                    <Fuel className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('fuel.tab_buy')}</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowRedeemModal(true)}
+                    className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm shrink-0"
+                    title={t('fuel.redeem_coupon')}
+                  >
+                    <Ticket className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('fuel.tab_redeem')}</span>
+                  </motion.button>
+                </div>
+              </div>
+            )}
+            <div className="relative shrink-0 ml-1" ref={menuRef}>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-stone-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center cursor-pointer"
+              >
+                {user?.photoURL ? (
+                  <img
+                    src={user.photoURL.includes('googleusercontent.com') ? user.photoURL.split('=')[0] + APP_CONFIG.USER.DEFAULT_AVATAR_SIZE : user.photoURL}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
                   />
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    {appUser && !appUser.freeCouponClaimed && (
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => setShowRedeemModal(true)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 bg-indigo-600 text-white rounded-xl transition-all shadow-lg shadow-indigo-200 animate-pulse shrink-0"
-                        title={t('redeem_modal.free_title')}
+                ) : (
+                  <img
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || APP_CONFIG.USER.ANONYMOUS_AVATAR_SEED}`}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                    crossOrigin="anonymous"
+                  />
+                )}
+              </motion.button>
+
+              <AnimatePresence>
+                {showUserMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50 overflow-hidden"
+                  >
+                    <div className="px-4 py-2 border-b border-stone-100 mb-1">
+                      <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                        {t('user_menu.profile')}
+                      </p>
+                      <p className="text-sm font-bold text-stone-900 truncate">
+                        {user?.displayName || user?.email || t('user_menu.anonymous_traveler')}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        signOut(auth);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      {t('app.sign_out')}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        setShowMerchantDashboard(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors text-left font-bold"
+                    >
+                      <ShoppingBag className="w-4 h-4" />
+                      {appUser?.isMerchant ? t('user_menu.manage_stores') : t('user_menu.register_store')}
+                    </button>
+
+                    {appUser?.isAdmin && (
+                      <button
+                        onClick={() => {
+                          setShowUserMenu(false);
+                          setShowAdminManager(true);
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors text-left font-bold"
                       >
-                        <Gift className="w-4 h-4 sm:w-5 sm:h-5" />
-                      </motion.button>
+                        <Shield className="w-4 h-4" />
+                        {t('user_menu.manage_submissions')}
+                      </button>
                     )}
 
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setShowRefuelModal(true)}
-                      className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-xl transition-colors shadow-sm shrink-0"
-                      title={t('fuel.tab_buy')}
+                    <button
+                      onClick={async () => {
+                        const confirmed = window.confirm(t('common.clear_cache_confirm'));
+                        if (confirmed) {
+                          setShowUserMenu(false);
+                          await forceClearCache();
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
                     >
-                      <Fuel className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('fuel.tab_buy')}</span>
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setShowRedeemModal(true)}
-                      className="flex items-center gap-1.5 px-2 py-1.5 sm:px-3 sm:py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 rounded-xl transition-colors shadow-sm shrink-0"
-                      title={t('fuel.redeem_coupon')}
+                      <RotateCcw className="w-4 h-4" />
+                      {t('user_menu.clear_cache')}
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        setShowOtherApps(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
                     >
-                      <Ticket className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider hidden md:inline">{t('fuel.tab_redeem')}</span>
-                    </motion.button>
-                  </div>
-                </div>
-              )}
-              <div className="relative shrink-0 ml-1" ref={menuRef}>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-stone-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center cursor-pointer"
-                >
-                  {user?.photoURL ? (
-                    <img
-                      src={user.photoURL.includes('googleusercontent.com') ? user.photoURL.split('=')[0] + APP_CONFIG.USER.DEFAULT_AVATAR_SIZE : user.photoURL}
-                      alt="avatar"
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                    />
-                  ) : (
-                    <img
-                      src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || APP_CONFIG.USER.ANONYMOUS_AVATAR_SEED}`}
-                      alt="avatar"
-                      className="w-full h-full object-cover"
-                      crossOrigin="anonymous"
-                    />
-                  )}
-                </motion.button>
+                      <LayoutGrid className="w-4 h-4" />
+                      {t('user_menu.other_apps')}
+                    </button>
 
-                <AnimatePresence>
-                  {showUserMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                      className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-stone-100 py-2 z-50 overflow-hidden"
+                    <button
+                      onClick={() => {
+                        setShowUserMenu(false);
+                        setShowDeleteConfirm(true);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left"
                     >
-                      <div className="px-4 py-2 border-b border-stone-100 mb-1">
-                        <p className="text-xs font-bold text-stone-400 uppercase tracking-widest">
-                          {t('user_menu.profile')}
-                        </p>
-                        <p className="text-sm font-bold text-stone-900 truncate">
-                          {user?.displayName || user?.email || t('user_menu.anonymous_traveler')}
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          signOut(auth);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
-                      >
-                        <LogOut className="w-4 h-4" />
-                        {t('app.sign_out')}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          setShowMerchantDashboard(true);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-emerald-600 hover:bg-emerald-50 transition-colors text-left font-bold"
-                      >
-                        <ShoppingBag className="w-4 h-4" />
-                        {appUser?.isMerchant ? t('user_menu.manage_stores') : t('user_menu.register_store')}
-                      </button>
-
-                      {appUser?.isAdmin && (
-                        <button
-                          onClick={() => {
-                            setShowUserMenu(false);
-                            setShowAdminManager(true);
-                          }}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-amber-600 hover:bg-amber-50 transition-colors text-left font-bold"
-                        >
-                          <Shield className="w-4 h-4" />
-                          {t('user_menu.manage_submissions')}
-                        </button>
-                      )}
-
-                      <button
-                        onClick={async () => {
-                          const confirmed = window.confirm(t('common.clear_cache_confirm'));
-                          if (confirmed) {
-                            setShowUserMenu(false);
-                            await forceClearCache();
-                          }
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        {t('user_menu.clear_cache')}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          setShowOtherApps(true);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50 transition-colors text-left"
-                      >
-                        <LayoutGrid className="w-4 h-4" />
-                        {t('user_menu.other_apps')}
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setShowUserMenu(false);
-                          setShowDeleteConfirm(true);
-                        }}
-                        className="w-full flex items-center gap-3 px-4 py-2 text-sm text-rose-600 hover:bg-rose-50 transition-colors text-left"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        {t('user_menu.delete_account')}
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                      <Trash2 className="w-4 h-4" />
+                      {t('user_menu.delete_account')}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
       {user && !showDiscoverStores && (
         <LoyaltyCardsRow
@@ -1075,7 +1077,10 @@ export default function App() {
                 salesOrders={salesOrders}
                 orderTab={orderTab}
                 setOrderTab={setOrderTab}
-                onShowOrders={() => setShowUserOrdersView(true)}
+                onShowOrders={() => {
+                  setOrderTab('purchases');
+                  setShowUserOrdersView(true);
+                }}
                 onShowOrderDetail={(id, isMerchant) => {
                   setSelectedOrderDetailId(id);
                   setIsOrderDetailMerchant(isMerchant);
@@ -1172,6 +1177,13 @@ export default function App() {
         {showAdminManager && (
           <AdminStoreManager
             onClose={() => setShowAdminManager(false)}
+            onShowAdminDatabaseManager={appUser?.isAdmin ? () => setShowAdminDatabaseManager(true) : undefined}
+          />
+        )}
+
+        {(appUser?.isAdmin && showAdminDatabaseManager) && (
+          <AdminDatabaseManager
+            onClose={() => setShowAdminDatabaseManager(false)}
           />
         )}
         {showUserOrdersView && (

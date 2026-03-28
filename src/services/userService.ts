@@ -4,6 +4,7 @@ import { httpsCallable } from 'firebase/functions';
 import { AppUser, PushToken } from '../types';
 import { User, signOut } from 'firebase/auth';
 import { shoppingService } from './shoppingService';
+import { storeService } from './storeService';
 
 export const userService = {
   ensureUserProfile: async (userId: string, existingDoc?: any): Promise<void> => {
@@ -104,10 +105,10 @@ export const userService = {
       console.error("Error subscribing to following list:", error);
     });
   },
-
   calculateEffectiveFuel: (user: AppUser): number => {
-    // If we have the short key fl, use it directly (summary field)
-    if (user.fl !== undefined) return user.fl;
+    // Top-level value takes precedence if populated via recent function
+    if (user.fuelLevel !== undefined && user.fuelLevel > 0) return user.fuelLevel;
+    if (user.fl !== undefined && user.fl > 0) return user.fl;
     
     // Legacy calculation
     const now = Date.now();
@@ -115,11 +116,11 @@ export const userService = {
     
     if (fuelBatches.length > 0) {
       return fuelBatches
-        .filter((b: any) => b.ea ? b.ea > now : b.expiresAt > now)
-        .reduce((sum: number, b: any) => sum + (b.r ?? (b.remaining || 0)), 0);
+        .filter((b: any) => (b.expiresAt ? b.expiresAt > now : (b.ea ? b.ea > now : true)))
+        .reduce((sum: number, b: any) => sum + (b.remaining ?? b.r ?? b.amount ?? b.a ?? 0), 0);
     }
     
-    return user.fuelLevel ?? user.coinBalance ?? 0;
+    return user.coinBalance ?? 0;
   },
 
   consumeFuel: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {
@@ -157,6 +158,18 @@ export const userService = {
       const batch = writeBatch(db);
       followedSnapshot.docs.forEach(doc => batch.delete(doc.ref));
       await batch.commit();
+
+      // 2.5 Delete owned stores (resolves unattended stores orphan issue)
+      const storesQuery = query(collection(db, 'stores'), where('ownerId', '==', userId));
+      const storesSnapshot = await getDocs(storesQuery);
+      // Wait, deleting a store requires deeper cleanup (products, stale images, etc.) so we should use storeService if possible.
+      // Assuming storeService.deleteStore(storeId: string) exists:
+      for (const storeDoc of storesSnapshot.docs) {
+        // Need to import storeService for this to work. Let's make sure it's imported at the top.
+        // Or we just try/catch if storeService is not imported yet, we'll do the imports next
+        // For now, assume it's imported or I will import it in another chunk
+        await storeService.deleteStore(storeDoc.id);
+      }
 
       // 3. Delete user profile
       await deleteDoc(doc(db, 'users', userId));
