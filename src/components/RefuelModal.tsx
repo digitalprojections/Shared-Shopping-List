@@ -31,7 +31,7 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // 'ad', 'gift', or package identifier
-  const [extraRewards, setExtraRewards] = useState(false);
+  const [extraRewards, setExtraRewards] = useState(() => localStorage.getItem('refuel_extra_rewards') === 'true');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'buy' | 'free'>('buy');
@@ -301,7 +301,11 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
                     </div>
                   </div>
                   <button 
-                    onClick={() => setExtraRewards(!extraRewards)}
+                    onClick={() => {
+                      const newValue = !extraRewards;
+                      setExtraRewards(newValue);
+                      localStorage.setItem('refuel_extra_rewards', String(newValue));
+                    }}
                     className={`w-12 h-6 rounded-full transition-colors relative ${extraRewards ? 'bg-amber-500' : 'bg-stone-200'}`}
                   >
                     <motion.div 
@@ -311,7 +315,7 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
                   </button>
                 </div>
                 <p className="text-xs text-stone-600 leading-relaxed font-medium">
-                  {t('fuel.extra_rewards_desc', 'Enable to receive double fuel units (+10 instead of +5) by watching a high-value ad.')}
+                  {t('fuel.extra_rewards_desc', 'Enable to receive double fuel units (+10 instead of +5) by watching a high-value Premium Ad.')}
                 </p>
               </div>
 
@@ -327,7 +331,9 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
                     <PlayCircle className="w-8 h-8" />
                   </div>
                   <div className="text-left">
-                    <h4 className="text-lg font-black text-stone-900 leading-tight">{t('fuel.watch_ad')}</h4>
+                    <h4 className="text-lg font-black text-stone-900 leading-tight">
+                      {extraRewards ? t('fuel.watch_premium_ad', 'Watch Premium Ad') : t('fuel.watch_ad')}
+                    </h4>
                     <p className="text-xs font-bold text-stone-400 mt-0.5">{t('fuel.ad_reward_desc')}</p>
                   </div>
                 </div>

@@ -138,6 +138,7 @@ export default function App() {
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const prevActiveListId = useRef<string | null>(null);
 
   const [showLoyaltyModal, setShowLoyaltyModal] = useState(false);
   const [showMerchantModal, setShowMerchantModal] = useState(false);
@@ -347,8 +348,8 @@ export default function App() {
               // In a real app, you might want to auto-select or highlight the specific order
             }
           });
-        } catch (e) {
-          console.error("Error setting up Native notifications:", e);
+        } catch (e: any) {
+          console.error("Error setting up Native notifications:", JSON.stringify(e));
         }
       }
       // 2. WEB / PWA PLATFORM FLOW (Browser)
@@ -618,6 +619,37 @@ export default function App() {
       };
     }
   }, [user]);
+
+  // --- Automatic Interstitial Rewarded Ads (Premium) ---
+  useEffect(() => {
+    // Check if navigation occurred between Dashboard (null) and a List (id)
+    const isNavigating = (prevActiveListId.current === null && activeListId !== null) || 
+                        (prevActiveListId.current !== null && activeListId === null);
+    
+    if (isNavigating && Capacitor.isNativePlatform()) {
+      const isExtraRewardsEnabled = localStorage.getItem('refuel_extra_rewards') === 'true';
+      
+      if (isExtraRewardsEnabled) {
+        const now = Date.now();
+        const lastAdTime = parseInt(localStorage.getItem('last_premium_ad_at') || '0');
+        const cooldownMs = 5 * 60 * 1000; // 5 minutes
+
+        if (now - lastAdTime >= cooldownMs) {
+          console.log("[PremiumAd] Triggering automatic interstitial navigation ad");
+          localStorage.setItem('last_premium_ad_at', now.toString());
+          adService.showRewardedAd(true).catch(err => {
+            console.error("[PremiumAd] Failed to show navigation ad:", err);
+          });
+        } else {
+          const remainingSecs = Math.ceil((cooldownMs - (now - lastAdTime)) / 1000);
+          console.log(`[PremiumAd] Cooldown active. Next ad available in ${remainingSecs}s`);
+        }
+      }
+    }
+    
+    // Update ref for next navigation
+    prevActiveListId.current = activeListId;
+  }, [activeListId]);
 
 
   const handleGoogleLogin = async () => {

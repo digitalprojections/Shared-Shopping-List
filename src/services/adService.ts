@@ -1,4 +1,4 @@
-import { AdMob, AdMobRewardItem, RewardAdOptions, RewardAdPluginEvents } from '@capacitor-community/admob';
+import { AdMob, AdMobRewardItem, RewardAdOptions, RewardAdPluginEvents, RewardInterstitialAdPluginEvents, AdMobRewardInterstitialItem, RewardInterstitialAdOptions } from '@capacitor-community/admob';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
 import { APP_CONFIG, isDev, isProduction } from '../config';
@@ -20,23 +20,34 @@ export const adService = {
 
   showRewardedAd: async (isPremium: boolean = false): Promise<{ success: boolean; error?: string }> => {
     try {
-      const options: RewardAdOptions = {
-        adId: isPremium ? INTERSTITIAL_REWARDED_ID : REWARDED_AD_ID,
+      const adId = isPremium ? INTERSTITIAL_REWARDED_ID : REWARDED_AD_ID;
+      console.log(`AdMob: Showing ${isPremium ? 'Premium (Interstitial Rewarded)' : 'Standard (Rewarded)'} Ad. Unit ID: ${adId}`);
+      
+      const options: RewardAdOptions | RewardInterstitialAdOptions = {
+        adId: adId,
       };
 
-      await AdMob.prepareRewardVideoAd(options);
+      if (isPremium) {
+        await AdMob.prepareRewardInterstitialAd(options as RewardInterstitialAdOptions);
+      } else {
+        await AdMob.prepareRewardVideoAd(options as RewardAdOptions);
+      }
       
       return new Promise(async (resolve) => {
         let rewardReceived = false;
         let rewardAmount = 1;
 
-        const rewardListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, (reward: AdMobRewardItem) => {
+        const rewardedEvent = isPremium ? RewardInterstitialAdPluginEvents.Rewarded : RewardAdPluginEvents.Rewarded;
+        const dismissedEvent = isPremium ? RewardInterstitialAdPluginEvents.Dismissed : RewardAdPluginEvents.Dismissed;
+        const failedEvent = isPremium ? RewardInterstitialAdPluginEvents.FailedToLoad : RewardAdPluginEvents.FailedToLoad;
+
+        const rewardListener = await AdMob.addListener(rewardedEvent as any, (reward: AdMobRewardItem | AdMobRewardInterstitialItem) => {
           rewardReceived = true;
           rewardAmount = reward.amount || 1;
           console.log('Reward received:', reward);
         });
 
-        const dismissListener = await AdMob.addListener(RewardAdPluginEvents.Dismissed, async () => {
+        const dismissListener = await AdMob.addListener(dismissedEvent as any, async () => {
           rewardListener.remove();
           dismissListener.remove();
           
@@ -53,20 +64,21 @@ export const adService = {
           }
         });
 
-        const failedListener = await AdMob.addListener(RewardAdPluginEvents.FailedToLoad, (err) => {
+        const failedListener = await AdMob.addListener(failedEvent as any, (err) => {
           rewardListener.remove();
           dismissListener.remove();
           failedListener.remove();
           resolve({ success: false, error: 'Failed to load ad' });
         });
 
-        AdMob.showRewardVideoAd()
-          .catch(err => {
-            rewardListener.remove();
-            dismissListener.remove();
-            failedListener.remove();
-            resolve({ success: false, error: 'Failed to show ad' });
-          });
+        const showMethod = isPremium ? AdMob.showRewardInterstitialAd() : AdMob.showRewardVideoAd();
+        
+        showMethod.catch(err => {
+          rewardListener.remove();
+          dismissListener.remove();
+          failedListener.remove();
+          resolve({ success: false, error: 'Failed to show ad' });
+        });
       });
     } catch (error: any) {
       console.error('Error showing rewarded ad:', error);
