@@ -50,7 +50,7 @@ export interface FuelBatch {
   ea: number; // expiresAt
   ca: number; // createdAt
   t: 'reward' | 'purchase' | 'coupon'; // type
-  
+
   // Legacy
   amount?: number;
   remaining?: number;
@@ -86,7 +86,7 @@ export interface AppUser {
   lastActionAt?: number;
   lastDailyRewardDay?: string;
   lastDailyRewardAt?: number;
-  freeGiftClaimed?: boolean;
+  freeCouponClaimed?: boolean;
 }
 
 export interface Coupon {
