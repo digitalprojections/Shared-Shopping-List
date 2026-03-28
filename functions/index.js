@@ -754,7 +754,7 @@ exports.processOrder = onCall({
           }
 
           // 1. Get batches from subcollection AND legacy array
-          const subSnap = await ownerRef.collection('fuel_batches').where('ea', '>', now).get();
+          const subSnap = await transaction.get(ownerRef.collection('fuel_batches').where('ea', '>', now));
           let fuelBatches = [];
           subSnap.forEach(doc => fuelBatches.push({ ...doc.data(), _path: doc.ref }));
           
@@ -908,6 +908,17 @@ exports.rateStoreSecure = onCall({
       const isNewRating = !existingRatingDoc.exists;
       const oldRating = existingRatingDoc.exists ? existingRatingDoc.data().rating : 0;
 
+      // 5. Implicit Fuel Consumption Check (1 unit)
+      const fuelLevel = userData.fl || userData.fuelLevel || userData.coinBalance || 0;
+      if (fuelLevel < 1) {
+        throw new HttpsError('failed-precondition', 'Insufficient fuel to submit rating.');
+      }
+
+      // Get batches from subcollection early (before any writes)
+      const subSnap = await transaction.get(userRef.collection('fuel_batches').where('ea', '>', now));
+      let fuelBatches = [];
+      subSnap.forEach(doc => fuelBatches.push({ ...doc.data(), _path: doc.ref }));
+
       // 3. Update Store Aggregates
       let newCount = storeData.ratingCount || 0;
       let newSum = (storeData.averageRating || 0) * newCount;
@@ -933,17 +944,6 @@ exports.rateStoreSecure = onCall({
         createdAt: now,
         updatedAt: now
       });
-
-      // 5. Implicit Fuel Consumption (1 unit)
-      const fuelLevel = userData.fl || userData.fuelLevel || userData.coinBalance || 0;
-      if (fuelLevel < 1) {
-        throw new HttpsError('failed-precondition', 'Insufficient fuel to submit rating.');
-      }
-
-      // 1. Get batches from subcollection AND legacy array
-      const subSnap = await userRef.collection('fuel_batches').where('ea', '>', now).get();
-      let fuelBatches = [];
-      subSnap.forEach(doc => fuelBatches.push({ ...doc.data(), _path: doc.ref }));
       
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
       if (legacyBatches.length > 0) {
@@ -1054,18 +1054,14 @@ exports.grantDailyFuelReward = onCall({
         t: 'reward' // type
       };
 
+      // Query all valid batches to calculate current level (must be done BEFORE writes)
+      const batchesSnap = await transaction.get(userRef.collection('fuel_batches').where('ea', '>', now));
+      
+      let totalLevel = rewardAmount; // Start with the new one
+
       // 1. Write the new batch to storage subcollection
       const batchRef = userRef.collection('fuel_batches').doc(batchId);
       transaction.set(batchRef, newBatch);
-
-      // 2. Query all valid batches to calculate current level
-      // Note: We can't query in a transaction easily without fetching all docs.
-      // For now, we fetch all non-expired batches.
-      const batchesSnap = await userRef.collection('fuel_batches')
-        .where('ea', '>', now)
-        .get();
-      
-      let totalLevel = rewardAmount; // Start with the new one
       
       // Migrate legacy arrays or raw balance
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
