@@ -112,9 +112,14 @@ export const userService = {
     // Legacy calculation
     const now = Date.now();
     const fuelBatches = user.fuelBatches || user.coinBatches || [];
-    return fuelBatches
-      .filter((b: any) => b.ea ? b.ea > now : b.expiresAt > now)
-      .reduce((sum: number, b: any) => sum + (b.r ?? (b.remaining || 0)), 0);
+    
+    if (fuelBatches.length > 0) {
+      return fuelBatches
+        .filter((b: any) => b.ea ? b.ea > now : b.expiresAt > now)
+        .reduce((sum: number, b: any) => sum + (b.r ?? (b.remaining || 0)), 0);
+    }
+    
+    return user.fuelLevel ?? user.coinBalance ?? 0;
   },
 
   consumeFuel: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {

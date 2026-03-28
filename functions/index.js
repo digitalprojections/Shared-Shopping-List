@@ -34,8 +34,19 @@ exports.consumeFuel = onCall({
       }
 
       // Filter valid fuel batches and sort by creation time (FIFO)
-      let fuelBatches = (userData.fuelBatches || userData.coinBatches || [])
-        .map(b => ({ ...b }));
+      let legacyBatches = userData.fuelBatches || userData.coinBatches || [];
+      const legacyBalance = userData.coinBalance || userData.fuelLevel || 0;
+      if (legacyBatches.length === 0 && legacyBalance > 0) {
+        legacyBatches.push({
+          id: `legacy_balance_${now}`,
+          amount: legacyBalance,
+          remaining: legacyBalance,
+          createdAt: now,
+          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          type: 'legacy_migration'
+        });
+      }
+      let fuelBatches = legacyBatches.map(b => ({ ...b }));
 
       const validBatches = fuelBatches
         .filter(b => b.expiresAt > now && b.remaining > 0)
@@ -132,7 +143,19 @@ exports.grantRewardedFuel = onCall({
         type: 'reward'
       };
 
-      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      let legacyBatches = userData.fuelBatches || userData.coinBatches || [];
+      const legacyBalance = userData.coinBalance || userData.fuelLevel || 0;
+      if (legacyBatches.length === 0 && legacyBalance > 0) {
+        legacyBatches.push({
+          id: `legacy_balance_${now}`,
+          amount: legacyBalance,
+          remaining: legacyBalance,
+          createdAt: now,
+          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          type: 'legacy_migration'
+        });
+      }
+      const updatedBatches = [...legacyBatches, newBatch];
       const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
@@ -208,7 +231,19 @@ exports.redeemFuelCoupon = onCall({
         type: 'coupon'
       };
 
-      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      let legacyBatches = userData.fuelBatches || userData.coinBatches || [];
+      const legacyBalance = userData.coinBalance || userData.fuelLevel || 0;
+      if (legacyBatches.length === 0 && legacyBalance > 0) {
+        legacyBatches.push({
+          id: `legacy_balance_${now}`,
+          amount: legacyBalance,
+          remaining: legacyBalance,
+          createdAt: now,
+          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          type: 'legacy_migration'
+        });
+      }
+      const updatedBatches = [...legacyBatches, newBatch];
       const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
@@ -278,7 +313,19 @@ exports.claimFreeFuelGift = onCall({
         type: 'coupon'
       };
 
-      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      let legacyBatches = userData.fuelBatches || userData.coinBatches || [];
+      const legacyBalance = userData.coinBalance || userData.fuelLevel || 0;
+      if (legacyBatches.length === 0 && legacyBalance > 0) {
+        legacyBatches.push({
+          id: `legacy_balance_${now}`,
+          amount: legacyBalance,
+          remaining: legacyBalance,
+          createdAt: now,
+          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          type: 'legacy_migration'
+        });
+      }
+      const updatedBatches = [...legacyBatches, newBatch];
       const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
@@ -378,7 +425,19 @@ exports.grantPurchaseFuel = onCall({
         productId: productId
       };
 
-      const updatedBatches = [...(userData.fuelBatches || userData.coinBatches || []), newBatch];
+      let legacyBatches = userData.fuelBatches || userData.coinBatches || [];
+      const legacyBalance = userData.coinBalance || userData.fuelLevel || 0;
+      if (legacyBatches.length === 0 && legacyBalance > 0) {
+        legacyBatches.push({
+          id: `legacy_balance_${now}`,
+          amount: legacyBalance,
+          remaining: legacyBalance,
+          createdAt: now,
+          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          type: 'legacy_migration'
+        });
+      }
+      const updatedBatches = [...legacyBatches, newBatch];
       const totalLevel = updatedBatches
         .filter(b => b.expiresAt > now)
         .reduce((sum, b) => sum + b.remaining, 0);
@@ -713,6 +772,17 @@ exports.processOrder = onCall({
                 t: b.type
               });
             });
+          } else {
+            const legacyBalance = ownerData.coinBalance || ownerData.fuelLevel || 0;
+            if (legacyBalance > 0) {
+              const mId = `legacy_balance_${now}`;
+              fuelBatches.push({
+                id: mId,
+                a: legacyBalance, r: legacyBalance,
+                ca: now, ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+                t: 'legacy_migration'
+              });
+            }
           }
 
           const validBatches = fuelBatches
@@ -887,6 +957,17 @@ exports.rateStoreSecure = onCall({
             t: b.type
           });
         });
+      } else {
+        const legacyBalance = userData.coinBalance || userData.fuelLevel || 0;
+        if (legacyBalance > 0) {
+          const mId = `legacy_balance_${now}`;
+          fuelBatches.push({
+            id: mId,
+            a: legacyBalance, r: legacyBalance,
+            ca: now, ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+            t: 'legacy_migration'
+          });
+        }
       }
 
       const validBatches = fuelBatches
@@ -985,6 +1066,31 @@ exports.grantDailyFuelReward = onCall({
         .get();
       
       let totalLevel = rewardAmount; // Start with the new one
+      
+      // Migrate legacy arrays or raw balance
+      const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
+      const legacyBalance = userData.coinBalance || userData.fuelLevel || 0;
+      
+      if (legacyBatches.length > 0) {
+        legacyBatches.forEach(b => {
+          const ea = b.expiresAt || b.ea;
+          const r = b.remaining || b.r || 0;
+          if (ea && ea > now && r > 0) {
+            totalLevel += r;
+            const mId = b.id || `migrated_${now}_${Math.random().toString(36).substr(2, 5)}`;
+            transaction.set(userRef.collection('fuel_batches').doc(mId), {
+               id: mId, a: b.amount || b.a, r: r, ca: b.createdAt || b.ca || now, ea: ea, t: b.type || b.t || 'migrated'
+            });
+          }
+        });
+      } else if (legacyBalance > 0) {
+        totalLevel += legacyBalance;
+        const mId = `legacy_balance_${now}`;
+        transaction.set(userRef.collection('fuel_batches').doc(mId), {
+           id: mId, a: legacyBalance, r: legacyBalance, ca: now, ea: now + (100 * 365 * 24 * 60 * 60 * 1000), t: 'legacy_migration'
+        });
+      }
+
       batchesSnap.forEach(doc => {
         const b = doc.data();
         if (b.id !== batchId) {

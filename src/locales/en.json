@@ -62,7 +62,7 @@
     "units": "Units",
     "units_short": "U",
     "refuel_title": "Fuel Station",
-    "refuel_subtitle": "Keep your tank full to sync",
+    "refuel_subtitle": "Refuel your tank early",
     "tab_buy": "Buy",
     "tab_redeem": "Redeem",
     "tab_free": "Free Fuel",
@@ -79,7 +79,7 @@
   },
   "reward": {
     "daily_prize_title": "Daily Prize!",
-    "daily_prize_desc": "Your daily fuel boost is ready. Keep moving!",
+    "daily_prize_desc": "Your daily fuel boost is ready. It will get a job done!",
     "fuel_reward": "FUEL REWARD",
     "claim_now": "Claim Now",
     "claimed_title": "Fuel Boosted!",
