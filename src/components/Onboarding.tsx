@@ -4,7 +4,6 @@ import {
   Users, 
   Fuel, 
   Layout, 
-  ShoppingBag, 
   ArrowRight, 
   CheckCircle2,
   Sparkles,
@@ -13,6 +12,10 @@ import {
   Store,
   Utensils
 } from 'lucide-react';
+import { userService } from '../services/userService';
+import { cn } from '../lib/utils';
+import { useTranslation } from 'react-i18next';
+import { STORE_CATEGORIES } from '../constants/categories';
 
 interface OnboardingProps {
   userId: string;
@@ -21,14 +24,7 @@ interface OnboardingProps {
   currentPreferences?: string[];
 }
 
-import { userService } from '../services/userService';
-import { cn } from '../lib/utils';
-import { useTranslation } from 'react-i18next';
-
-import { STORE_CATEGORIES } from '../constants/categories';
-
-
-const MIN_REQUIRED_INTERESTS = 3;
+const MIN_REQUIRED_INTERESTS = 1;
 
 const slides = [
   {
@@ -126,11 +122,11 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
     <div className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-between overflow-hidden">
       <div className={`absolute inset-0 bg-gradient-to-b ${slides[currentSlide].color} transition-colors duration-700 opacity-50`} />
       
-      {/* Top Section - Spacing (Skip removed as per request) */}
-      <div className="w-full p-6 flex justify-end relative z-10 min-h-[5rem]" />
+      {/* Top Section */}
+      <div className="w-full p-4 flex justify-end relative z-10 min-h-[4rem]" />
 
       {/* Slide Content */}
-      <div className="flex-1 w-full max-w-lg flex items-center justify-center p-8 relative z-10">
+      <div className="flex-1 w-full max-w-lg flex flex-col items-center justify-center px-6 relative z-10 overflow-hidden">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
@@ -138,35 +134,38 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -50, opacity: 0 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="flex flex-col items-center text-center space-y-8"
+            className="w-full flex flex-col items-center text-center space-y-4 max-h-full"
           >
-            <div className={`p-8 rounded-3xl bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 mb-4`}>
+            <div className={`p-6 rounded-3xl bg-white shadow-xl shadow-black/5 ring-1 ring-black/5 mb-2 shrink-0`}>
               {slides[currentSlide].icon}
             </div>
             
-            <div className="space-y-4">
-              <h2 className="text-3xl font-bold text-gray-900 tracking-tight">
+            <div className="w-full space-y-3 flex flex-col overflow-hidden">
+              <h2 className="text-2xl font-bold text-gray-900 tracking-tight shrink-0">
                 {t(slides[currentSlide].title)}
               </h2>
+              
               { isSelectionSlide ? (
-                <div className="grid grid-cols-2 gap-2 pt-4 px-2">
-                  {STORE_CATEGORIES.map(cat => (
-                    <button
-                      key={cat.key}
-                      onClick={() => toggleInterest(cat.key)}
-                      className={cn(
-                        "px-4 py-3 rounded-xl text-sm font-bold transition-all border-2",
-                        selectedInterests.includes(cat.key)
-                          ? "bg-amber-500 border-amber-500 text-white shadow-md scale-105"
-                          : "bg-white border-stone-100 text-stone-600 hover:border-amber-200"
-                      )}
-                    >
-                      {t(`merchant.categories.${cat.key}`)}
-                    </button>
-                  ))}
+                <div className="flex-1 overflow-y-auto px-2 py-2 -mx-2 custom-scrollbar max-h-[40vh] md:max-h-[50vh]">
+                  <div className="grid grid-cols-2 gap-2">
+                    {STORE_CATEGORIES.map(cat => (
+                      <button
+                        key={cat.key}
+                        onClick={() => toggleInterest(cat.key)}
+                        className={cn(
+                          "px-4 py-3 rounded-xl text-sm font-bold transition-all border-2",
+                          selectedInterests.includes(cat.key)
+                            ? "bg-amber-500 border-amber-500 text-white shadow-md scale-105"
+                            : "bg-white border-stone-100 text-stone-600 hover:border-amber-200"
+                        )}
+                      >
+                        {t(`merchant.categories.${cat.key}`)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
-                <p className="text-lg text-gray-600 leading-relaxed px-4">
+                <p className="text-base text-gray-600 leading-relaxed px-4 overflow-y-auto">
                   {t(slides[currentSlide].description)}
                 </p>
               )}
@@ -175,15 +174,15 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
         </AnimatePresence>
       </div>
 
-      {/* Bottom Section - Navigation */}
-      <div className="w-full p-8 pb-12 flex flex-col items-center space-y-8 relative z-10">
+      {/* Bottom Section */}
+      <div className="w-full p-6 pb-8 flex flex-col items-center space-y-6 relative z-10 bg-white/80 backdrop-blur-sm border-t border-stone-100/50">
         {/* Progress Dots */}
         <div className="flex space-x-2">
           {slides.map((_, i) => (
             <div 
               key={i}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                i === currentSlide ? `w-8 ${slides[currentSlide].accent}` : 'w-2 bg-gray-200'
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                i === currentSlide ? `w-6 ${slides[currentSlide].accent}` : 'w-1.5 bg-gray-200'
               }`}
             />
           ))}
@@ -194,7 +193,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ userId, onFinish, initia
           onClick={next}
           disabled={!canProceed}
           className={cn(
-            "w-full max-w-xs py-4 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95",
+            "w-full max-w-xs py-3.5 rounded-2xl font-bold text-white shadow-lg flex items-center justify-center space-x-2 transition-all active:scale-95",
             slides[currentSlide].accent,
             !canProceed && "opacity-50 cursor-not-allowed"
           )}

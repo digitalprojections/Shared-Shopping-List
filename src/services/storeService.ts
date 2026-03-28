@@ -95,10 +95,31 @@ export const storeService = {
       if (!consumption.success) throw new Error(consumption.error || 'Insufficient fuel');
 
       const storeRef = doc(db, 'stores', storeId);
-      await updateDoc(storeRef, cleanObject({
+      
+      // Use setDoc with merge: true to effectively "upsert" - creating if missing, merging if existing
+      await setDoc(storeRef, cleanObject({
         ...data,
         updatedAt: Date.now()
-      }));
+      }), { merge: true });
+    }
+  },
+
+  restoreStore: async (storeId: string, ownerId: string, name: string = "Restored Store") => {
+    if (!isFirebaseConfigured) return;
+    const storeRef = doc(db, 'stores', storeId);
+    try {
+      await setDoc(storeRef, {
+        ownerId,
+        name,
+        status: 'active',
+        isVerified: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        followersCount: 0
+      }, { merge: true });
+      console.log("[StoreService] Store successfully restored:", storeId);
+    } catch (error) {
+      console.error("[StoreService] Failed to restore store:", error);
     }
   },
 
@@ -352,6 +373,9 @@ export const storeService = {
   rejectStore: async (storeId: string) => {
     if (!isFirebaseConfigured) return;
     const storeRef = doc(db, 'stores', storeId);
+    const storeSnap = await getDoc(storeRef);
+    if (!storeSnap.exists()) return; // Already deleted or doesn't exist
+
     await updateDoc(storeRef, { 
       status: 'rejected',
       updatedAt: Date.now()
