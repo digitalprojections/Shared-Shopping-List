@@ -16,13 +16,13 @@ interface RedeemModalProps {
 function FreeGiftCard({ appUser }: { appUser: AppUser | null }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [claimed, setClaimed] = useState(appUser?.freeGiftClaimed || false);
+  const [claimed, setClaimed] = useState(appUser?.freeCouponClaimed || false);
 
   useEffect(() => {
-    if (appUser?.freeGiftClaimed) {
+    if (appUser?.freeCouponClaimed) {
       setClaimed(true);
     }
-  }, [appUser?.freeGiftClaimed]);
+  }, [appUser?.freeCouponClaimed]);
 
   const handleClaim = async () => {
     if (loading || claimed) return;
@@ -253,7 +253,7 @@ export function RedeemModal({ userId, onClose, appUser }: RedeemModalProps) {
           {t('redeem_modal.info')}
         </p>
 
-        {appUser && !appUser.freeGiftClaimed && (
+        {appUser && !appUser.freeCouponClaimed && (
           <div className="pt-4 border-t border-stone-100">
             <FreeGiftCard appUser={appUser} />
           </div>
