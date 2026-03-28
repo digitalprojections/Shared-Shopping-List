@@ -73,7 +73,7 @@ export const userService = {
         const now = Date.now();
         
         // Map short keys to long names for UI consumption (transitional)
-        const fuelLevel = data.fl ?? data.fuelLevel ?? (data.coinBalance || 0);
+        const fuelLevel = data.fuelLevel ?? data.fl ?? (data.coinBalance || 0);
         const lastActionAt = data.laa ?? data.lastActionAt ?? now;
         const lastDailyRewardDay = data.ldrd ?? data.lastDailyRewardDay ?? '';
         const lastDailyRewardAt = data.ldra ?? data.lastDailyRewardAt ?? 0;

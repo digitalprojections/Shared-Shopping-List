@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, 
-  Plus, 
-  Trash2, 
-  CreditCard, 
-  ChevronRight, 
+import {
+  X,
+  Plus,
+  Trash2,
+  CreditCard,
+  ChevronRight,
   Scan,
   Store,
   Palette,
@@ -41,12 +41,12 @@ interface LoyaltyCardsModalProps {
 import bwipjs from 'bwip-js';
 
 const CARD_COLORS = [
-  'bg-emerald-500', 
-  'bg-rose-500', 
-  'bg-amber-500', 
-  'bg-sky-500', 
-  'bg-indigo-500', 
-  'bg-violet-500', 
+  'bg-emerald-500',
+  'bg-rose-500',
+  'bg-amber-500',
+  'bg-sky-500',
+  'bg-indigo-500',
+  'bg-violet-500',
   'bg-fuchsia-500',
   'bg-stone-800',
 ];
@@ -160,8 +160,8 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
       });
 
       if (barcodes.length > 0) {
-        setNewCard(prev => ({ 
-          ...prev, 
+        setNewCard(prev => ({
+          ...prev,
           cardNumber: barcodes[0].displayValue,
           barcodeType: barcodes[0].format || 'CODE_128'
         }));
@@ -189,7 +189,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
         const { textDetections } = await Ocr.detectText({
           filename: photo.path,
         });
-        
+
         const combinedText = textDetections.map(d => d.text).join(' ');
         const numberMatch = combinedText.match(/\d{5,20}/);
         if (numberMatch) {
@@ -279,10 +279,10 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
   const handleDeleteCard = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (!id) return;
-    
+
     if (window.confirm(t('loyalty.remove_confirm'))) {
       try {
-    await loyaltyService.deleteCard(userId, id);
+        await loyaltyService.deleteCard(userId, id);
         if (initialCard) {
           onClose();
         } else {
@@ -334,7 +334,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                 exit={{ opacity: 0, scale: 0.95 }}
                 className="space-y-8 py-4"
               >
-                <button 
+                <button
                   onClick={() => {
                     if (isEditing) {
                       setIsEditing(false);
@@ -357,7 +357,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                         required
                         placeholder={t('loyalty.provider_placeholder')}
                         value={newCard.provider}
-                        onChange={e => setNewCard({...newCard, provider: e.target.value})}
+                        onChange={e => setNewCard({ ...newCard, provider: e.target.value })}
                         className="w-full px-6 py-4 bg-white border-2 border-stone-100 rounded-2xl font-bold focus:border-emerald-500 outline-none transition-all"
                       />
                     </div>
@@ -370,7 +370,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                           required
                           placeholder={t('loyalty.card_number_placeholder')}
                           value={newCard.cardNumber}
-                          onChange={e => setNewCard({...newCard, cardNumber: e.target.value})}
+                          onChange={e => setNewCard({ ...newCard, cardNumber: e.target.value })}
                           className="flex-1 px-6 py-4 bg-white border-2 border-stone-100 rounded-2xl font-bold focus:border-emerald-500 outline-none transition-all"
                         />
                         <button
@@ -390,7 +390,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                           <button
                             key={c}
                             type="button"
-                            onClick={() => setNewCard({...newCard, color: c})}
+                            onClick={() => setNewCard({ ...newCard, color: c })}
                             className={cn(
                               "w-10 h-10 rounded-xl transition-all border-4",
                               c,
@@ -408,7 +408,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                           <button
                             key={iconId}
                             type="button"
-                            onClick={() => setNewCard({...newCard, icon: iconId})}
+                            onClick={() => setNewCard({ ...newCard, icon: iconId })}
                             className={cn(
                               "w-10 h-10 rounded-xl transition-all border-2 flex items-center justify-center",
                               newCard.icon === iconId ? "bg-stone-900 border-stone-900 text-white shadow-lg scale-110" : "bg-white border-stone-100 text-stone-400 hover:bg-stone-50"
@@ -452,40 +452,40 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                             <IconComponent iconId={activeCard.icon} className="w-8 h-8" />
                           </div>
                         </div>
-                        
+
                         <div className="mt-8">
-                           <button onClick={() => setShowZoomedBarcode(true)} className="w-full text-left bg-white/5 hover:bg-white/10 transition-colors rounded-2xl cursor-zoom-in" title={t('loyalty.tap_to_enlarge')}>
-                             <BwipBarcode value={activeCard.cardNumber} format={activeCard.barcodeType} />
-                           </button>
+                          <button onClick={() => setShowZoomedBarcode(true)} className="w-full text-left bg-white/5 hover:bg-white/10 transition-colors rounded-2xl cursor-zoom-in" title={t('loyalty.tap_to_enlarge')}>
+                            <BwipBarcode value={activeCard.cardNumber} format={activeCard.barcodeType} />
+                          </button>
                         </div>
                       </div>
                       <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
                     </div>
 
                     <div className="bg-white rounded-[2rem] p-6 border border-stone-100 shadow-sm space-y-4">
-                       <div className="flex items-center gap-4 text-stone-600">
-                          <Scan className="w-5 h-5" />
-                          <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">{t('loyalty.card_number')}</p>
-                            <p className="font-mono font-bold">{activeCard.cardNumber}</p>
-                          </div>
-                       </div>
-                       <div className="flex gap-2">
-                         <button
+                      <div className="flex items-center gap-4 text-stone-600">
+                        <Scan className="w-5 h-5" />
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">{t('loyalty.card_number')}</p>
+                          <p className="font-mono font-bold">{activeCard.cardNumber}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
                           onClick={startEdit}
                           className="flex-1 py-4 rounded-2xl bg-stone-50 text-stone-600 font-bold text-sm hover:bg-stone-100 transition-colors flex items-center justify-center gap-2"
-                         >
-                           <Edit2 className="w-4 h-4" />
-                           {t('loyalty.edit_card')}
-                         </button>
-                         <button 
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          {t('loyalty.edit_card')}
+                        </button>
+                        <button
                           onClick={(e) => handleDeleteCard(e, activeCard.id)}
                           className="flex-1 py-4 rounded-2xl bg-rose-50 text-rose-600 font-bold text-sm hover:bg-rose-100 transition-colors flex items-center justify-center gap-2"
-                         >
-                           <Trash2 className="w-4 h-4" />
-                           {t('loyalty.remove_card')}
-                         </button>
-                       </div>
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          {t('loyalty.remove_card')}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
@@ -506,7 +506,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                     required
                     placeholder={t('loyalty.provider_placeholder')}
                     value={newCard.provider}
-                    onChange={e => setNewCard({...newCard, provider: e.target.value})}
+                    onChange={e => setNewCard({ ...newCard, provider: e.target.value })}
                     className="w-full px-6 py-4 bg-white border-2 border-stone-100 rounded-2xl font-bold focus:border-emerald-500 outline-none transition-all"
                   />
                 </div>
@@ -519,7 +519,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                       required
                       placeholder={t('loyalty.card_number_placeholder')}
                       value={newCard.cardNumber}
-                      onChange={e => setNewCard({...newCard, cardNumber: e.target.value})}
+                      onChange={e => setNewCard({ ...newCard, cardNumber: e.target.value })}
                       className="flex-1 px-6 py-4 bg-white border-2 border-stone-100 rounded-2xl font-bold focus:border-emerald-500 outline-none transition-all"
                     />
                     <button
@@ -549,7 +549,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                       <button
                         key={c}
                         type="button"
-                        onClick={() => setNewCard({...newCard, color: c})}
+                        onClick={() => setNewCard({ ...newCard, color: c })}
                         className={cn(
                           "w-10 h-10 rounded-xl transition-all border-4",
                           c,
@@ -567,7 +567,7 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                       <button
                         key={iconId}
                         type="button"
-                        onClick={() => setNewCard({...newCard, icon: iconId})}
+                        onClick={() => setNewCard({ ...newCard, icon: iconId })}
                         className={cn(
                           "w-10 h-10 rounded-xl transition-all border-2 flex items-center justify-center",
                           newCard.icon === iconId ? "bg-stone-900 border-stone-900 text-white shadow-lg scale-110" : "bg-white border-stone-100 text-stone-400 hover:bg-stone-50"
@@ -603,14 +603,14 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
                 className="space-y-4 py-4"
               >
                 <div className="flex items-center justify-between mb-2 px-2">
-                   <h3 className="text-xs font-black text-stone-400 uppercase tracking-[0.2em]">{t('loyalty.saved_cards')}</h3>
-                   <button 
+                  <h3 className="text-xs font-black text-stone-400 uppercase tracking-[0.2em]">{t('loyalty.saved_cards')}</h3>
+                  <button
                     onClick={() => setShowAddForm(true)}
                     className="flex items-center gap-1.5 text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg"
-                   >
-                     <Plus className="w-3.5 h-3.5" />
-                     {t('loyalty.add_new')}
-                   </button>
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    {t('loyalty.add_new')}
+                  </button>
                 </div>
 
                 {loading ? (
@@ -678,11 +678,11 @@ export const LoyaltyCardsModal: React.FC<LoyaltyCardsModalProps> = ({ userId, in
             </button>
             <div className="flex items-center justify-center overflow-hidden" style={{ transform: 'rotate(90deg)', width: '100vh', height: '100vw' }}>
               <div className="w-[80vh] max-w-4xl bg-white p-12 rounded-[3rem] shadow-2xl border border-stone-100 flex items-center justify-center">
-                <BwipBarcode 
-                  value={activeCard.cardNumber} 
-                  format={activeCard.barcodeType} 
-                  scale={5} 
-                  height={30} 
+                <BwipBarcode
+                  value={activeCard.cardNumber}
+                  format={activeCard.barcodeType}
+                  scale={5}
+                  height={30}
                 />
               </div>
             </div>

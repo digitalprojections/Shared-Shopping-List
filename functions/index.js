@@ -948,17 +948,7 @@ exports.rateStoreSecure = onCall({
         throw new HttpsError('resource-exhausted', 'Fraud prevention: You can only rate one store per day.');
       }
 
-      // 2. Verify Completed Order for this Store
-      const ordersSnap = await db.collection('orders')
-        .where('customerId', '==', uid)
-        .where('storeId', '==', storeId)
-        .where('status', '==', 'completed')
-        .limit(1)
-        .get();
-
-      if (ordersSnap.empty) {
-        throw new HttpsError('failed-precondition', 'You must have at least one completed order from this store to leave a rating.');
-      }
+      // 2. (Relaxed) Any authenticated user may rate a store
 
       const existingRatingDoc = await transaction.get(ratingRef);
       const isNewRating = !existingRatingDoc.exists;
@@ -970,6 +960,7 @@ exports.rateStoreSecure = onCall({
         throw new HttpsError('failed-precondition', 'Insufficient fuel to submit rating.');
       }
 
+      let fuelBatches = [];
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
       const legacyBalance = Number(userData.fuelLevel || userData.coinBalance || userData.fl || 0);
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, 
-  MapPin, 
-  ShoppingBag, 
-  Star, 
+import {
+  X,
+  MapPin,
+  ShoppingBag,
+  Star,
   ArrowLeft,
   ChevronRight,
   ChevronDown,
@@ -45,10 +45,10 @@ interface StorePageProps {
   followedStoreIds: string[];
 }
 
-export const StorePage: React.FC<StorePageProps> = ({ 
-  storeId, 
-  onClose, 
-  onAddProductToList, 
+export const StorePage: React.FC<StorePageProps> = ({
+  storeId,
+  onClose,
+  onAddProductToList,
   activeListId,
   currentUser,
   appUser,
@@ -69,7 +69,8 @@ export const StorePage: React.FC<StorePageProps> = ({
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [userOrders, setUserOrders] = useState<Order[]>([]);
-  
+
+
   // auth user is now passed via props
 
   useEffect(() => {
@@ -236,26 +237,26 @@ export const StorePage: React.FC<StorePageProps> = ({
   };
 
   const handleAdd = (product: StoreProduct) => {
-    if (store?.directOrderEnabled) {
-      handleOrderAdd(product);
-      return;
-    }
-    if (onAddProductToList) {
+    // Always add to the order cart so the checkout flow is available
+    handleAddToCart(product, 1);
+
+    // For non-direct-order stores, also sync to the shared shopping list
+    if (!store?.directOrderEnabled && onAddProductToList) {
       onAddProductToList(product, store?.name);
       setAddedItemIds(prev => new Set(prev).add(product.id));
-      setTimeout(() => {
-        setAddedItemIds(prev => {
-          const next = new Set(prev);
-          next.delete(product.id);
-          return next;
-        });
-      }, 2000);
+
+      setAddedItemIds(prev => {
+        const next = new Set(prev);
+        next.delete(product.id);
+        return next;
+      });
     }
   };
 
+
   const renderProductCard = (product: StoreProduct) => {
     const isAdded = addedItemIds.has(product.id) || existingProductIds.has(product.id);
-    
+
     return (
       <motion.div
         key={product.id}
@@ -269,7 +270,7 @@ export const StorePage: React.FC<StorePageProps> = ({
         )}
       >
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/0 to-indigo-500/0 group-hover:from-indigo-500/[0.03] group-hover:to-transparent transition-all duration-700" />
-        
+
         <div className={cn(
           "relative rounded-[1.5rem] flex items-center justify-center transition-all bg-white shadow-sm overflow-hidden",
           viewMode === 'grid' ? "w-full aspect-square" : "w-16 h-16 sm:w-20 sm:h-20 shrink-0"
@@ -286,7 +287,7 @@ export const StorePage: React.FC<StorePageProps> = ({
           {existingProductIds.has(product.id) && (
             <div className="absolute inset-0 bg-emerald-500/10 backdrop-blur-[1px] flex items-center justify-center z-10 group-hover:backdrop-blur-none transition-all">
               <div className="bg-emerald-500 text-white p-2 rounded-full shadow-lg shadow-emerald-500/20 translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                 <Check className="w-4 h-4 stroke-[4px]" />
+                <Check className="w-4 h-4 stroke-[4px]" />
               </div>
             </div>
           )}
@@ -308,7 +309,7 @@ export const StorePage: React.FC<StorePageProps> = ({
               )}
             </div>
           </div>
-          
+
           <div className={cn(
             "flex items-center justify-between pt-2 border-t border-stone-100 mt-2",
             viewMode === 'list' && "pt-0 border-t-0 mt-0"
@@ -319,7 +320,7 @@ export const StorePage: React.FC<StorePageProps> = ({
                 {product.price.toFixed(2)}
               </span>
             </div>
-            
+
             <button
               disabled={!product.inStock || addedItemIds.has(product.id) || existingProductIds.has(product.id) || isOwner}
               onClick={(e) => { e.stopPropagation(); handleAdd(product); }}
@@ -328,13 +329,13 @@ export const StorePage: React.FC<StorePageProps> = ({
                 existingProductIds.has(product.id)
                   ? "bg-emerald-100 text-emerald-600 shadow-sm"
                   : addedItemIds.has(product.id)
-                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200"
-                  : product.inStock
-                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700"
-                  : "bg-stone-100 text-stone-400 cursor-not-allowed"
+                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-200"
+                    : product.inStock
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700"
+                      : "bg-stone-100 text-stone-400 cursor-not-allowed"
               )}
             >
-              { (addedItemIds.has(product.id) || existingProductIds.has(product.id)) ? (
+              {(addedItemIds.has(product.id) || existingProductIds.has(product.id)) ? (
                 <Check className="w-4 h-4 stroke-[3px]" />
               ) : (
                 <Plus className="w-5 h-5 group-hover/btn:scale-125 transition-transform" />
@@ -359,7 +360,7 @@ export const StorePage: React.FC<StorePageProps> = ({
 
   const renderProductDetail = () => {
     if (!selectedProduct) return null;
-    
+
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -386,23 +387,23 @@ export const StorePage: React.FC<StorePageProps> = ({
               </div>
             )}
             <button
-               onClick={() => setSelectedProduct(null)}
-               className="absolute top-6 right-6 p-3 bg-black/20 backdrop-blur-md rounded-2xl text-white hover:bg-black/30 transition-all active:scale-90 shadow-xl z-20"
+              onClick={() => setSelectedProduct(null)}
+              className="absolute top-6 right-6 p-3 bg-black/20 backdrop-blur-md rounded-2xl text-white hover:bg-black/30 transition-all active:scale-90 shadow-xl z-20"
             >
               <X className="w-6 h-6" />
             </button>
-            
+
             {/* Badges */}
             <div className="absolute bottom-6 left-6 flex gap-2 z-20">
-               <span className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-stone-900 shadow-xl">
-                 {t(`merchant.categories.${selectedProduct.category?.toLowerCase() || 'grocery'}`)}
-               </span>
-               {!selectedProduct.inStock && (
-                 <span className="px-4 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
-                   {t('store_front.out_of_stock')}
-                 </span>
-               )}
-               {/* Likes removed as per user request */}
+              <span className="px-4 py-2 bg-white/90 backdrop-blur-md rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-stone-900 shadow-xl">
+                {t(`merchant.categories.${selectedProduct.category?.toLowerCase() || 'grocery'}`)}
+              </span>
+              {!selectedProduct.inStock && (
+                <span className="px-4 py-2 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl">
+                  {t('store_front.out_of_stock')}
+                </span>
+              )}
+              {/* Likes removed as per user request */}
             </div>
           </div>
 
@@ -411,14 +412,14 @@ export const StorePage: React.FC<StorePageProps> = ({
               <h2 className="text-lg sm:text-3xl font-black text-stone-900 leading-tight">{selectedProduct.name}</h2>
               <div className="flex items-center gap-3">
                 <span className="text-xl sm:text-3xl font-black text-indigo-600">
-                   <span className="text-[10px] sm:text-sm mr-1 font-bold">{selectedProduct.currency || t('common.currency_symbol')}</span>
-                   {selectedProduct.price.toFixed(2)}
+                  <span className="text-[10px] sm:text-sm mr-1 font-bold">{selectedProduct.currency || t('common.currency_symbol')}</span>
+                  {selectedProduct.price.toFixed(2)}
                 </span>
                 {existingProductIds.has(selectedProduct.id) && (
-                   <span className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                     <Check className="w-3 h-3 stroke-[4px]" />
-                     {t('store.in_list', 'In Your List')}
-                   </span>
+                  <span className="px-3 py-1 bg-emerald-100 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5">
+                    <Check className="w-3 h-3 stroke-[4px]" />
+                    {t('store.in_list', 'In Your List')}
+                  </span>
                 )}
               </div>
             </div>
@@ -429,7 +430,7 @@ export const StorePage: React.FC<StorePageProps> = ({
                 {selectedProduct.description || t('store_front.no_description', 'No description available for this product.')}
               </p>
             </div>
-            
+
             {(selectedProduct.saleStart || selectedProduct.saleEnd) && (
               <div className="p-5 sm:p-8 bg-indigo-50/50 rounded-[1.5rem] sm:rounded-[2.5rem] border border-indigo-100 space-y-3 sm:space-y-4">
                 <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em]">{t('store.sale_info', 'Promotion Period')}</h4>
@@ -454,33 +455,44 @@ export const StorePage: React.FC<StorePageProps> = ({
             </div>
           </div>
 
-          <div className="p-4 sm:p-10 border-t border-stone-100 bg-white shrink-0">
-            <button
-              disabled={!selectedProduct.inStock || addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id) || isOwner}
-              onClick={(e) => { e.stopPropagation(); handleAdd(selectedProduct); setSelectedProduct(null); }}
-              className={cn(
-                "w-full py-4 sm:py-6 rounded-xl sm:rounded-3xl font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl",
-                existingProductIds.has(selectedProduct.id)
-                  ? "bg-emerald-100 text-emerald-600 cursor-default"
-                  : addedItemIds.has(selectedProduct.id)
-                  ? "bg-emerald-500 text-white shadow-emerald-200"
-                  : selectedProduct.inStock
-                  ? "bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300"
-                  : "bg-stone-100 text-stone-400 cursor-not-allowed"
-              )}
-            >
-               { (addedItemIds.has(selectedProduct.id) || existingProductIds.has(selectedProduct.id)) ? (
-                <>
-                  <Check className="w-4 h-4 sm:w-7 sm:h-7 stroke-[4px]" />
-                  <span className="text-sm sm:text-xl uppercase tracking-widest">{t('store.item_added', 'Added to List')}</span>
-                </>
-              ) : (
-                <>
-                  <Plus className="w-4 h-4 sm:w-7 sm:h-7 stroke-[4px]" />
-                  <span className="text-sm sm:text-xl uppercase tracking-widest">{t('store.add_to_list', 'Add to Shopping List')}</span>
-                </>
-              )}
-            </button>
+          <div className="p-4 sm:p-10 border-t border-stone-100 bg-white shrink-0 flex flex-col gap-3">
+            {orderItems.has(selectedProduct.id) ? (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedProduct(null);
+                    setShowOrderCheckout(true);
+                  }}
+                  className={"w-full py-4 sm:py-6 rounded-xl sm:rounded-3xl font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700"}
+                >
+                  <ShoppingBag className="w-4 h-4 sm:w-7 sm:h-7 stroke-[3px]" />
+                  <span className="text-sm sm:text-xl uppercase tracking-widest">{t('store.proceed_to_checkout', 'Proceed to Checkout')}</span>
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setSelectedProduct(null); }}
+                  className="w-full py-3 sm:py-4 rounded-xl sm:rounded-2xl font-black flex items-center justify-center gap-2 transition-all active:scale-95 text-stone-500 bg-stone-100 hover:bg-stone-200"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-xs sm:text-sm uppercase tracking-widest">{t('store_front.back_to_store', 'Return to Store')}</span>
+                </button>
+              </>
+            ) : (
+              <button
+                disabled={!selectedProduct.inStock || isOwner}
+                onClick={(e) => { e.stopPropagation(); handleAdd(selectedProduct); }}
+                className={cn(
+                  "w-full py-4 sm:py-6 rounded-xl sm:rounded-3xl font-black flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl",
+                  selectedProduct.inStock && !isOwner
+                    ? "bg-indigo-600 text-white shadow-indigo-200 hover:bg-indigo-700 hover:shadow-indigo-300"
+                    : "bg-stone-100 text-stone-400 cursor-not-allowed"
+                )}
+              >
+                <Plus className="w-4 h-4 sm:w-7 sm:h-7 stroke-[4px]" />
+                <span className="text-sm sm:text-xl uppercase tracking-widest">{t('store.add_to_list', 'Add to Order')}</span>
+              </button>
+            )}
+
           </div>
         </motion.div>
       </motion.div>
@@ -494,197 +506,197 @@ export const StorePage: React.FC<StorePageProps> = ({
       </AnimatePresence>
       <motion.div
         initial={{ x: '100%' }}
-      animate={{ x: 0 }}
-      exit={{ x: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-[150] bg-white flex flex-col overflow-hidden"
-    >
-      {/* Dynamic Header */}
-      <div className="relative h-44 sm:h-64 shrink-0 overflow-hidden">
-        {/* Banner Mockup */}
-        <div className={cn(
-          "absolute inset-0 bg-gradient-to-br transition-all duration-700",
-          store.themeColor === 'Emerald' ? "from-emerald-400 to-teal-600" :
-          store.themeColor === 'Indigo' ? "from-indigo-400 to-purple-600" :
-          store.themeColor === 'Rose' ? "from-rose-400 to-pink-600" :
-          store.themeColor === 'Amber' ? "from-amber-400 to-orange-600" :
-          store.themeColor === 'Stone' ? "from-stone-400 to-stone-600" :
-          // Fallback to category colors
-          store.category === 'Grocery' ? "from-emerald-400 to-teal-600" :
-          store.category === 'Pharmacy' ? "from-rose-400 to-pink-600" :
-          store.category === 'Apparel' ? "from-indigo-400 to-purple-600" :
-          "from-stone-400 to-stone-600"
-        )} />
-        
-        {/* Floating Controls */}
-        <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 flex items-center justify-between z-20">
-          <button
-            onClick={onClose}
-            className="p-2 sm:p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/30 transition-all active:scale-90 shadow-xl"
-          >
-            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-          </button>
-          <div className="flex gap-2">
-          </div>
-        </div>
+        animate={{ x: 0 }}
+        exit={{ x: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="fixed inset-0 z-[150] bg-white flex flex-col overflow-hidden"
+      >
+        {/* Dynamic Header */}
+        <div className="relative h-44 sm:h-64 shrink-0 overflow-hidden">
+          {/* Banner Mockup */}
+          <div className={cn(
+            "absolute inset-0 bg-gradient-to-br transition-all duration-700",
+            store.themeColor === 'Emerald' ? "from-emerald-400 to-teal-600" :
+              store.themeColor === 'Indigo' ? "from-indigo-400 to-purple-600" :
+                store.themeColor === 'Rose' ? "from-rose-400 to-pink-600" :
+                  store.themeColor === 'Amber' ? "from-amber-400 to-orange-600" :
+                    store.themeColor === 'Stone' ? "from-stone-400 to-stone-600" :
+                      // Fallback to category colors
+                      store.category === 'Grocery' ? "from-emerald-400 to-teal-600" :
+                        store.category === 'Pharmacy' ? "from-rose-400 to-pink-600" :
+                          store.category === 'Apparel' ? "from-indigo-400 to-purple-600" :
+                            "from-stone-400 to-stone-600"
+          )} />
 
-        {/* Store Brand Info */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 pt-12 sm:pt-20 bg-gradient-to-t from-white via-white/80 to-transparent">
-          <div className="flex items-end gap-3 sm:gap-6 translate-y-1 sm:translate-y-2">
-            <div className="w-14 h-14 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-3xl shadow-2xl flex items-center justify-center border-4 border-white overflow-hidden shrink-0">
-               <ShoppingBag className={cn(
-                 "w-7 h-7 sm:w-12 sm:h-12",
-                 store.category === 'Grocery' ? "text-emerald-500" :
-                 store.category === 'Pharmacy' ? "text-rose-500" :
-                 "text-stone-300"
-               )} />
+          {/* Floating Controls */}
+          <div className="absolute top-4 sm:top-6 left-4 sm:left-6 right-4 sm:right-6 flex items-center justify-between z-20">
+            <button
+              onClick={onClose}
+              className="p-2 sm:p-3 bg-white/20 backdrop-blur-md rounded-2xl text-white hover:bg-white/30 transition-all active:scale-90 shadow-xl"
+            >
+              <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+            </button>
+            <div className="flex gap-2">
             </div>
-            <div className="flex-1 pb-0.5 sm:pb-2">
-              <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
-                <h1 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">{store.name}</h1>
-                {store.isVerified && (
-                  <div className="bg-emerald-500 rounded-full p-0.5 sm:p-1" title={t('store_front.verified_badge')}>
-                    <Check className="w-2 h-2 sm:w-3 sm:h-3 text-white stroke-[4px]" />
+          </div>
+
+          {/* Store Brand Info */}
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-8 pt-12 sm:pt-20 bg-gradient-to-t from-white via-white/80 to-transparent">
+            <div className="flex items-end gap-3 sm:gap-6 translate-y-1 sm:translate-y-2">
+              <div className="w-14 h-14 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-3xl shadow-2xl flex items-center justify-center border-4 border-white overflow-hidden shrink-0">
+                <ShoppingBag className={cn(
+                  "w-7 h-7 sm:w-12 sm:h-12",
+                  store.category === 'Grocery' ? "text-emerald-500" :
+                    store.category === 'Pharmacy' ? "text-rose-500" :
+                      "text-stone-300"
+                )} />
+              </div>
+              <div className="flex-1 pb-0.5 sm:pb-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
+                  <h1 className="text-xl sm:text-3xl font-black text-stone-900 tracking-tight">{store.name}</h1>
+                  {store.isVerified && (
+                    <div className="bg-emerald-500 rounded-full p-0.5 sm:p-1" title={t('store_front.verified_badge')}>
+                      <Check className="w-2 h-2 sm:w-3 sm:h-3 text-white stroke-[4px]" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 sm:gap-4 text-stone-400 font-bold text-[10px] sm:text-sm">
+                  <div className="flex items-center gap-1">
+                    <Star className="w-3 sm:w-4 h-3 sm:h-4 text-amber-400 fill-amber-400" />
+                    <span className="text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</span>
                   </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 sm:gap-4 text-stone-400 font-bold text-[10px] sm:text-sm">
-                 <div className="flex items-center gap-1">
-                   <Star className="w-3 sm:w-4 h-3 sm:h-4 text-amber-400 fill-amber-400" />
-                   <span className="text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</span>
-                 </div>
-                 <span>•</span>
-                 <div className="flex items-center gap-1 uppercase tracking-widest text-[8px] sm:text-[10px]">
-                   {t(`merchant.categories.${store.category?.toLowerCase() || 'grocery'}`)}
-                 </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className={cn(
-        "flex-1 overflow-y-auto no-scrollbar pb-12",
-        cartCount > 0 && "pb-32"
-      )}>
-        <div className="px-4 sm:px-8 space-y-8">
-          
-          {/* Stats Bar */}
-          <div className="flex items-center justify-between bg-stone-50 rounded-2xl sm:rounded-3xl p-2 sm:p-4 border border-stone-100 shadow-sm">
-            <div className="text-center flex-1 border-r border-stone-200">
-              <p className="text-[8px] sm:text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.followers_label')}</p>
-              <p className="text-xs sm:text-lg font-black text-stone-900">{store.followersCount}</p>
-            </div>
-            <div className="text-center flex-1 border-r border-stone-200">
-              <p className="text-[8px] sm:text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.rating_label')}</p>
-              <div className="flex items-center justify-center gap-0.5">
-                <p className="text-xs sm:text-lg font-black text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</p>
-                <Star className="w-2 sm:w-3.5 h-2 sm:h-3.5 text-amber-400 fill-amber-400" />
-              </div>
-            </div>
-            {isOwner ? (
-              <div className="text-center flex-2 sm:flex-1 pl-2">
-                <div className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center gap-2">
-                   <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" />
-                   {t('store.your_store', 'Your Store')}
+                  <span>•</span>
+                  <div className="flex items-center gap-1 uppercase tracking-widest text-[8px] sm:text-[10px]">
+                    {t(`merchant.categories.${store.category?.toLowerCase() || 'grocery'}`)}
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="text-center flex-2 sm:flex-1 pl-2">
-                 <button 
-                   onClick={handleFollow}
-                   className={cn(
-                     "w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all active:scale-95",
-                     isFollowing ? "bg-stone-200 text-stone-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
-                   )}
-                 >
-                   {isFollowing ? t('store_front.unfollow') : t('store_front.follow')}
-                 </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className={cn(
+          "flex-1 overflow-y-auto no-scrollbar pb-12",
+          cartCount > 0 && "pb-32"
+        )}>
+          <div className="px-4 sm:px-8 space-y-8">
+
+            {/* Stats Bar */}
+            <div className="flex items-center justify-between bg-stone-50 rounded-2xl sm:rounded-3xl p-2 sm:p-4 border border-stone-100 shadow-sm">
+              <div className="text-center flex-1 border-r border-stone-200">
+                <p className="text-[8px] sm:text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.followers_label')}</p>
+                <p className="text-xs sm:text-lg font-black text-stone-900">{store.followersCount}</p>
+              </div>
+              <div className="text-center flex-1 border-r border-stone-200">
+                <p className="text-[8px] sm:text-[10px] font-black text-stone-300 uppercase tracking-widest mb-0.5">{t('store_front.rating_label')}</p>
+                <div className="flex items-center justify-center gap-0.5">
+                  <p className="text-xs sm:text-lg font-black text-stone-900">{store.averageRating?.toFixed(1) || '0.0'}</p>
+                  <Star className="w-2 sm:w-3.5 h-2 sm:h-3.5 text-amber-400 fill-amber-400" />
+                </div>
+              </div>
+              {isOwner ? (
+                <div className="text-center flex-2 sm:flex-1 pl-2">
+                  <div className="w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center gap-2">
+                    <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4" />
+                    {t('store.your_store', 'Your Store')}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center flex-2 sm:flex-1 pl-2">
+                  <button
+                    onClick={handleFollow}
+                    className={cn(
+                      "w-full sm:w-auto px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl font-black text-[10px] sm:text-sm uppercase tracking-widest transition-all active:scale-95",
+                      isFollowing ? "bg-stone-200 text-stone-600" : "bg-indigo-600 text-white shadow-lg shadow-indigo-100"
+                    )}
+                  >
+                    {isFollowing ? t('store_front.unfollow') : t('store_front.follow')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* User Orders @ Store */}
+            {userOrders.length > 0 && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">{t('store.my_orders_here', 'My Orders at this Store')}</h3>
+                  <History className="w-4 h-4 text-stone-300" />
+                </div>
+                <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1">
+                  {userOrders.map((order) => (
+                    <motion.button
+                      key={order.id}
+                      layoutId={order.id}
+                      onClick={() => {
+                        setActiveOrderId(order.id);
+                        setShowOrderDetails(true);
+                      }}
+                      className="flex-shrink-0 w-64 bg-white p-5 rounded-[2rem] border border-stone-100 shadow-xl shadow-stone-900/[0.02] text-left group relative hover:border-indigo-100 transition-all active:scale-95"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="p-2.5 bg-indigo-50 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                          <ShoppingBag className="w-5 h-5" />
+                        </div>
+                        <span className={cn(
+                          "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border",
+                          order.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
+                            order.status === 'completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
+                              'bg-blue-100 text-blue-700 border-blue-200'
+                        )}>
+                          {t(`order.status.${order.status}`)}
+                        </span>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-stone-300 uppercase tracking-widest leading-none">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </p>
+                        <p className="text-sm font-black text-stone-900 truncate">
+                          {order.items.map(i => i.name).join(', ')}
+                        </p>
+                      </div>
+                    </motion.button>
+                  ))}
+                </div>
               </div>
             )}
-          </div>
 
-          {/* User Orders @ Store */}
-          {userOrders.length > 0 && (
+            {/* Rating Widget */}
+            {!isOwner && (
+              <div className="bg-amber-50/50 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 border border-amber-100 flex flex-col items-center gap-2 sm:gap-4">
+                <h4 className="text-[9px] sm:text-[10px] font-black text-amber-900 uppercase tracking-widest">{t('store_front.rate_this_store', 'Rate this Store')}</h4>
+                <div className="flex gap-1.5 sm:gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => handleRate(star)}
+                      className="transition-all active:scale-90"
+                    >
+                      <Star
+                        className={cn(
+                          "w-6 sm:w-8 h-6 sm:h-8",
+                          star <= (userRating || Math.round(store.averageRating || 0))
+                            ? "text-amber-400 fill-amber-400"
+                            : "text-amber-200"
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[9px] font-bold text-amber-700 uppercase tracking-wider text-center">
+                  {userRating > 0 ? t('store_front.thanks_for_rating', 'Thanks for your feedback!') : t('store_front.tap_to_rate', 'Tap a star to rate')}
+                </p>
+              </div>
+            )}
+
+            {/* About */}
             <div className="space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">{t('store.my_orders_here', 'My Orders at this Store')}</h3>
-                <History className="w-4 h-4 text-stone-300" />
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">{t('store_front.info_title')}</h3>
+                <Info className="w-4 h-4 sm:w-5 sm:h-5 text-stone-300" />
               </div>
-              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-4 -mx-1 px-1">
-                {userOrders.map((order) => (
-                  <motion.button
-                    key={order.id}
-                    layoutId={order.id}
-                    onClick={() => {
-                      setActiveOrderId(order.id);
-                      setShowOrderDetails(true);
-                    }}
-                    className="flex-shrink-0 w-64 bg-white p-5 rounded-[2rem] border border-stone-100 shadow-xl shadow-stone-900/[0.02] text-left group relative hover:border-indigo-100 transition-all active:scale-95"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="p-2.5 bg-indigo-50 rounded-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                        <ShoppingBag className="w-5 h-5" />
-                      </div>
-                      <span className={cn(
-                        "px-2.5 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border",
-                        order.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                        order.status === 'completed' ? 'bg-emerald-100 text-emerald-700 border-emerald-200' :
-                        'bg-blue-100 text-blue-700 border-blue-200'
-                      )}>
-                        {t(`order.status.${order.status}`)}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-stone-300 uppercase tracking-widest leading-none">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </p>
-                      <p className="text-sm font-black text-stone-900 truncate">
-                        {order.items.map(i => i.name).join(', ')}
-                      </p>
-                    </div>
-                  </motion.button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Rating Widget */}
-          {!isOwner && (
-            <div className="bg-amber-50/50 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 border border-amber-100 flex flex-col items-center gap-2 sm:gap-4">
-              <h4 className="text-[9px] sm:text-[10px] font-black text-amber-900 uppercase tracking-widest">{t('store_front.rate_this_store', 'Rate this Store')}</h4>
-              <div className="flex gap-1.5 sm:gap-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    onClick={() => handleRate(star)}
-                    className="transition-all active:scale-90"
-                  >
-                    <Star 
-                      className={cn(
-                        "w-6 sm:w-8 h-6 sm:h-8",
-                        star <= (userRating || Math.round(store.averageRating || 0)) 
-                          ? "text-amber-400 fill-amber-400" 
-                          : "text-amber-200"
-                      )} 
-                    />
-                  </button>
-                ))}
-              </div>
-              <p className="text-[9px] font-bold text-amber-700 uppercase tracking-wider text-center">
-                {userRating > 0 ? t('store_front.thanks_for_rating', 'Thanks for your feedback!') : t('store_front.tap_to_rate', 'Tap a star to rate')}
-              </p>
-            </div>
-          )}
-
-          {/* About */}
-          <div className="space-y-4">
-             <div className="flex items-center justify-between">
-               <h3 className="text-lg sm:text-xl font-black text-stone-900 tracking-tight">{t('store_front.info_title')}</h3>
-               <Info className="w-4 h-4 sm:w-5 sm:h-5 text-stone-300" />
-             </div>
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
                   <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
                   <div>
@@ -699,202 +711,203 @@ export const StorePage: React.FC<StorePageProps> = ({
                     <StoreWorkingHours workingHours={store.workingHours} t={t} />
                   </div>
                 </div>
-                 {store.contactPhone && (
-                   <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
-                     <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
-                     <div>
-                       <p className="text-[10px] sm:text-sm font-bold text-stone-700">{t('store_front.contact_label')}</p>
-                       <p className="text-xs sm:text-sm text-stone-500 font-medium">{store.contactPhone}</p>
-                     </div>
-                   </div>
-                 )}
-                 {store.website && (
-                   <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
-                     <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
-                     <div>
-                       <p className="text-[10px] sm:text-sm font-bold text-stone-700">{t('store_front.website_label')}</p>
-                       <a href={store.website} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 font-bold hover:underline">
-                         {store.website.replace(/^https?:\/\//, '')}
-                       </a>
-                     </div>
-                   </div>
-                 )}
-              </div>
-             <p className="text-stone-500 text-sm leading-relaxed font-medium px-1">
-               {store.description}
-             </p>
-          </div>          {/* Products Section */}
-          <div className="space-y-4 sm:space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-1">
-              <h3 className="text-lg sm:text-2xl font-black text-stone-900 tracking-tight">{t('store_front.products')}</h3>
-              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
-                {/* View Mode Toggle */}
-                <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
-                  <button 
-                    onClick={() => setViewMode('grid')}
-                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                  <button 
-                    onClick={() => setViewMode('list')}
-                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
-                  >
-                    <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  </button>
-                </div>
-                
-                {/* Sort Toggle */}
-                <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
-                  <button 
-                    onClick={() => setSortBy('newest')}
-                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'newest' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
-                  >
-                    <History className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_newest', 'Newest')}</span>
-                  </button>
-                  <button 
-                    onClick={() => setSortBy('alpha')}
-                    className={cn("p-1.5 sm:p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'alpha' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
-                  >
-                    <SortAsc className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                    <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_alpha', 'A-Z')}</span>
-                  </button>
-                </div>
-
-                <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest h-8 sm:h-9 flex items-center shrink-0">
-                  {t('store_front.items_available', { count: products.length })}
-                </div>
-              </div>
-            </div>
-            { products.length === 0 ? (
-              <div className="py-20 text-center space-y-4 border-2 border-dashed border-stone-100 rounded-[2.5rem]">
-                 <Package className="w-12 h-12 text-stone-100 mx-auto" />
-                 <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('store_front.no_items')}</p>
-              </div>
-            ) : (
-              <div className="space-y-12">
-                {/* Items in list section */}
-                {products.some(p => existingProductIds.has(p.id)) && (
-                  <div className="bg-emerald-50/50 p-6 sm:p-8 rounded-[3rem] border border-emerald-100/50 space-y-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                        <Check className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <h4 className="text-xl font-black text-stone-900 tracking-tight">{t('store.items_in_list', 'In Your Shopping List')}</h4>
-                        <p className="text-emerald-600/60 text-xs font-bold uppercase tracking-widest">
-                          {t('store.ready_to_buy', 'Items you added to your list')}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className={cn(
-                      "grid gap-6",
-                      viewMode === 'grid' 
-                        ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
-                        : "grid-cols-1 max-w-3xl"
-                    )}>
-                      {products.filter(p => existingProductIds.has(p.id)).map(product => renderProductCard(product))}
+                {store.contactPhone && (
+                  <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
+                    <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] sm:text-sm font-bold text-stone-700">{t('store_front.contact_label')}</p>
+                      <p className="text-xs sm:text-sm text-stone-500 font-medium">{store.contactPhone}</p>
                     </div>
                   </div>
                 )}
+                {store.website && (
+                  <div className="flex items-start gap-3 p-3 sm:p-4 bg-stone-50 rounded-2xl">
+                    <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-stone-400 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] sm:text-sm font-bold text-stone-700">{t('store_front.website_label')}</p>
+                      <a href={store.website} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 font-bold hover:underline">
+                        {store.website.replace(/^https?:\/\//, '')}
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <p className="text-stone-500 text-sm leading-relaxed font-medium px-1">
+                {store.description}
+              </p>
+            </div>          {/* Products Section */}
+            <div className="space-y-4 sm:space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 px-1">
+                <h3 className="text-lg sm:text-2xl font-black text-stone-900 tracking-tight">{t('store_front.products')}</h3>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
+                  {/* View Mode Toggle */}
+                  <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
+                    <button
+                      onClick={() => setViewMode('grid')}
+                      className={cn("p-1.5 sm:p-2 rounded-lg transition-all", viewMode === 'grid' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    >
+                      <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+                    <button
+                      onClick={() => setViewMode('list')}
+                      className={cn("p-1.5 sm:p-2 rounded-lg transition-all", viewMode === 'list' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    >
+                      <List className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </button>
+                  </div>
 
-                {/* Main catalog */}
-                <div className="space-y-6">
-                  {products.some(p => existingProductIds.has(p.id)) && (
-                    <h4 className="text-sm font-black text-stone-400 uppercase tracking-widest px-2">{t('store_front.all_products', 'All Products')}</h4>
-                  )}
-                  <div className={cn(
-                    "grid gap-6",
-                    viewMode === 'grid' 
-                      ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" 
-                      : "grid-cols-1 max-w-3xl mx-auto w-full"
-                  )}>
-                    {products.map(product => renderProductCard(product))}
+                  {/* Sort Toggle */}
+                  <div className="flex bg-stone-100 p-1 rounded-xl shrink-0">
+                    <button
+                      onClick={() => setSortBy('newest')}
+                      className={cn("p-1.5 sm:p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'newest' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    >
+                      <History className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_newest', 'Newest')}</span>
+                    </button>
+                    <button
+                      onClick={() => setSortBy('alpha')}
+                      className={cn("p-1.5 sm:p-2 rounded-lg transition-all flex items-center gap-1.5 px-3", sortBy === 'alpha' ? "bg-white shadow-sm text-stone-900" : "text-stone-400")}
+                    >
+                      <SortAsc className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+                      <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-wider">{t('store_front.sort_alpha', 'A-Z')}</span>
+                    </button>
+                  </div>
+
+                  <div className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest h-8 sm:h-9 flex items-center shrink-0">
+                    {t('store_front.items_available', { count: products.length })}
                   </div>
                 </div>
               </div>
-            )}
-          </div>
-
-          {/* CTA / Quick Actions */}
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-             <button className="p-4 sm:p-6 bg-stone-50 rounded-[1.5rem] sm:rounded-[2rem] flex flex-col items-center gap-2 sm:gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
-               <div className="p-2.5 sm:p-3 bg-white rounded-xl sm:rounded-2xl shadow-sm">
-                 <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-stone-600" />
-               </div>
-               <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.contact')}</span>
-             </button>
-             <button className="p-4 sm:p-6 bg-stone-50 rounded-[1.5rem] sm:rounded-[2rem] flex flex-col items-center gap-2 sm:gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
-               <div className="p-2.5 sm:p-3 bg-white rounded-xl sm:rounded-2xl shadow-sm">
-                 <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-stone-600" />
-               </div>
-               <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.report_store')}</span>
-             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Checkout Footer */}
-      <AnimatePresence>
-        {cartCount > 0 && (
-          <motion.div
-            initial={{ y: 100 }}
-            animate={{ y: 0 }}
-            exit={{ y: 100 }}
-            className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 bg-white border-t border-stone-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40 safe-bottom"
-          >
-            <div className="max-w-xl mx-auto flex items-center justify-between gap-6">
-              <div>
-                <p className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] mb-1">{t('store.order_total', 'Order Total')}</p>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-black text-stone-900">
-                    <span className="text-xs text-indigo-500 mr-1">{t('common.currency_symbol')}</span>
-                    {cartTotal.toFixed(2)}
-                  </span>
-                  <span className="text-xs text-stone-400 font-bold uppercase tracking-widest bg-stone-50 px-3 py-1 rounded-full">
-                    {t('store.items_count', '{{count}} Items', { count: cartCount })}
-                  </span>
+              {products.length === 0 ? (
+                <div className="py-20 text-center space-y-4 border-2 border-dashed border-stone-100 rounded-[2.5rem]">
+                  <Package className="w-12 h-12 text-stone-100 mx-auto" />
+                  <p className="text-stone-400 font-bold uppercase tracking-widest text-xs">{t('store_front.no_items')}</p>
                 </div>
-              </div>
-              <button
-                onClick={() => setShowOrderCheckout(true)}
-                className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3"
-              >
-                <ShoppingBag className="w-5 h-5" />
-                <span className="uppercase tracking-widest">{t('store.place_order_btn', 'Next: Checkout')}</span>
-                <ChevronRight className="w-5 h-5" />
+              ) : (
+                <div className="space-y-12">
+                  {/* Items in list section */}
+                  {products.some(p => existingProductIds.has(p.id)) && (
+                    <div className="bg-emerald-50/50 p-6 sm:p-8 rounded-[3rem] border border-emerald-100/50 space-y-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                          <Check className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="text-xl font-black text-stone-900 tracking-tight">{t('store.items_in_list', 'In Your Shopping List')}</h4>
+                          <p className="text-emerald-600/60 text-xs font-bold uppercase tracking-widest">
+                            {t('store.ready_to_buy', 'Items you added to your list')}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className={cn(
+                        "grid gap-6",
+                        viewMode === 'grid'
+                          ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                          : "grid-cols-1 max-w-3xl"
+                      )}>
+                        {products.filter(p => existingProductIds.has(p.id)).map(product => renderProductCard(product))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Main catalog */}
+                  <div className="space-y-6">
+                    {products.some(p => existingProductIds.has(p.id)) && (
+                      <h4 className="text-sm font-black text-stone-400 uppercase tracking-widest px-2">{t('store_front.all_products', 'All Products')}</h4>
+                    )}
+                    <div className={cn(
+                      "grid gap-6",
+                      viewMode === 'grid'
+                        ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6"
+                        : "grid-cols-1 max-w-3xl mx-auto w-full"
+                    )}>
+                      {products.map(product => renderProductCard(product))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* CTA / Quick Actions */}
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <button className="p-4 sm:p-6 bg-stone-50 rounded-[1.5rem] sm:rounded-[2rem] flex flex-col items-center gap-2 sm:gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
+                <div className="p-2.5 sm:p-3 bg-white rounded-xl sm:rounded-2xl shadow-sm">
+                  <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-stone-600" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.contact')}</span>
+              </button>
+              <button className="p-4 sm:p-6 bg-stone-50 rounded-[1.5rem] sm:rounded-[2rem] flex flex-col items-center gap-2 sm:gap-3 border border-stone-100 hover:bg-stone-100 transition-all">
+                <div className="p-2.5 sm:p-3 bg-white rounded-xl sm:rounded-2xl shadow-sm">
+                  <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 text-stone-600" />
+                </div>
+                <span className="text-[9px] sm:text-[10px] font-black text-stone-500 uppercase tracking-widest">{t('store_front.report_store')}</span>
               </button>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </div>
 
-      <AnimatePresence>
-        {showOrderCheckout && (
-          <StoreOrderCheckout 
-            store={store}
-            items={orderItems}
-            total={cartTotal}
-            count={cartCount}
-            onClose={() => setShowOrderCheckout(false)}
-            onOrderSuccess={handleOrderSuccess}
-            updateQuantity={handleUpdateQuantity}
-            removeItem={handleRemoveItem}
-          />
-        )}
-      </AnimatePresence>
-      
-      <AnimatePresence>
-        {showOrderDetails && activeOrderId && (
-          <OrderDetailView
-            orderId={activeOrderId}
-            onClose={() => setShowOrderDetails(false)}
-          />
-        )}
-      </AnimatePresence>
-    </motion.div>
-  </div>
+        {/* Checkout Footer */}
+        <AnimatePresence>
+          {cartCount > 0 && (
+            <motion.div
+              initial={{ y: 100 }}
+              animate={{ y: 0 }}
+              exit={{ y: 100 }}
+              className="fixed bottom-0 left-0 right-0 p-4 sm:p-6 bg-white border-t border-stone-100 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-40 safe-bottom"
+            >
+              <div className="max-w-xl mx-auto flex items-center justify-between gap-6">
+                <div>
+                  <p className="text-[10px] font-black text-stone-300 uppercase tracking-[0.2em] mb-1">{t('store.order_total', 'Order Total')}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-black text-stone-900">
+                      <span className="text-xs text-indigo-500 mr-1">{t('common.currency_symbol')}</span>
+                      {cartTotal.toFixed(2)}
+                    </span>
+                    <span className="text-xs text-stone-400 font-bold uppercase tracking-widest bg-stone-50 px-3 py-1 rounded-full">
+                      {t('store.items_count', '{{count}} Items', { count: cartCount })}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowOrderCheckout(true)}
+                  className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black rounded-2xl shadow-xl shadow-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                  <ShoppingBag className="w-5 h-5" />
+                  <span className="uppercase tracking-widest">{t('store.place_order_btn', 'Next: Checkout')}</span>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+
+        <AnimatePresence>
+          {showOrderCheckout && (
+            <StoreOrderCheckout
+              store={store}
+              items={orderItems}
+              total={cartTotal}
+              count={cartCount}
+              onClose={() => setShowOrderCheckout(false)}
+              onOrderSuccess={handleOrderSuccess}
+              updateQuantity={handleUpdateQuantity}
+              removeItem={handleRemoveItem}
+            />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showOrderDetails && activeOrderId && (
+            <OrderDetailView
+              orderId={activeOrderId}
+              onClose={() => setShowOrderDetails(false)}
+            />
+          )}
+        </AnimatePresence>
+      </motion.div>
+    </div>
   );
 };
