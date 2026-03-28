@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { Fuel, AlertTriangle } from 'lucide-react';
+import { Gauge } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useTranslation } from 'react-i18next';
 
@@ -35,9 +35,9 @@ export const FuelGauge: React.FC<FuelGaugeProps> = ({
   };
 
   const getTrackColor = () => {
-    if (isCritical) return "bg-rose-100";
-    if (isLow) return "bg-amber-100";
-    return "bg-stone-100";
+    if (isCritical) return "bg-rose-100/30";
+    if (isLow) return "bg-amber-100/30";
+    return "bg-stone-100/50";
   };
 
   return (
@@ -46,27 +46,27 @@ export const FuelGauge: React.FC<FuelGaugeProps> = ({
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
       className={cn(
-        "relative flex flex-col gap-1.5 p-3 rounded-2xl transition-all border shrink-0",
-        isCritical ? "bg-rose-50 border-rose-100 shadow-rose-100/50 shadow-lg" : 
-        isLow ? "bg-amber-50 border-amber-100 shadow-amber-100/50 shadow-lg" : 
-        "bg-white border-stone-100 shadow-sm",
+        "relative flex flex-col gap-1.5 p-3 rounded-2xl transition-all border shrink-0 bg-transparent",
+        isCritical ? "border-rose-200" : 
+        isLow ? "border-amber-200" : 
+        "border-stone-100",
         className
       )}
     >
       <div className="flex items-center justify-between w-full gap-3">
         <div className="flex items-center gap-2">
           <div className={cn(
-            "w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-colors",
-            isCritical ? "bg-rose-500 text-white" : 
-            isLow ? "bg-amber-500 text-white" : 
-            "bg-stone-50 text-stone-400"
+            "w-8 h-8 flex items-center justify-center shrink-0 transition-colors",
+            isCritical ? "text-rose-500" : 
+            isLow ? "text-amber-500" : 
+            "text-stone-400"
           )}>
-            {isCritical ? <AlertTriangle className="w-4 h-4" /> : <Fuel className="w-4 h-4" />}
+            <Gauge className="w-5 h-5" />
           </div>
           {showLabel && (
             <div className="text-left leading-none">
               <span className={cn(
-                "text-[10px] font-black uppercase tracking-widest",
+                "text-[10px] font-black uppercase tracking-widest transition-colors",
                 isCritical ? "text-rose-600" : isLow ? "text-amber-600" : "text-stone-400"
               )}>
                 {isCritical ? t('fuel.critical') : isLow ? t('fuel.low') : t('fuel.status')}
@@ -106,14 +106,6 @@ export const FuelGauge: React.FC<FuelGaugeProps> = ({
           />
         </motion.div>
       </div>
-
-      {isCritical && (
-        <motion.div 
-          animate={{ opacity: [0.4, 1, 0.4] }}
-          transition={{ repeat: Infinity, duration: 1.5 }}
-          className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white shadow-sm shadow-rose-500/50"
-        />
-      )}
     </motion.button>
   );
 };

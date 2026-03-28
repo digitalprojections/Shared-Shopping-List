@@ -95,16 +95,6 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({ onClose, onC
       >
         {/* Decorative Background Elements */}
         <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-emerald-50 to-transparent pointer-events-none" />
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-          className="absolute -top-20 -right-20 w-64 h-64 bg-emerald-100/30 rounded-full blur-3xl pointer-events-none" 
-        />
-        <motion.div 
-          animate={{ rotate: -360 }}
-          transition={{ duration: 25, repeat: Infinity, ease: "linear" }}
-          className="absolute -bottom-20 -left-20 w-64 h-64 bg-teal-100/30 rounded-full blur-3xl pointer-events-none" 
-        />
 
         <div className="relative p-10 flex flex-col items-center text-center">
           {/* Icon Container */}

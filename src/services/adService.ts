@@ -1,11 +1,15 @@
 import { AdMob, AdMobRewardItem, RewardAdOptions, RewardAdPluginEvents } from '@capacitor-community/admob';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
-import { APP_CONFIG, isDev } from '../config';
+import { APP_CONFIG, isDev, isProduction } from '../config';
 
 const REWARDED_AD_ID = isDev 
   ? APP_CONFIG.ADMOB.REWARDED_ID_TEST 
   : APP_CONFIG.ADMOB.REWARDED_ID_REAL;
+
+const INTERSTITIAL_REWARDED_ID = isDev
+  ? APP_CONFIG.ADMOB.REWARDED_ID_TEST // Use standard rewarded test ID for dev
+  : APP_CONFIG.ADMOB.INTERSTITIAL_REWARDED_ID_REAL;
 
 export const adService = {
   initialize: async () => {
@@ -14,10 +18,10 @@ export const adService = {
     await AdMob.initialize();
   },
 
-  showRewardedAd: async (): Promise<{ success: boolean; error?: string }> => {
+  showRewardedAd: async (isPremium: boolean = false): Promise<{ success: boolean; error?: string }> => {
     try {
       const options: RewardAdOptions = {
-        adId: REWARDED_AD_ID,
+        adId: isPremium ? INTERSTITIAL_REWARDED_ID : REWARDED_AD_ID,
       };
 
       await AdMob.prepareRewardVideoAd(options);

@@ -163,20 +163,19 @@ export default function App() {
 
   // --- Daily Reward Check ---
   useEffect(() => {
-    if (!appUser || !user) return;
+    if (!appUser || !user || showDailyReward) return;
 
     const today = new Date().toISOString().split('T')[0];
-    const lastClaimed = appUser.lastDailyRewardDay || '';
+    const lastClaimed = appUser.lastDailyRewardDay || appUser.ldrd || '';
 
-    // If not claimed today AND not already showing
+    // If not claimed today
     if (lastClaimed !== today) {
-      // Small delay to let the app load first
       const timer = setTimeout(() => {
         setShowDailyReward(true);
       }, 2000);
       return () => clearTimeout(timer);
     }
-  }, [!!appUser, appUser?.lastDailyRewardDay, user?.uid]); // Depend on !!appUser to trigger when loaded from null
+  }, [appUser?.lastDailyRewardDay, appUser?.ldrd, user?.uid]); 
 
   // --- Version Control & Auto-Update Logic ---
   useEffect(() => {

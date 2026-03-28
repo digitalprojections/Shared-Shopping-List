@@ -31,6 +31,7 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
   const [packages, setPackages] = useState<PurchasesPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null); // 'ad', 'gift', or package identifier
+  const [extraRewards, setExtraRewards] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'buy' | 'free'>('buy');
@@ -82,7 +83,7 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
     setActionLoading('ad');
     setError(null);
     try {
-      const result = await adService.showRewardedAd();
+      const result = await adService.showRewardedAd(extraRewards);
       if (result.success) {
         setSuccess(true);
         setTimeout(onClose, 2500);
@@ -288,12 +289,38 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
           ) : (
             <div className="space-y-4">
               {/* Watch Ad */}
+              <div className="bg-amber-50/50 rounded-3xl p-6 border border-amber-100/50 mb-2">
+                <div className="flex items-center justify-between gap-4 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                      <Zap className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-stone-900 leading-tight">{t('fuel.extra_rewards', 'Extra Rewards')}</h4>
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{t('fuel.beta_feature', 'Beta Feature')}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => setExtraRewards(!extraRewards)}
+                    className={`w-12 h-6 rounded-full transition-colors relative ${extraRewards ? 'bg-amber-500' : 'bg-stone-200'}`}
+                  >
+                    <motion.div 
+                      animate={{ x: extraRewards ? 26 : 4 }}
+                      className="absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm"
+                    />
+                  </button>
+                </div>
+                <p className="text-xs text-stone-600 leading-relaxed font-medium">
+                  {t('fuel.extra_rewards_desc', 'Enable to receive double fuel units (+10 instead of +5) by watching a high-value ad.')}
+                </p>
+              </div>
+
               <motion.button
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleWatchAd}
                 disabled={!!actionLoading || success}
-                className="w-full flex items-center justify-between p-6 rounded-3xl bg-white border-2 border-stone-100 hover:border-amber-200 hover:shadow-xl hover:shadow-amber-100/50 shadow-sm transition-all group"
+                className="w-full flex items-center justify-between p-6 rounded-3xl bg-white border-2 border-amber-100 hover:border-amber-200 hover:shadow-xl hover:shadow-amber-100/50 shadow-sm transition-all group"
               >
                 <div className="flex items-center gap-5">
                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-amber-100 shrink-0">
@@ -306,7 +333,7 @@ export const RefuelModal: React.FC<RefuelModalProps> = ({ onClose, currentFuel }
                 </div>
                 <div className="flex items-center gap-3">
                    <div className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-xl text-xs font-black uppercase tracking-widest border border-amber-100">
-                    +50 {t('fuel.units_short')}
+                    +{extraRewards ? '10' : '5'} {t('fuel.units_short')}
                   </div>
                   <div className="w-10 h-10 bg-stone-50 rounded-xl flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors shadow-sm">
                     {actionLoading === 'ad' ? (
