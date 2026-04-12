@@ -167,7 +167,7 @@ export function ListView({
   const handleSync = async () => {
     if (!user || !appUser || isSyncing) return;
 
-    if (appUser.fuelLevel <= 0) {
+    if (appUser.fl <= 0) {
       alert(t('list_view.insufficient_fuel'));
       return;
     }

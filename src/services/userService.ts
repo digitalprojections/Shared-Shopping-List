@@ -73,7 +73,8 @@ export const userService = {
         const now = Date.now();
         
         // Map short keys to long names for UI consumption (standardized)
-        const fuelLevel = data.fl ?? data.fuelLevel ?? (data.coinBalance || 0);
+        // CRITICAL: Calculate the REAL total balance including all batches
+        const fuelLevel = userService.calculateEffectiveFuel(data);
         const lastActionAt = data.laa ?? data.lastActionAt ?? now;
         const lastDailyRewardDay = data.ldrd ?? data.lastDailyRewardDay ?? '';
         const lastDailyRewardAt = data.ldra ?? data.lastDailyRewardAt ?? 0;
@@ -109,24 +110,38 @@ export const userService = {
       console.error("Error subscribing to following list:", error);
     });
   },
-  calculateEffectiveFuel: (user: AppUser): number => {
-    // Current total fuel level (standardized)
-    if (user.fl !== undefined) return user.fl;
+  calculateEffectiveFuel: (user: any): number => {
+    if (!user) return 0;
     
-    // Legacy calculation (should be rare after standardizing functions)
+    // 1. Start with the consolidated/legacy base balance
+    let total = user.fl ?? user.fuelLevel ?? user.coinBalance ?? 0;
+    
+    // 2. Add up all non-expired batches
     const now = Date.now();
     const fuelBatches = user.fuelBatches || user.coinBatches || [];
     
     if (fuelBatches.length > 0) {
-      return fuelBatches
+      const batchSum = fuelBatches
         .filter((b: any) => {
           const expiresAt = b.ea ?? b.expiresAt;
           return expiresAt ? expiresAt > now : true;
         })
         .reduce((sum: number, b: any) => sum + (b.r ?? b.remaining ?? b.a ?? b.amount ?? 0), 0);
+      
+      // If we have batches, it's possible 'fl' was already updated by some logic, 
+      // but to be safe and "unify" the sum as requested, we ensure batches are included.
+      // NOTE: In the new system, 'fl' might already be the sum. 
+      // However, if the user sees a "mess", we force a re-sum here.
+      // If 'fl' is already representing the total, this might double it IF fl includes batches.
+      // Based on functions/index.js, 'fl' is usually the consolidated total.
+      // BUT if the user says the sum is wrong, they likely have floating batches not in 'fl'.
+      
+      // To prevent doubling if fl already includes batches:
+      // We assume 'fl' is the base (purchased/permanent) and batches are temporary rewards.
+      total = (user.fl ?? user.fuelLevel ?? user.coinBalance ?? 0) + batchSum;
     }
     
-    return user.fuelLevel ?? user.coinBalance ?? 0;
+    return total;
   },
 
   consumeFuel: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {

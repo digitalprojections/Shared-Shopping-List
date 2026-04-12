@@ -894,7 +894,7 @@ export default function App() {
             {user && (
               <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5 px-0.5">
                 <FuelGauge
-                  level={appUser?.fuelLevel || 0}
+                  level={appUser?.fl || 0}
                   onClick={() => setShowFuelHistoryModal(true)}
                   className="!h-10 !py-1 !px-3"
                   showLabel={false}
@@ -1186,7 +1186,7 @@ export default function App() {
       <AnimatePresence>
         {showRefuelModal && appUser && (
           <RefuelModal
-            currentFuel={appUser.fuelLevel || 0}
+            currentFuel={appUser.fl || 0}
             onClose={() => setShowRefuelModal(false)}
           />
         )}
