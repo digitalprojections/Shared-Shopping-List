@@ -19,7 +19,7 @@ exports.consumeFuel = onCall({
   const amountToConsume = (request.data && request.data.amount) ? Math.max(1, Number(request.data.amount)) : 1;
 
   try {
-    await db.runTransaction(async (transaction) => {
+    const result = await db.runTransaction(async (transaction) => {
       const userDoc = await transaction.get(userRef);
       if (!userDoc.exists) {
         throw new HttpsError('not-found', 'User profile not found.');
@@ -29,42 +29,43 @@ exports.consumeFuel = onCall({
       const now = Date.now();
 
       // Anti-abuse: 1-second cooldown
-      if (userData.lastActionAt && (now - userData.lastActionAt < 1000)) {
+      const lastActionAt = userData.laa ?? userData.lastActionAt;
+      if (lastActionAt && (now - lastActionAt < 1000)) {
         throw new HttpsError('resource-exhausted', 'Please wait 1 second between actions.');
       }
 
-      // Unified Parser: Parse both legacy and short keys and map them to standard long keys
+      // Unified Parser: Parse both legacy and short keys and map them to standard abbreviated keys
       let fuelBatches = [];
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
-      const legacyBalance = Number(userData.fuelLevel || userData.coinBalance || userData.fl || 0);
+      const legacyBalance = Number(userData.fl ?? userData.fuelLevel ?? userData.coinBalance ?? 0);
 
       if (legacyBatches.length > 0) {
         legacyBatches.forEach(b => {
           fuelBatches.push({
             id: b.id,
-            amount: Number(b.amount ?? b.a ?? b.remaining ?? b.r ?? 0),
-            remaining: Number(b.remaining ?? b.r ?? 0),
-            createdAt: b.createdAt ?? b.ca ?? now,
-            expiresAt: b.expiresAt ?? b.ea ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
-            type: b.type ?? b.t ?? 'legacy'
+            a: Number(b.a ?? b.amount ?? b.remaining ?? b.r ?? 0),
+            r: Number(b.r ?? b.remaining ?? 0),
+            ca: b.ca ?? b.createdAt ?? now,
+            ea: b.ea ?? b.expiresAt ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
+            t: b.t ?? b.type ?? 'legacy'
           });
         });
       } else if (legacyBalance > 0) {
         fuelBatches.push({
-          id: `legacy_balance_${now}`,
-          amount: legacyBalance,
-          remaining: legacyBalance,
-          createdAt: now,
-          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
-          type: 'legacy_migration'
+          id: `migration_${now}`,
+          a: legacyBalance,
+          r: legacyBalance,
+          ca: now,
+          ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          t: 'coupon'
         });
       }
 
       const validBatches = fuelBatches
-        .filter(b => b.expiresAt > now && b.remaining > 0)
-        .sort((a, b) => a.createdAt - b.createdAt);
+        .filter(b => b.ea > now && b.r > 0)
+        .sort((a, b) => a.ca - b.ca);
 
-      const currentLevel = validBatches.reduce((sum, b) => sum + Number(b.remaining), 0);
+      const currentLevel = validBatches.reduce((sum, b) => sum + Number(b.r), 0);
 
       if (currentLevel < amountToConsume) {
         throw new HttpsError('failed-precondition', 'Insufficient fuel.');
@@ -75,28 +76,29 @@ exports.consumeFuel = onCall({
       for (const batch of validBatches) {
         if (remainingToDeduct <= 0) break;
 
-        const deduct = Math.min(batch.remaining, remainingToDeduct);
-        batch.remaining -= deduct;
+        const deduct = Math.min(batch.r, remainingToDeduct);
+        batch.r -= deduct;
         remainingToDeduct -= deduct;
 
         const index = fuelBatches.findIndex(b => b.id === batch.id);
         if (index !== -1) {
-          fuelBatches[index].remaining = batch.remaining;
+          fuelBatches[index].r = batch.r;
         }
       }
 
-      // Recalculate total fuel level
-      const newLevel = fuelBatches
-        .filter(b => b.expiresAt > now)
-        .reduce((sum, b) => sum + Number(b.remaining), 0);
+      // Filter out totally consumed and expired batches to keep doc size small
+      const updatedBatches = fuelBatches.filter(b => b.ea > now && b.r > 0);
+      const newLevel = updatedBatches.reduce((sum, b) => sum + Number(b.r), 0);
 
       transaction.update(userRef, {
-        fuelBatches: fuelBatches,
-        fuelLevel: newLevel,
-        // Keep legacy fields for backward compatibility during transition if needed
-        coinBatches: fuelBatches,
-        coinBalance: newLevel,
-        lastActionAt: now
+        fuelBatches: updatedBatches,
+        fl: newLevel,
+        laa: now,
+        // Explicitly clear legacy fields once migrated to prevent double-counting
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete(),
+        lastActionAt: admin.firestore.FieldValue.delete()
       });
 
       logger.info(`Consumed ${amountToConsume} fuel for user ${uid}. New level: ${newLevel}`);
@@ -149,50 +151,52 @@ exports.grantRewardedFuel = onCall({
       const rewardAmount = Math.max(1, Math.min(requestedAmount, 20));
       const newBatch = {
         id: `reward_${now}`,
-        createdAt: now,
-        expiresAt: now + (30 * 24 * 60 * 60 * 1000), // 30 days
-        remaining: rewardAmount,
-        type: 'reward'
+        ca: now,
+        ea: now + (30 * 24 * 60 * 60 * 1000), // 30 days
+        r: rewardAmount,
+        a: rewardAmount,
+        t: 'reward'
       };
 
       let fuelBatches = [];
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
-      const legacyBalance = Number(userData.fuelLevel || userData.coinBalance || userData.fl || 0);
+      const legacyBalance = Number(userData.fl ?? userData.fuelLevel ?? userData.coinBalance ?? 0);
 
       if (legacyBatches.length > 0) {
         legacyBatches.forEach(b => {
           fuelBatches.push({
             id: b.id,
-            amount: Number(b.amount ?? b.a ?? b.remaining ?? b.r ?? 0),
-            remaining: Number(b.remaining ?? b.r ?? 0),
-            createdAt: b.createdAt ?? b.ca ?? now,
-            expiresAt: b.expiresAt ?? b.ea ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
-            type: b.type ?? b.t ?? 'legacy'
+            a: Number(b.a ?? b.amount ?? b.remaining ?? b.r ?? 0),
+            r: Number(b.r ?? b.remaining ?? 0),
+            ca: b.ca ?? b.createdAt ?? now,
+            ea: b.ea ?? b.expiresAt ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
+            t: b.t ?? b.type ?? 'legacy'
           });
         });
       } else if (legacyBalance > 0) {
         fuelBatches.push({
-          id: `legacy_balance_${now}`,
-          amount: legacyBalance,
-          remaining: legacyBalance,
-          createdAt: now,
-          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
-          type: 'legacy_migration'
+          id: `migration_${now}`,
+          a: legacyBalance,
+          r: legacyBalance,
+          ca: now,
+          ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          t: 'coupon'
         });
       }
-      const updatedBatches = [...fuelBatches, newBatch];
-      const totalLevel = updatedBatches
-        .filter(b => b.expiresAt > now)
-        .reduce((sum, b) => sum + Number(b.remaining), 0);
+      
+      const updatedBatches = [...fuelBatches.filter(b => b.ea > now && b.r > 0), newBatch];
+      const totalLevel = updatedBatches.reduce((sum, b) => sum + Number(b.r), 0);
 
       transaction.update(userRef, {
         fuelBatches: updatedBatches,
-        fuelLevel: totalLevel,
-        coinBatches: updatedBatches,
-        coinBalance: totalLevel,
+        fl: totalLevel,
         lastAdAt: now,
         lastAdDay: today,
-        adCount: adCount + 1
+        adCount: adCount + 1,
+        // Cleanup
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete()
       });
 
       logger.info(`Rewarded fuel granted to user ${uid}. New level: ${totalLevel}`);
@@ -242,49 +246,50 @@ exports.redeemFuelCoupon = onCall({
       const now = Date.now();
 
       // Anti-abuse: 10-second cooldown
-      if (userData.lastActionAt && (now - userData.lastActionAt < 10000)) {
+      const lastActionAt = userData.laa ?? userData.lastActionAt;
+      if (lastActionAt && (now - lastActionAt < 10000)) {
         throw new HttpsError('resource-exhausted', 'Please wait 10 seconds between redemptions.');
       }
 
+      const amount = Number(couponData.fuelAmount || couponData.coinsAmount || 0);
       const expiresAt = now + (30 * 24 * 60 * 60 * 1000); // 30 days
       const newBatch = {
         id: `coupon_${Math.random().toString(36).substring(7)}`,
-        amount: Number(couponData.fuelAmount || couponData.coinsAmount || 0),
-        remaining: Number(couponData.fuelAmount || couponData.coinsAmount || 0),
-        createdAt: now,
-        expiresAt: expiresAt,
-        type: 'coupon'
+        a: amount,
+        r: amount,
+        ca: now,
+        ea: expiresAt,
+        t: 'coupon'
       };
 
       let fuelBatches = [];
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
-      const legacyBalance = Number(userData.fuelLevel || userData.coinBalance || userData.fl || 0);
+      const legacyBalance = Number(userData.fl ?? userData.fuelLevel ?? userData.coinBalance ?? 0);
 
       if (legacyBatches.length > 0) {
         legacyBatches.forEach(b => {
           fuelBatches.push({
             id: b.id,
-            amount: Number(b.amount ?? b.a ?? b.remaining ?? b.r ?? 0),
-            remaining: Number(b.remaining ?? b.r ?? 0),
-            createdAt: b.createdAt ?? b.ca ?? now,
-            expiresAt: b.expiresAt ?? b.ea ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
-            type: b.type ?? b.t ?? 'legacy'
+            a: Number(b.a ?? b.amount ?? b.remaining ?? b.r ?? 0),
+            r: Number(b.r ?? b.remaining ?? 0),
+            ca: b.ca ?? b.createdAt ?? now,
+            ea: b.ea ?? b.expiresAt ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
+            t: b.t ?? b.type ?? 'legacy'
           });
         });
       } else if (legacyBalance > 0) {
         fuelBatches.push({
-          id: `legacy_balance_${now}`,
-          amount: legacyBalance,
-          remaining: legacyBalance,
-          createdAt: now,
-          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
-          type: 'legacy_migration'
+          id: `migration_${now}`,
+          a: legacyBalance,
+          r: legacyBalance,
+          ca: now,
+          ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          t: 'coupon'
         });
       }
-      const updatedBatches = [...fuelBatches, newBatch];
-      const totalLevel = updatedBatches
-        .filter(b => b.expiresAt > now)
-        .reduce((sum, b) => sum + Number(b.remaining), 0);
+
+      const updatedBatches = [...fuelBatches.filter(b => b.ea > now && b.r > 0), newBatch];
+      const totalLevel = updatedBatches.reduce((sum, b) => sum + Number(b.r), 0);
 
       transaction.update(couponRef, {
         isConsumed: true,
@@ -294,11 +299,16 @@ exports.redeemFuelCoupon = onCall({
 
       transaction.update(userRef, {
         fuelBatches: updatedBatches,
-        fuelLevel: totalLevel,
-        coinBatches: updatedBatches,
-        coinBalance: totalLevel,
-        lastActionAt: now
+        fl: totalLevel,
+        laa: now,
+        // Cleanup legacy
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete(),
+        lastActionAt: admin.firestore.FieldValue.delete()
       });
+
+      return { fuel: amount };
 
       return { fuel: newBatch.amount };
     });
@@ -344,42 +354,41 @@ exports.claimFreeFuelGift = onCall({
 
       const newBatch = {
         id: `free_${Math.random().toString(36).substring(7)}`,
-        amount: giftAmount,
-        remaining: giftAmount,
-        createdAt: now,
-        expiresAt: expiresAt,
-        type: 'coupon'
+        a: giftAmount,
+        r: giftAmount,
+        ca: now,
+        ea: expiresAt,
+        t: 'gift'
       };
 
       let fuelBatches = [];
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
-      const legacyBalance = Number(userData.fuelLevel || userData.coinBalance || userData.fl || 0);
+      const legacyBalance = Number(userData.fl ?? userData.fuelLevel ?? userData.coinBalance ?? 0);
 
       if (legacyBatches.length > 0) {
         legacyBatches.forEach(b => {
           fuelBatches.push({
             id: b.id,
-            amount: Number(b.amount ?? b.a ?? b.remaining ?? b.r ?? 0),
-            remaining: Number(b.remaining ?? b.r ?? 0),
-            createdAt: b.createdAt ?? b.ca ?? now,
-            expiresAt: b.expiresAt ?? b.ea ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
-            type: b.type ?? b.t ?? 'legacy'
+            a: Number(b.a ?? b.amount ?? b.remaining ?? b.r ?? 0),
+            r: Number(b.r ?? b.remaining ?? 0),
+            ca: b.ca ?? b.createdAt ?? now,
+            ea: b.ea ?? b.expiresAt ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
+            t: b.t ?? b.type ?? 'legacy'
           });
         });
       } else if (legacyBalance > 0) {
         fuelBatches.push({
-          id: `legacy_balance_${now}`,
-          amount: legacyBalance,
-          remaining: legacyBalance,
-          createdAt: now,
-          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
-          type: 'legacy_migration'
+          id: `migration_${now}`,
+          a: legacyBalance,
+          r: legacyBalance,
+          ca: now,
+          ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          t: 'gift'
         });
       }
-      const updatedBatches = [...fuelBatches, newBatch];
-      const totalLevel = updatedBatches
-        .filter(b => b.expiresAt > now)
-        .reduce((sum, b) => sum + Number(b.remaining), 0);
+
+      const updatedBatches = [...fuelBatches.filter(b => b.ea > now && b.r > 0), newBatch];
+      const totalLevel = updatedBatches.reduce((sum, b) => sum + Number(b.r), 0);
 
       transaction.set(couponRef, {
         code: couponCode,
@@ -392,11 +401,14 @@ exports.claimFreeFuelGift = onCall({
 
       transaction.update(userRef, {
         fuelBatches: updatedBatches,
-        fuelLevel: totalLevel,
-        coinBatches: updatedBatches,
-        coinBalance: totalLevel,
+        fl: totalLevel,
+        laa: now,
         freeCouponClaimed: true,
-        lastActionAt: now
+        // Cleanup legacy
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete(),
+        lastActionAt: admin.firestore.FieldValue.delete()
       });
 
       return { fuel: giftAmount };
@@ -462,56 +474,55 @@ exports.grantPurchaseFuel = onCall({
       }
 
       const userData = userDoc.data();
-      const now = Date.now();
-
       const expiresAt = now + (100 * 365 * 24 * 60 * 60 * 1000);
 
       const newBatch = {
         id: `purchase_${productId}_${now}`,
-        amount: Number(amount),
-        remaining: Number(amount),
-        createdAt: now,
-        expiresAt: expiresAt,
-        type: 'purchase',
-        productId: productId
+        a: Number(amount),
+        r: Number(amount),
+        ca: now,
+        ea: expiresAt,
+        t: 'purchase'
       };
 
       let fuelBatches = [];
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
-      const legacyBalance = Number(userData.fuelLevel || userData.coinBalance || userData.fl || 0);
+      const legacyBalance = Number(userData.fl ?? userData.fuelLevel ?? userData.coinBalance ?? 0);
 
       if (legacyBatches.length > 0) {
         legacyBatches.forEach(b => {
           fuelBatches.push({
             id: b.id,
-            amount: Number(b.amount ?? b.a ?? b.remaining ?? b.r ?? 0),
-            remaining: Number(b.remaining ?? b.r ?? 0),
-            createdAt: b.createdAt ?? b.ca ?? now,
-            expiresAt: b.expiresAt ?? b.ea ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
-            type: b.type ?? b.t ?? 'legacy'
+            a: Number(b.a ?? b.amount ?? b.remaining ?? b.r ?? 0),
+            r: Number(b.r ?? b.remaining ?? 0),
+            ca: b.ca ?? b.createdAt ?? now,
+            ea: b.ea ?? b.expiresAt ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
+            t: b.t ?? b.type ?? 'legacy'
           });
         });
       } else if (legacyBalance > 0) {
         fuelBatches.push({
-          id: `legacy_balance_${now}`,
-          amount: legacyBalance,
-          remaining: legacyBalance,
-          createdAt: now,
-          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
-          type: 'legacy_migration'
+          id: `migration_${now}`,
+          a: legacyBalance,
+          r: legacyBalance,
+          ca: now,
+          ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          t: 'purchase'
         });
       }
-      const updatedBatches = [...fuelBatches, newBatch];
-      const totalLevel = updatedBatches
-        .filter(b => b.expiresAt > now)
-        .reduce((sum, b) => sum + Number(b.remaining), 0);
+
+      const updatedBatches = [...fuelBatches.filter(b => b.ea > now && b.r > 0), newBatch];
+      const totalLevel = updatedBatches.reduce((sum, b) => sum + Number(b.r), 0);
 
       transaction.update(userRef, {
         fuelBatches: updatedBatches,
-        fuelLevel: totalLevel,
-        coinBatches: updatedBatches,
-        coinBalance: totalLevel,
-        lastActionAt: now
+        fl: totalLevel,
+        laa: now,
+        // Cleanup
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete(),
+        lastActionAt: admin.firestore.FieldValue.delete()
       });
 
       logger.info(`Purchased fuel (${amount}) granted to user ${uid}.`);
@@ -1052,7 +1063,8 @@ exports.grantDailyFuelReward = onCall({
       const today = new Date().toISOString().split('T')[0];
 
       // Check if already claimed today
-      if (userData.lastDailyRewardDay === today) {
+      const lastDailyRewardDay = userData.ldrd ?? userData.lastDailyRewardDay;
+      if (lastDailyRewardDay === today) {
         return { success: false, alreadyClaimed: true };
       }
 
@@ -1061,50 +1073,53 @@ exports.grantDailyFuelReward = onCall({
       const batchId = `daily_${now}`;
       const newBatch = {
         id: batchId,
-        amount: rewardAmount,
-        remaining: rewardAmount,
-        createdAt: now,
-        expiresAt: expiresAt,
-        type: 'reward'
+        a: rewardAmount,
+        r: rewardAmount,
+        ca: now,
+        ea: expiresAt,
+        t: 'reward'
       };
 
       let fuelBatches = [];
       const legacyBatches = userData.fuelBatches || userData.coinBatches || [];
-      const legacyBalance = Number(userData.fuelLevel || userData.coinBalance || userData.fl || 0);
+      const legacyBalance = Number(userData.fl ?? userData.fuelLevel ?? userData.coinBalance ?? 0);
 
       if (legacyBatches.length > 0) {
         legacyBatches.forEach(b => {
           fuelBatches.push({
             id: b.id,
-            amount: Number(b.amount ?? b.a ?? b.remaining ?? b.r ?? 0),
-            remaining: Number(b.remaining ?? b.r ?? 0),
-            createdAt: b.createdAt ?? b.ca ?? now,
-            expiresAt: b.expiresAt ?? b.ea ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
-            type: b.type ?? b.t ?? 'legacy'
+            a: Number(b.a ?? b.amount ?? b.remaining ?? b.r ?? 0),
+            r: Number(b.r ?? b.remaining ?? 0),
+            ca: b.ca ?? b.createdAt ?? now,
+            ea: b.ea ?? b.expiresAt ?? (now + 100 * 365 * 24 * 60 * 60 * 1000),
+            t: b.t ?? b.type ?? 'legacy'
           });
         });
       } else if (legacyBalance > 0) {
         fuelBatches.push({
-          id: `legacy_balance_${now}`,
-          amount: legacyBalance,
-          remaining: legacyBalance,
-          createdAt: now,
-          expiresAt: now + (100 * 365 * 24 * 60 * 60 * 1000),
-          type: 'legacy_migration'
+          id: `migration_${now}`,
+          a: legacyBalance,
+          r: legacyBalance,
+          ca: now,
+          ea: now + (100 * 365 * 24 * 60 * 60 * 1000),
+          t: 'coupon'
         });
       }
 
-      const updatedBatches = [...fuelBatches, newBatch];
-      const totalLevel = updatedBatches
-        .filter(b => b.expiresAt > now)
-        .reduce((sum, b) => sum + Number(b.remaining), 0);
+      const updatedBatches = [...fuelBatches.filter(b => b.ea > now && b.r > 0), newBatch];
+      const totalLevel = updatedBatches.reduce((sum, b) => sum + Number(b.r), 0);
 
       transaction.update(userRef, {
-        lastDailyRewardDay: today,
+        ldrd: today,
+        ldra: now,
         fuelBatches: updatedBatches,
-        fuelLevel: totalLevel,
-        coinBatches: updatedBatches,
-        coinBalance: totalLevel
+        fl: totalLevel,
+        // Cleanup
+        lastDailyRewardDay: admin.firestore.FieldValue.delete(),
+        lastDailyRewardAt: admin.firestore.FieldValue.delete(),
+        fuelLevel: admin.firestore.FieldValue.delete(),
+        coinBalance: admin.firestore.FieldValue.delete(),
+        coinBatches: admin.firestore.FieldValue.delete()
       });
 
       logger.info(`Daily reward granted. New level: ${totalLevel}`);

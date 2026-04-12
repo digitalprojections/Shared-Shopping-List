@@ -149,7 +149,6 @@ export const DailyRewardModal: React.FC<DailyRewardModalProps> = ({ onClose, onC
                   <div className="inline-flex flex-col items-center justify-center">
                     <div className="text-5xl font-black text-emerald-600 tracking-tighter tabular-nums flex items-baseline gap-1">
                       +1
-                      <span className="text-lg text-emerald-400 opacity-60 uppercase tracking-widest">%</span>
                     </div>
                     <span className="text-[10px] font-black text-stone-300 uppercase tracking-[0.3em] mt-1">
                       {t('reward.fuel_reward')}

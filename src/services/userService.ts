@@ -72,17 +72,21 @@ export const userService = {
         const data = doc.data() as AppUser;
         const now = Date.now();
         
-        // Map short keys to long names for UI consumption (transitional)
-        const fuelLevel = data.fuelLevel ?? data.fl ?? (data.coinBalance || 0);
+        // Map short keys to long names for UI consumption (standardized)
+        const fuelLevel = data.fl ?? data.fuelLevel ?? (data.coinBalance || 0);
         const lastActionAt = data.laa ?? data.lastActionAt ?? now;
-        const lastDailyRewardDay = data.lastDailyRewardDay ?? data.ldrd ?? '';
+        const lastDailyRewardDay = data.ldrd ?? data.lastDailyRewardDay ?? '';
         const lastDailyRewardAt = data.ldra ?? data.lastDailyRewardAt ?? 0;
         
         callback({
           ...data,
+          fl: fuelLevel,
           fuelLevel,
+          laa: lastActionAt,
           lastActionAt,
+          ldrd: lastDailyRewardDay,
           lastDailyRewardDay,
+          ldra: lastDailyRewardAt,
           lastDailyRewardAt
         });
       } else {
@@ -106,21 +110,23 @@ export const userService = {
     });
   },
   calculateEffectiveFuel: (user: AppUser): number => {
-    // Top-level value takes precedence if populated via recent function
-    if (user.fuelLevel !== undefined && user.fuelLevel > 0) return user.fuelLevel;
-    if (user.fl !== undefined && user.fl > 0) return user.fl;
+    // Current total fuel level (standardized)
+    if (user.fl !== undefined) return user.fl;
     
-    // Legacy calculation
+    // Legacy calculation (should be rare after standardizing functions)
     const now = Date.now();
     const fuelBatches = user.fuelBatches || user.coinBatches || [];
     
     if (fuelBatches.length > 0) {
       return fuelBatches
-        .filter((b: any) => (b.expiresAt ? b.expiresAt > now : (b.ea ? b.ea > now : true)))
-        .reduce((sum: number, b: any) => sum + (b.remaining ?? b.r ?? b.amount ?? b.a ?? 0), 0);
+        .filter((b: any) => {
+          const expiresAt = b.ea ?? b.expiresAt;
+          return expiresAt ? expiresAt > now : true;
+        })
+        .reduce((sum: number, b: any) => sum + (b.r ?? b.remaining ?? b.a ?? b.amount ?? 0), 0);
     }
     
-    return user.coinBalance ?? 0;
+    return user.fuelLevel ?? user.coinBalance ?? 0;
   },
 
   consumeFuel: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {

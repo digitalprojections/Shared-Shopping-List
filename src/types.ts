@@ -51,11 +51,15 @@ export interface FuelBatch {
   ca: number; // createdAt
   t: 'reward' | 'purchase' | 'coupon'; // type
 
-  // Legacy
+  /** @deprecated Use abbreviated keys (a, r, ea, ca, t) */
   amount?: number;
+  /** @deprecated Use abbreviated keys (a, r, ea, ca, t) */
   remaining?: number;
+  /** @deprecated Use abbreviated keys (a, r, ea, ca, t) */
   expiresAt?: number;
+  /** @deprecated Use abbreviated keys (a, r, ea, ca, t) */
   createdAt?: number;
+  /** @deprecated Use abbreviated keys (a, r, ea, ca, t) */
   type?: string;
 }
 
@@ -67,7 +71,7 @@ export interface PushToken {
 
 export interface AppUser {
   uid: string;
-  fl: number; // fuelLevel
+  fl: number; // current total fuel level
   ldrd?: string; // lastDailyRewardDay
   ldra?: number; // lastDailyRewardAt
   laa?: number; // lastActionAt
@@ -77,14 +81,19 @@ export interface AppUser {
   followedStores?: string[];
   ownedStores?: string[];
   fcmTokens?: PushToken[];
+  fuelBatches?: FuelBatch[]; // Primary batch storage
 
-  // Legacy fields (transitional)
+  /** @deprecated Use fl */
   fuelLevel?: number;
-  fuelBatches?: FuelBatch[];
+  /** @deprecated Use fl and fuelBatches */
   coinBalance?: number;
+  /** @deprecated Use fuelBatches */
   coinBatches?: any[];
+  /** @deprecated Use laa */
   lastActionAt?: number;
+  /** @deprecated Use ldrd */
   lastDailyRewardDay?: string;
+  /** @deprecated Use ldra */
   lastDailyRewardAt?: number;
   freeCouponClaimed?: boolean;
 }
