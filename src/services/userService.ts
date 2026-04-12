@@ -73,8 +73,7 @@ export const userService = {
         const now = Date.now();
         
         // Map short keys to long names for UI consumption (standardized)
-        // CRITICAL: Calculate the REAL total balance including all batches
-        const fuelLevel = userService.calculateEffectiveFuel(data);
+        const fuelLevel = data.fl ?? 0;
         const lastActionAt = data.laa ?? data.lastActionAt ?? now;
         const lastDailyRewardDay = data.ldrd ?? data.lastDailyRewardDay ?? '';
         const lastDailyRewardAt = data.ldra ?? data.lastDailyRewardAt ?? 0;
@@ -110,38 +109,37 @@ export const userService = {
       console.error("Error subscribing to following list:", error);
     });
   },
-  calculateEffectiveFuel: (user: any): number => {
+
+  subscribeToFuelInventory: (userId: string, callback: (fuelAmount: number) => void) => {
+    if (!isFirebaseConfigured || !userId) return () => {};
+    console.log("Subscribing to Fuel Inventory:", userId);
+    const fuelInventoryRef = collection(db, 'users', userId, 'fuel_inventory');
+    
+    return onSnapshot(fuelInventoryRef, (snapshot) => {
+      const now = Date.now();
+      const total = snapshot.docs.reduce((sum, docSnap) => {
+        const data = docSnap.data();
+        const expiresAt = data.ea ?? data.expiresAt;
+        const remaining = Number(data.r ?? data.remaining ?? 0);
+        // Client-side expiry check for instant visual feedback
+        if (remaining > 0 && (!expiresAt || expiresAt > now)) {
+          return sum + remaining;
+        }
+        return sum;
+      }, 0);
+      callback(total);
+    }, (error) => {
+      console.error("Fuel inventory subscription error:", error);
+    });
+  },
+
+  calculateEffectiveFuel: (user: any, inventoryTotal?: number): number => {
+    // If inventoryTotal is provided from a subcollection listener, use it as priority
+    if (typeof inventoryTotal === 'number') return inventoryTotal;
+    
+    // Fallback for logic that only has user document (legacy support)
     if (!user) return 0;
-    
-    // 1. Start with the consolidated/legacy base balance
-    let total = user.fl ?? user.fuelLevel ?? user.coinBalance ?? 0;
-    
-    // 2. Add up all non-expired batches
-    const now = Date.now();
-    const fuelBatches = user.fuelBatches || user.coinBatches || [];
-    
-    if (fuelBatches.length > 0) {
-      const batchSum = fuelBatches
-        .filter((b: any) => {
-          const expiresAt = b.ea ?? b.expiresAt;
-          return expiresAt ? expiresAt > now : true;
-        })
-        .reduce((sum: number, b: any) => sum + (b.r ?? b.remaining ?? b.a ?? b.amount ?? 0), 0);
-      
-      // If we have batches, it's possible 'fl' was already updated by some logic, 
-      // but to be safe and "unify" the sum as requested, we ensure batches are included.
-      // NOTE: In the new system, 'fl' might already be the sum. 
-      // However, if the user sees a "mess", we force a re-sum here.
-      // If 'fl' is already representing the total, this might double it IF fl includes batches.
-      // Based on functions/index.js, 'fl' is usually the consolidated total.
-      // BUT if the user says the sum is wrong, they likely have floating batches not in 'fl'.
-      
-      // To prevent doubling if fl already includes batches:
-      // We assume 'fl' is the base (purchased/permanent) and batches are temporary rewards.
-      total = (user.fl ?? user.fuelLevel ?? user.coinBalance ?? 0) + batchSum;
-    }
-    
-    return total;
+    return user.fl ?? user.fuelLevel ?? user.coinBalance ?? 0;
   },
 
   consumeFuel: async (userId: string, amount: number = 1): Promise<{ success: boolean; error?: string }> => {

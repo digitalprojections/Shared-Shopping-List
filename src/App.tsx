@@ -501,10 +501,14 @@ export default function App() {
     if (user) {
       const unsubProfile = userService.subscribeToUserProfile(user.uid, setAppUser);
       const unsubFollowing = userService.subscribeToFollowing(user.uid, setFollowedStoreIds);
+      const unsubInventory = userService.subscribeToFuelInventory(user.uid, (total) => {
+        setAppUser(prev => prev ? ({ ...prev, fl: total, fuelLevel: total }) : null);
+      });
 
       return () => {
         unsubProfile();
         unsubFollowing();
+        unsubInventory();
       };
     } else {
       setAppUser(null);
